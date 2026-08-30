@@ -1,0 +1,557 @@
+src/components/AdrenalineModal.tsx:              {isEn ? "Massive Rewards Unlocked" : "Ogromne Nagrade Otključane"}
+src/components/AdrenalineModal.tsx:                {isEn ? "Boost" : "Skok"}
+src/components/AdrenalineModal.tsx:                {isEn ? "Coins" : "Novčića"}
+src/components/AdrenalineModal.tsx:                {isEn ? "Health" : "Zdravlje"}
+src/components/AdrenalineModal.tsx:            {isEn ? "Claim & Dominate" : "Preuzmi & Dominiraj"}
+src/components/AuthModal.tsx:          language === "en" ? "Welcome back!" : "Dobrodošli nazad!",
+src/components/AuthModal.tsx:                <span>{language === "en" ? "Processing..." : "Obrada..."}</span>
+src/components/CollabPanel.tsx:    setFormAlias(language === "en" ? "My New Board" : "Moja nova tabla");
+src/components/CollabPanel.tsx:    setFormAlias(language === "en" ? "Joint Board" : "Zajednička tabla");
+src/components/CollabPanel.tsx:    setFormAlias(language === "en" ? "Active Collab Board" : "Aktivna tabla");
+src/components/CollabPanel.tsx:                            {language === "en" ? "Enter" : "Pristupi"}
+src/components/CollabPanel.tsx:                            title={language === "en" ? "Delete" : "Ukloni"}
+src/components/CompanionSvgs.tsx:        subTitle: isEn ? "VICE MODE: GRUMP" : "POROČNI REŽIM: BUNT",
+src/components/CompanionSvgs.tsx:        subTitle: isEn ? "VICE MODE: COUCH" : "POROČNI REŽIM: LENJOST",
+src/components/CompanionSvgs.tsx:        subTitle: isEn ? "VICE MODE: DELUSION" : "POROČNI REŽIM: ZABLUDA",
+src/components/CompanionSvgs.tsx:        subTitle: isEn ? "VICE MODE" : "POROČNI REŽIM",
+src/components/CompanionSvgs.tsx:        species: isEn ? "Pet Companion" : "Ljubimac",
+src/components/DopamineEducation.tsx:        title: isEn ? "🏆 Optimal Receptors" : "🏆 Optimalni Receptori",
+src/components/DopamineEducation.tsx:        title: isEn ? "⚖️ Mildly Desensitized" : "⚖️ Blaga desenzitizacija",
+src/components/DopamineEducation.tsx:        title: isEn ? "🚨 Receptor Exhaustion" : "🚨 Iscrpljenost Receptora",
+src/components/DopamineEducation.tsx:          {isEn ? "Neurobiology & Dopamine Lab" : "Laboratorija Uma i Dopamina"}
+src/components/DopamineEducation.tsx:            { id: "simulator", label: isEn ? "🔬 Simulator" : "🔬 Simulator" },
+src/components/DopamineEducation.tsx:              label: isEn ? "📊 Brain Audit" : "📊 Test Receptora",
+src/components/DopamineEducation.tsx:            { id: "laws", label: isEn ? "🧠 Laws" : "🧠 Zakoni Uma" },
+src/components/DopamineEducation.tsx:            { id: "reset", label: isEn ? "🔄 Reset" : "🔄 Nedeljni Reset" },
+src/components/DopamineEducation.tsx:                          {isEn ? activeData.titleEn : activeData.titleSr}
+src/components/DopamineEducation.tsx:                      <p>{isEn ? activeData.neuroEn : activeData.neuroSr}</p>
+src/components/DopamineEducation.tsx:                          {isEn ? "Dopamine Amplitude" : "Amplituda Dopamina"}
+src/components/DopamineEducation.tsx:                          {isEn ? "Time Duration" : "Faza i oporavak"}
+src/components/DopamineEducation.tsx:                          {isEn ? "Peak Effect" : "Špica / Pik"}
+src/components/DopamineEducation.tsx:                          {isEn ? activeData.peakEn : activeData.peakSr}
+src/components/DopamineEducation.tsx:                          {isEn ? "Recovery / Crash" : "Krah / Oporavak"}
+src/components/DopamineEducation.tsx:                          {isEn ? activeData.crashEn : activeData.crashSr}
+src/components/DopamineEducation.tsx:                          {isEn ? item.labelEn : item.labelSr}
+src/components/DopamineEducation.tsx:                      {isEn ? item.titleEn : item.titleSr}
+src/components/DopamineEducation.tsx:                      {isEn ? item.descEn : item.descSr}
+src/components/DopamineEducation.tsx:                          {isEn ? d.titleEn : d.titleSr}
+src/components/DopamineEducation.tsx:                          {isEn ? d.descEn : d.descSr}
+src/components/DopamineEducation.tsx:                            title: `(${d.day}/7) ${isEn ? d.titleEn : d.titleSr}`,
+src/components/DopamineEducation.tsx:                            description: isEn ? d.descEn : d.descSr,
+src/components/DopamineEducation.tsx:                        {isEn ? "+ Try Routine Today" : "+ Isprobaj danas"}
+src/components/DopamineTracker.tsx:      timestamp: new Date().toLocaleDateString(isEn ? "en-US" : "sr-RS", {
+src/components/DopamineTracker.tsx:              {isEn ? "Dopamine & Focus Protocol" : "Dopamin i Protokol Pažnje"}
+src/components/DopamineTracker.tsx:              { id: "analyser", label: isEn ? "🔬 Evaluator" : "🔬 Evaluator" },
+src/components/DopamineTracker.tsx:                label: isEn ? "🧪 Focus Audit" : "🧪 Provera Fokusa",
+src/components/DopamineTracker.tsx:                label: isEn ? "📚 Science & Resets" : "📚 Nauka & Reset",
+src/components/DopamineTracker.tsx:                label: isEn ? "🤖 Neuro AI Coach" : "🤖 Neuro Asistent",
+src/components/DopamineTracker.tsx:                label: isEn ? "📋 Saved Logs" : "📋 Sačuvani pici",
+src/components/DopamineTracker.tsx:                      {isEn ? "Clear" : "Isprazni"}
+src/components/DopamineTracker.tsx:                              {isEn ? "Diagnosing..." : "Analiziram..."}
+src/components/DopamineTracker.tsx:                            <span>{isEn ? "Complete!" : "Završeno!"}</span>
+src/components/DopamineTracker.tsx:                            <span>{isEn ? "Error" : "Greška"}</span>
+src/components/DopamineTracker.tsx:                                  {isEn ? "Rescue Action" : "Brza akcija"}
+src/components/DopamineTracker.tsx:                              {isEn ? "Discard" : "Poništi"}
+src/components/DopamineTracker.tsx:                                {isEn ? "Save to Logs" : "Sačuvaj u zapisnik"}
+src/components/DopamineTracker.tsx:                      {isEn ? "BIOMETRY" : "BIOMED"}
+src/components/DopamineTracker.tsx:                                        {isEn ? opt.labelEn : opt.labelSr}
+src/components/DopamineTracker.tsx:                                <span>{isEn ? "Back" : "Nazad"}</span>
+src/components/DopamineTracker.tsx:                                <span>{isEn ? "Next" : "Sledeće"}</span>
+src/components/DopamineTracker.tsx:                            {isEn ? "Focus" : "Fokus"}
+src/components/DopamineTracker.tsx:                            {isEn ? "Stimulation" : "Stim."}
+src/components/DopamineTracker.tsx:                            {isEn ? "Rest" : "Buffer"}
+src/components/DopamineTracker.tsx:                                    {isEn ? "DOPAMINE LEVEL" : "NIVO DOPAMINA"}
+src/components/DopamineTracker.tsx:                                {isEn ? profileDescEn : profileDescSr}
+src/components/DopamineTracker.tsx:                                      isEn ? "Copy advice" : "Kopiraj savet"
+src/components/DopamineTracker.tsx:                      {isEn ? "Send" : "Pitaj"}
+src/components/DopamineTracker.tsx:                          setChatInput(isEn ? cue.promptEn : cue.promptSr);
+src/components/DopamineTracker.tsx:                        {isEn ? cue.titleEn : cue.titleSr} →
+src/components/DopamineTracker.tsx:                    {savedDecisions.length} {isEn ? "logged" : "zapisa"}
+src/components/DopamineTracker.tsx:                                  {isEn ? "Delete Log" : "Ukloni zapis"}
+src/components/DopamineTracker.tsx:                              <span>{isEn ? "Previous" : "Prethodni"}</span>
+src/components/DopamineTracker.tsx:                              <span>{isEn ? "Next" : "Sledeći"}</span>
+src/components/FocusState.tsx:              {language === "en" ? "Skip Break" : "Preskoči pauzu"}
+src/components/HomePortal.tsx:  let greeting = isEn ? "Good Morning" : "Dobro Jutro";
+src/components/HomePortal.tsx:    greeting = isEn ? "Good Afternoon" : "Dobar Dan";
+src/components/HomePortal.tsx:    greeting = isEn ? "Good Evening" : "Dobro Veče";
+src/components/HomePortal.tsx:          (language === "en" ? "Analysis complete." : "Analiza završena."),
+src/components/HomePortal.tsx:            {isEn ? "You're on an exceptional" : "Nalazite se u izuzetnom"}
+src/components/HomePortal.tsx:              {isEn ? "Lock In" : "Zaključaj"}
+src/components/HomePortal.tsx:          {isEn ? "Recommended Actions" : "Preporučene akcije"}
+src/components/HomePortal.tsx:                {tasksCount.critical} {isEn ? "Critical pending" : "Kritičnih"}
+src/components/HomePortal.tsx:                {isEn ? "Execute Priorities" : "Izvršavanje prioriteta"}
+src/components/HomePortal.tsx:                {isEn ? "Mental Reset & Mindset" : "Mentalni Reset"}
+src/components/HomePortal.tsx:          {isEn ? "Core Modules" : "Glavni Moduli"}
+src/components/HomePortal.tsx:                    {isEn ? mod.labelEn : mod.labelSr}
+src/components/HomePortal.tsx:                        (isEn ? "Dopamine Resets" : "3. Optimizacija Dopamina")}
+src/components/HomePortal.tsx:                        (isEn ? "Cognitive AI Lab" : "5. Kognitivni Trener")}
+src/components/HomePortal.tsx:                        {isEn ? "Prev" : "Nazad"}
+src/components/HomePortal.tsx:                        <span>{isEn ? "Next" : "Sledeće"}</span>
+src/components/HomePortal.tsx:                        {isEn ? "Got It!" : "Sve jasno!"}
+src/components/MatrixOverview.tsx:                                language === "en" ? "Delete Task" : "Obriši"
+src/components/MatrixOverview.tsx:                        language === "en" ? "Task title..." : "Naziv zadatka..."
+src/components/MatrixOverview.tsx:                      {language === "en" ? "Quick Add" : "Brzi unos u"}{" "}
+src/components/MatrixOverview.tsx:                        A - {language === "en" ? "Must" : "Mora"}
+src/components/MatrixOverview.tsx:                        B - {language === "en" ? "Should" : "Trebalo bi"}
+src/components/MatrixOverview.tsx:                        C - {language === "en" ? "Nice" : "Moguće"}
+src/components/MatrixOverview.tsx:                        D - {language === "en" ? "Delegate" : "Delegirati"}
+src/components/MatrixOverview.tsx:                        E - {language === "en" ? "Eliminate" : "Eliminisati"}
+src/components/MindsetCoach.tsx:      title: isEn ? "Activating Event" : "Okidač (Situacija)",
+src/components/MindsetCoach.tsx:        decodedA || (isEn ? "No event entered." : "Nema unetog događaja."),
+src/components/MindsetCoach.tsx:      title: isEn ? "Beliefs & Demands" : "Uverenja i Moranja",
+src/components/MindsetCoach.tsx:      title: isEn ? "Consequences" : "Posledice",
+src/components/MindsetCoach.tsx:        (isEn ? "No consequence specified." : "Nema unete posledice."),
+src/components/MindsetCoach.tsx:        title: isEn ? "Activating Event" : "Okidač (Situacija)",
+src/components/MindsetCoach.tsx:          decodedA || (isEn ? "No event entered." : "Nema unetog događaja."),
+src/components/MindsetCoach.tsx:        title: isEn ? "Beliefs & Demands" : "Uverenja i Moranja",
+src/components/MindsetCoach.tsx:        title: isEn ? "Consequences" : "Posledice",
+src/components/MindsetCoach.tsx:          (isEn ? "No consequences entered." : "Nema unetih posledica."),
+src/components/MindsetCoach.tsx:        title: isEn ? "Disputing (AI Coach)" : "Osporavanje (Kognitivni rad)",
+src/components/MindsetCoach.tsx:        title: isEn ? "New Perspective" : "Nova Fleksibilnost",
+src/components/MindsetCoach.tsx:          ? `**${isEn ? "Facts Entered:" : "Uneti Okidač:"}** ${decodedA}\n\n`
+src/components/MindsetCoach.tsx:        decodedA || (isEn ? "No event entered." : "Nema unetog događaja.");
+src/components/MindsetCoach.tsx:          ? `**${isEn ? "Demands Entered:" : "Uneto Moranje / Uverenje:"}** ${decodedB}\n\n`
+src/components/MindsetCoach.tsx:        `**${isEn ? "Consequences Entered:" : "Unete Posledice:"}** ${decodedC}\n\n` +
+src/components/MindsetCoach.tsx:          ? `\n\n*${isEn ? "CBT Context Analysis:" : "KBT Kontekst Analiza:"}*\n${partAC}`
+src/components/MindsetCoach.tsx:        (isEn ? "No consequences entered." : "Nema unetih posledica.");
+src/components/MindsetCoach.tsx:        (isEn ? "Mentor answered silently." : "Nema odgovora od mentora.");
+src/components/MindsetCoach.tsx:        (isEn ? "Mentor answered silently." : "Nema odgovora od mentora.");
+src/components/MindsetCoach.tsx:      setRebtError(isEn ? "Failed: " + e.message : "Greška: " + e.message);
+src/components/MindsetCoach.tsx:            🧠 {isEn ? "Cognitive Alignment Suite" : "Kognitivni AI Mentor"}
+src/components/MindsetCoach.tsx:                {isEn ? "Clear All" : "Isprazni sve"}
+src/components/MindsetCoach.tsx:                        ⚡ {isEn ? "Recommended Route:" : "Preporučena ruta:"}{" "}
+src/components/MindsetCoach.tsx:                            {isEn ? "Biohack Expert" : "Biohaker AI"}
+src/components/MindsetCoach.tsx:                            {isEn ? "TA Expert" : "TA Ekspert"}
+src/components/MindsetCoach.tsx:                            {isEn ? "NLP / Murphy AI" : "NLP / Marfi AI"}
+src/components/MindsetCoach.tsx:                          title={isEn ? "Discard" : "Odbaci"}
+src/components/MindsetCoach.tsx:                  {isEn ? tab.labelEn : tab.labelSr}
+src/components/MindsetCoach.tsx:                  {isEn ? "Omni-AI Dialogue" : "Razgovor sa Omni-Mentorom"}
+src/components/MindsetCoach.tsx:                          title={isEn ? "Copy advice" : "Kopiraj savet"}
+src/components/MindsetCoach.tsx:                placeholder={isEn ? "Message..." : "Poruka..."}
+src/components/MindsetCoach.tsx:                title={isEn ? "Send message" : "Pošalji poruku"}
+src/components/MindsetCoach.tsx:                  onClick={() => handleSendChatMessage(isEn ? rec.en : rec.sr)}
+src/components/MindsetCoach.tsx:                  {isEn ? rec.en : rec.sr}
+src/components/MindsetCoach.tsx:                  {isEn ? "Clear history" : "Očisti istoriju"}
+src/components/MindsetCoach.tsx:                        {isEn ? "Restore" : "Vrati"}
+src/components/MindsetCoach.tsx:                        {isEn ? "REBT Phase" : "REBT Faza"}{" "}
+src/components/MindsetCoach.tsx:                      👈 {isEn ? "Swipe" : "Prevucite"} 👉
+src/components/MindsetCoach.tsx:                      🔍 {isEn ? "Tap to zoom" : "Dodirni za uvećanje"}
+src/components/MindsetCoach.tsx:                          {isEn ? "REBT Cognitive Phase" : "KBT REBT faza"}{" "}
+src/components/MindsetCoach.tsx:                      {isEn ? "Done" : "Gotovo"}
+src/components/MindsetCoach.tsx:                      ‹ {isEn ? "Prev" : "Nazad"}
+src/components/MindsetCoach.tsx:                      {isEn ? "Next" : "Dalje"} ›
+src/components/MindsetCoach.tsx:                  {isEn ? "Clear history" : "Očisti istoriju"}
+src/components/MindsetCoach.tsx:                          {isEn ? "Restore" : "Vrati"}
+src/components/MindsetCoach.tsx:                        {isEn ? "Event: " : "Situacija: "} {cleanQuery}...
+src/components/MindsetCoach.tsx:                          title={isEn ? "Copy advice" : "Kopiraj savet"}
+src/components/MindsetCoach.tsx:                placeholder={isEn ? "Message..." : "Poruka..."}
+src/components/MindsetCoach.tsx:                title={isEn ? "Send message" : "Pošalji poruku"}
+src/components/MindsetCoach.tsx:                  {isEn ? "Clear history" : "Očisti istoriju"}
+src/components/MindsetCoach.tsx:                        {isEn ? "Restore" : "Vrati"}
+src/components/MindsetCoach.tsx:                          title={isEn ? "Copy advice" : "Kopiraj savet"}
+src/components/MindsetCoach.tsx:                  isEn ? "Why is it happening..." : "Zasto se desava..."
+src/components/MindsetCoach.tsx:                title={isEn ? "Send message" : "Pošalji poruku"}
+src/components/MindsetCoach.tsx:                  onClick={() => handleSendTaMessage(isEn ? rec.en : rec.sr)}
+src/components/MindsetCoach.tsx:                  {isEn ? rec.en : rec.sr}
+src/components/MindsetCoach.tsx:                  ⏱️ {isEn ? "PAST TA SESSIONS" : "PRETHODNE TA SEANSE"}
+src/components/MindsetCoach.tsx:                  {isEn ? "Clear history" : "Očisti istoriju"}
+src/components/MindsetCoach.tsx:                        {isEn ? "Restore" : "Vrati"}
+src/components/MorningAIHub.tsx:      [id]: isEn ? "Sent to Vision Chamber ✓" : "Poslato u Stratešku Sobu ✓",
+src/components/MorningAIHub.tsx:      [id]: isEn ? "Added to ABCDE (A) ✓" : "Dodato u ABCDE (A) ✓",
+src/components/MorningAIHub.tsx:      isEn ? `Resolve concern: ${worryText}` : `Reši zabrinutost: ${worryText}`,
+src/components/MorningAIHub.tsx:      [id]: isEn ? "Added to ABCDE (B) ✓" : "Dodato u ABCDE (B) ✓",
+src/components/MorningAIHub.tsx:      [id]: isEn ? "Mentally Released 🌬️" : "Mentalno Otpušteno 🌬️",
+src/components/MorningAIHub.tsx:      [id]: isEn ? "Saved to Sandbox (C) ✓" : "Sačuvano u Sandbox (C) ✓",
+src/components/MorningAIHub.tsx:      [id]: isEn ? "Sent to Vision Chamber ✓" : "Poslato u Stratešku Sobu ✓",
+src/components/MorningAIHub.tsx:      [id]: isEn ? "Tracked in ABCDE (D) ✓" : "Prati se u ABCDE (D) ✓",
+src/components/MorningAIHub.tsx:      [id]: isEn ? "Added to Sandbox (E) ✓" : "Dodato u Sandbox (E) ✓",
+src/components/MorningAIHub.tsx:                language === "en" ? data.suggestedMicrohabit.twoMinVersion : "",
+src/components/MorningAIHub.tsx:              whyEn: language === "en" ? data.tip : "",
+src/components/MorningAIHub.tsx:            title: (isEn ? "Pending: " : "Na čekanju: ") + wf,
+src/components/MorningAIHub.tsx:            title: (isEn ? "Future: " : "Dugoročno: ") + nt,
+src/components/MorningAIHub.tsx:      const prompt = `Perform a high-level cognitive audit of the user's weekly operation logs:\n${promptLogs}\n\nGenerate a professional 4-part operating review containing:\n1. WHAT GAVE ENERGY (What themes & metrics boosted user energy)\n2. WHAT DRAINED ENERGY (Key blockers, storms or fog patterns)\n3. WHAT TO REMOVE (Inefficiencies, bad habits, categories)\n4. WHAT TO REPEAT (Successful loops, positive routines)\n\nProvide the analysis in ${isEn ? "English" : "Serbian"} with rich visual bullet points and formatting. Keep it elegant, clear and highly actionable.`;
+src/components/MorningAIHub.tsx:            {isEn ? "COGNITIVE COMMAND CENTER" : "KOGNITIVNI KOMANDNI CENTAR"}
+src/components/MorningAIHub.tsx:              {isEn ? "TODAY'S RESET COMMITTED" : "JUTARNJI RESET AKTIVAN"}
+src/components/MorningAIHub.tsx:              title={isEn ? "Restart Morning Reset" : "Ponovi reset"}
+src/components/MorningAIHub.tsx:                      {isEn ? "CHARACTERS:" : "ZNAKOVI:"}
+src/components/MorningAIHub.tsx:                      150+ {isEn ? "recommended" : "preporučeno"}
+src/components/MorningAIHub.tsx:                      {isEn ? "Open Vault" : "Otvori Trezor"}
+src/components/MorningAIHub.tsx:                      <span>{isEn ? "Clear" : "Isprazni"}</span>
+src/components/MorningAIHub.tsx:                    {isEn ? "Learn More 💡" : "Saznaj više 💡"}
+src/components/MorningAIHub.tsx:                          {isEn ? pre.labelEn : pre.labelSr}
+src/components/MorningAIHub.tsx:                        ⚡ {isEn ? "Energy Level" : "Nivo Fiziološke Energije"}
+src/components/MorningAIHub.tsx:                      <span>{isEn ? "-5 Fatigue" : "-5 Iscrpljeno"}</span>
+src/components/MorningAIHub.tsx:                      <span>{isEn ? "+5 Charge" : "+5 Prepuno"}</span>
+src/components/MorningAIHub.tsx:                        🎭 {isEn ? "Pleasantness" : "Biološka Prijatnost"}
+src/components/MorningAIHub.tsx:                      <span>{isEn ? "-5 Stressor" : "-5 Stresor"}</span>
+src/components/MorningAIHub.tsx:                      <span>{isEn ? "+5 Harmony" : "+5 Harmonija"}</span>
+src/components/MorningAIHub.tsx:                          {isEn ? "Pleasantness" : "Prijatnost"}
+src/components/MorningAIHub.tsx:                          {isEn ? "Energy" : "Energija"}
+src/components/MorningAIHub.tsx:                    ← {isEn ? "Back to dump text" : "Nazad na unos teksta"}
+src/components/MorningAIHub.tsx:                    {isEn ? "Archive" : "Arhiva unosa"}
+src/components/MorningAIHub.tsx:                      <span>{isEn ? "Clear" : "Isprazni"}</span>
+src/components/MorningAIHub.tsx:                            {isEn ? "Refining Map..." : "Mapiranje..."}
+src/components/MorningAIHub.tsx:                            {isEn ? "Mind Synced!" : "Um sinhronizovan!"}
+src/components/MorningAIHub.tsx:                          <span>{isEn ? "Error" : "Greška"}</span>
+src/components/MorningAIHub.tsx:                            {isEn ? "Analyze My Mind" : "Analiziraj moj um"}
+src/components/MorningAIHub.tsx:                        {isEn ? opt.labelEn : opt.labelSr}
+src/components/MorningAIHub.tsx:                  ← {isEn ? "Back" : "Nazad"}
+src/components/MorningAIHub.tsx:                      {isEn ? "CHARACTERS:" : "ZNAKOVI:"}
+src/components/MorningAIHub.tsx:                      500+ {isEn ? "recommended" : "preporučeno"}
+src/components/MorningAIHub.tsx:                  ← {isEn ? "Back" : "Nazad"}
+src/components/MorningAIHub.tsx:                        <span>{isEn ? "Refining Map..." : "Mapiranje..."}</span>
+src/components/MorningAIHub.tsx:                          {isEn ? "Mind Synced!" : "Um sinhronizovan!"}
+src/components/MorningAIHub.tsx:                        <span>{isEn ? "Error" : "Greška"}</span>
+src/components/MorningAIHub.tsx:                          {isEn ? "Analyze My Mind" : "Analiziraj moj um"}
+src/components/MorningAIHub.tsx:                      {isEn ? "Brackett Register" : "Matrica Brackett"}
+src/components/MorningAIHub.tsx:                      {isEn ? "Operational Quadrant" : "Operativni kvadrant"}
+src/components/MorningAIHub.tsx:                        {isEn ? "State Indicator:" : "Identifikator stanja:"}
+src/components/MorningAIHub.tsx:                      <span>{isEn ? "Quadrant Tag:" : "Naziv kvadranta:"}</span>
+src/components/MorningAIHub.tsx:                        {isEn ? "1. EMOTION SIGNAL" : "1. EMOCIONALNI SIGNAL"}
+src/components/MorningAIHub.tsx:                          (isEn ? "Internal clutter" : "Mentalni nered")}
+src/components/MorningAIHub.tsx:                        {isEn ? "3. COGNITIVE NEED" : "3. KOGNITIVNA POTREBA"}
+src/components/MorningAIHub.tsx:                          (isEn ? "Clarity" : "Jasnoća")}
+src/components/MorningAIHub.tsx:                            (isEn ? "Priority Board" : "Prioritetna tabla")}
+src/components/MorningAIHub.tsx:                        ⚡ {isEn ? "EXECUTE MODULE" : "OTVORI MODUL"}
+src/components/MorningAIHub.tsx:                                        `${isEn ? "Micro-routine:" : "Mikrorutina:"} ${suggestedBiohackHabit.twoMinVersion}`,
+src/components/MorningAIHub.tsx:                      <span>{isEn ? "GIVE ME MORE" : "DAJ MI JOŠ"}</span>
+src/components/MorningAIHub.tsx:                  ← {isEn ? "Back" : "Nazad"}
+src/components/MorningAIHub.tsx:                      {isEn ? "Your Raw Input:" : "Vaš jutarnji unos:"}
+src/components/MorningAIHub.tsx:                      type: isEn ? "Cognitive Need" : "Kognitivna Potreba",
+src/components/MorningAIHub.tsx:                        (isEn ? "Clarity and Control" : "Jasnoća i kontrola"),
+src/components/MorningAIHub.tsx:                              type: isEn ? "Biohack Advice" : "Biohaking Savet",
+src/components/MorningAIHub.tsx:                                `${isEn ? "Micro-routine:" : "Mikrorutina:"} ${suggestedBiohackHabit.twoMinVersion}`,
+src/components/MorningAIHub.tsx:                                type: isEn ? "Task" : "Zadatak",
+src/components/MorningAIHub.tsx:                                      isEn ? "Remove task" : "Ukloni zadatak"
+src/components/MorningAIHub.tsx:                      🎯 {isEn ? "Multi-step Goals" : "Dugoročni ciljevi"}
+src/components/MorningAIHub.tsx:                                  type: isEn ? "Goal" : "Cilj",
+src/components/MorningAIHub.tsx:                      🧠 {isEn ? "Anxieties & Worries" : "Brige i anksioznost"}
+src/components/MorningAIHub.tsx:                                  type: isEn ? "Worry" : "Briga / Anksioznost",
+src/components/MorningAIHub.tsx:                      💡 {isEn ? "Inspirations & Ideas" : "Seme novih ideja"}
+src/components/MorningAIHub.tsx:                                  type: isEn ? "Idea" : "Ideja",
+src/components/MorningAIHub.tsx:                      {isEn ? "Confidence" : "Pouzdanost"})
+src/components/MorningAIHub.tsx:                        title: isEn ? "Mentor's Advice" : "Savet",
+src/components/MorningAIHub.tsx:                          title: isEn ? "Deep Insight" : "Uvid u Obrasce",
+src/components/MorningAIHub.tsx:                              {isEn ? "Event (Trigger)" : "Događaj (Okidač)"}
+src/components/MorningAIHub.tsx:                              {isEn ? "Consequences" : "Posledice"}
+src/components/MorningAIHub.tsx:                                title: isEn ? "Recovery Plan" : "Plan oporavka",
+src/components/MorningAIHub.tsx:                              {isEn ? "Recovery Plan" : "Plan oporavka"}
+src/components/MorningAIHub.tsx:                              {isEn ? "Why it helps" : "Zašto ovo pomaže"}
+src/components/MorningAIHub.tsx:                              {isEn ? "How to execute" : "Kako da ovo izvedeš"}
+src/components/MorningAIHub.tsx:                  ← {isEn ? "Back" : "Nazad"}
+src/components/MorningAIHub.tsx:                    🗄️ {isEn ? "Vault" : "Trezor"}
+src/components/MorningAIHub.tsx:                      🔄 {isEn ? "Redo Reset" : "Ponovi reset"}
+src/components/MorningAIHub.tsx:                      <span>{isEn ? "Finish & Save" : "Završi i Sačuvaj"}</span>
+src/components/MorningAIHub.tsx:                {isEn ? "Close" : "Zatvori"}
+src/components/MorningAIHub.tsx:                            {isEn ? "Your Input:" : "Unos korisnika:"}
+src/components/MorningAIHub.tsx:                            {isEn ? "Agent's Solution:" : "Rešenje Agenta:"}
+src/components/MorningAIHub.tsx:                        {isEn ? "ANALYZED WORRY:" : "IDENTIFIKOVANA BRIGA:"}
+src/components/MorningAIHub.tsx:                              {isEn ? "Under Control" : "Pod kontrolom"}
+src/components/MorningAIHub.tsx:                              {isEn ? "Outside Control" : "Van kontrole"}
+src/components/MorningAIHub.tsx:                              {isEn ? "Done" : "Završi"}
+src/components/MorningAIHub.tsx:                                    `${isEn ? "Action extracted from worry:" : "Preventivna akcija izdvojena iz brige:"} ${expandedCard.description}`,
+src/components/MorningAIHub.tsx:                              {isEn ? "Action Saved!" : "Akcija sačuvana!"}
+src/components/MorningAIHub.tsx:                              {isEn ? "Close" : "Zatvori"}
+src/components/MorningAIHub.tsx:                      {isEn ? "Brain Dump History" : "Istorija Unosa"}
+src/components/ParetoAnalyzer.tsx:    effort: isEn ? "Effort (Time Spent)" : "Napor (Potrošeno vreme)",
+src/components/ParetoAnalyzer.tsx:    impact: isEn ? "Impact (Reward)" : "Efekat (Nagrada)",
+src/components/ParetoAnalyzer.tsx:    addBtn: isEn ? "Add Input" : "Dodaj aktivnost",
+src/components/ParetoAnalyzer.tsx:    leverageScore: isEn ? "Leverage Index" : "Indeks poluge",
+src/components/ParetoAnalyzer.tsx:    analyzeBtn: isEn ? "Find My 20% Catalyst" : "Pronađi ključnih 20% sa AI",
+src/components/ParetoAnalyzer.tsx:    actionBtn: isEn ? "Promote to Priority Board" : "Prebaci na prioritete",
+src/components/ParetoAnalyzer.tsx:              {isEn ? "Add Activity to Analyze" : "Dodajte novu aktivnost"}
+src/components/ParetoAnalyzer.tsx:              <span>{isEn ? "Scoring Wizard" : "Pomoćnik za bodove"}</span>
+src/components/ParetoAnalyzer.tsx:                        {isEn ? "AI Estimating..." : "Procenjivanje..."}
+src/components/ParetoAnalyzer.tsx:                      {isEn ? "Confirm" : "Potvrdi"}
+src/components/ParetoAnalyzer.tsx:                      {isEn ? "Skip" : "Preskoči"}
+src/components/ParetoAnalyzer.tsx:              {items.length} {isEn ? "items" : "aktivnosti"}
+src/components/ParetoAnalyzer.tsx:                          {isEn ? "Outcome weight" : "Udeo u uspehu"}:{" "}
+src/components/ParetoAnalyzer.tsx:                        title={isEn ? "Delete item" : "Ukloni"}
+src/components/ParetoAnalyzer.tsx:                      {isEn ? "Sorting Leverages..." : "AI meri polugu..."}
+src/components/ParetoAnalyzer.tsx:                      {isEn ? "Analysis Complete!" : "Analiza uspešna!"}
+src/components/ParetoAnalyzer.tsx:                    <span>{isEn ? "Error" : "Greška"}</span>
+src/components/ParetoAnalyzer.tsx:                isEn ? "Pareto Insight" : "Pareto Savetnik",
+src/components/ParetoAnalyzer.tsx:                            {isEn ? "Impact" : "Udeo rezultata"}
+src/components/ParetoAnalyzer.tsx:                    {isEn ? "Mark to Eliminate" : "Premesti u Eliminaciju"} (E)
+src/components/ParetoAnalyzer.tsx:                          const name = isEn ? tmpl.nameEn : tmpl.nameSr;
+src/components/ParetoAnalyzer.tsx:                          const desc = isEn ? tmpl.descEn : tmpl.descSr;
+src/components/ParetoAnalyzer.tsx:                          const cat = isEn ? tmpl.catEn : tmpl.catSr;
+src/components/ParetoAnalyzer.tsx:                                      {isEn ? "Effort" : "Napor"}
+src/components/ParetoAnalyzer.tsx:                                      {isEn ? "Impact" : "Efekat"}
+src/components/ParetoAnalyzer.tsx:                      {isEn ? "Close Companion" : "Zatvori prozor"}
+src/components/PetSanctuary.tsx:      showBubble(isEn ? "Need more coins!" : "Nemaš dovoljno novčića!");
+src/components/PetSanctuary.tsx:            {isEn ? "Level" : "Nivo"}
+src/components/PetSanctuary.tsx:            {isEn ? "Coins" : "Novčići"}
+src/components/PetSanctuary.tsx:            {isEn ? "Happiness" : "Sreća"}
+src/components/PetSanctuary.tsx:              {isEn ? "Feed" : "Nahrani"}
+src/components/PetSanctuary.tsx:              -15 {isEn ? "Coins" : "Novčića"}
+src/components/PetSanctuary.tsx:              {isEn ? "Pet" : "Pomazi"}
+src/components/PetSanctuary.tsx:              {isEn ? "Free" : "Besplatno"}
+src/components/PetSanctuary.tsx:              {isEn ? "Bath" : "Okupaj"}
+src/components/PetSanctuary.tsx:              -10 {isEn ? "Coins" : "Novčića"}
+src/components/PetSanctuary.tsx:              {isEn ? "Sleep" : "Uspavaj"}
+src/components/PetSanctuary.tsx:              {isEn ? "Free" : "Besplatno"}
+src/components/PetSanctuary.tsx:              {isEn ? "Play" : "Igraj se"}
+src/components/PetSanctuary.tsx:              -12 {isEn ? "Coins" : "Novčića"}
+src/components/PetSanctuary.tsx:              {isEn ? "Daily Tasks" : "Zadaci"}
+src/components/PetSanctuary.tsx:              {isEn ? "Eter-Market" : "Eterska Prodavnica"}
+src/components/PetSanctuary.tsx:                      {isEn ? item.nameEn : item.nameSr}
+src/components/PetSanctuary.tsx:                      +{item.rxp}XP • +{item.rh}% {isEn ? "Joy" : "Sreća"}
+src/components/PetSanctuary.tsx:              {isEn ? "Lumi's Biological Index" : "Lumi Biološki Indeks"}
+src/components/PetSanctuary.tsx:                <span>🍖 {isEn ? "Satiety" : "Sitost"}</span>
+src/components/PetSanctuary.tsx:                <span>❤️ {isEn ? "Happiness" : "Sreća / Ljubav"}</span>
+src/components/PetSanctuary.tsx:                <span>⚡ {isEn ? "Energy" : "Energija (Odmor)"}</span>
+src/components/PetSanctuary.tsx:                <span>🚿 {isEn ? "Hygiene" : "Higijena (Čistoća)"}</span>
+src/components/ProgressMatrix.tsx:      name: isEn ? "Complete Priority A1 Task" : "Završen glavni A1 zadatak",
+src/components/ProgressMatrix.tsx:      name: isEn ? "Review Life Balance" : "Analiziraj balans (krug života)",
+src/components/ProgressMatrix.tsx:        description: `${isEn ? "Micro-routine format:" : "Mikrorutina:"} ${sh.twoMinVersion}`,
+src/components/ProgressMatrix.tsx:          description: `${isEn ? "Micro-routine:" : "Mikrorutina:"} ${sh.twoMinVersion}`,
+src/components/ProgressMatrix.tsx:    addHabit: isEn ? "Add Habit / Routine" : "Dodaj novu naviku ili rutinu",
+src/components/ProgressMatrix.tsx:    twoMinLabel: isEn ? "The Micro-routine:" : "Mikrorutina:",
+src/components/ProgressMatrix.tsx:    afterLabel: isEn ? "After I..." : "Nakon što...",
+src/components/ProgressMatrix.tsx:    willLabel: isEn ? "I will..." : "ja ću odmah...",
+src/components/ProgressMatrix.tsx:    btnStack: isEn ? "Stack Habit" : "Poveži navike",
+src/components/ProgressMatrix.tsx:    willDo: isEn ? "I will do..." : "Ja ću uraditi...",
+src/components/ProgressMatrix.tsx:    whereDo: isEn ? "at location..." : "na lokaciji...",
+src/components/ProgressMatrix.tsx:    whenDo: isEn ? "at time..." : "u vreme...",
+src/components/ProgressMatrix.tsx:    btnIntent: isEn ? "Establish Intention" : "Ureži nameru",
+src/components/ProgressMatrix.tsx:    streakHeader: isEn ? "Peak Streak Flame" : "Vatreni niz doslednosti",
+src/components/ProgressMatrix.tsx:    daysStreak: isEn ? "days streak" : "dana zaredom",
+src/components/ProgressMatrix.tsx:    gridLegend: isEn ? "Activity Level" : "Nivo aktivnosti",
+src/components/ProgressMatrix.tsx:    legendLess: isEn ? "Less" : "Manje",
+src/components/ProgressMatrix.tsx:    legendMore: isEn ? "More" : "Više",
+src/components/ProgressMatrix.tsx:    btnResetAll: isEn ? "Reset Progress Logs" : "Resetuj sve logove",
+src/components/ProgressMatrix.tsx:    completedCount: isEn ? "habits checked" : "završenih navika",
+src/components/ProgressMatrix.tsx:        label: d.toLocaleDateString(isEn ? "en-US" : "sr-RS", {
+src/components/ProgressMatrix.tsx:                        title={isEn ? "Clear" : "Ukloni"}
+src/components/ProgressMatrix.tsx:                                    {isEn ? "Dismiss" : "Odustani"}
+src/components/ProgressMatrix.tsx:                                    {isEn ? "Save" : "Sačuvaj"}
+src/components/ProgressMatrix.tsx:                                      {isEn ? "Micro-routine:" : "Mikrorutina:"}
+src/components/ProgressMatrix.tsx:                        {isEn ? "Cancel" : "Otkaži"}
+src/components/ProgressMatrix.tsx:                        {isEn ? "Adopt as Mikrorutine" : "Usvoji mikrorutinu"}
+src/components/ProgressMatrix.tsx:                        {isEn ? "After" : "Nakon što"}
+src/components/ProgressMatrix.tsx:                        {isEn ? "I will" : "ja ću odmah"}
+src/components/ProgressMatrix.tsx:                      isEn ? "Meditate for 10m" : "Meditirati 10 minuta"
+src/components/ProgressMatrix.tsx:                      placeholder={isEn ? "in the bedroom" : "u spavaćoj sobi"}
+src/components/ProgressMatrix.tsx:                        {isEn ? "I will" : "Ja ću"}
+src/components/ProgressMatrix.tsx:                        {isEn ? "at" : "u"}
+src/components/ProgressMatrix.tsx:                        {isEn ? "in" : "na lokaciji"}
+src/components/ProgressMatrix.tsx:                {isEn ? "HOW TO SCORE CONSISTENCY" : "SAVETI ZA DOSLEDNOST"}
+src/components/ProgressMatrix.tsx:                    {isEn ? "1. Make It Obvious" : "1. Učini očiglednim"}
+src/components/ProgressMatrix.tsx:                    {isEn ? "2. Make It Attractive" : "2. Učini privlačnim"}
+src/components/ProgressMatrix.tsx:                    {isEn ? "3. Make It Easy" : "3. Učini jednostavnim"}
+src/components/ProgressMatrix.tsx:                    <span>{isEn ? tab.labelEn : tab.labelSr}</span>
+src/components/ProgressMatrix.tsx:                        {isEn ? personalizationTextEn : personalizationTextSr}
+src/components/ProgressMatrix.tsx:                        {isEn ? currentRoutine.nameEn : currentRoutine.nameSr}
+src/components/ProgressMatrix.tsx:                        title={isEn ? "Why do this?" : "Zašto ovo raditi?"}
+src/components/ProgressMatrix.tsx:                                  {isEn ? "Tracking" : "Prati se"}
+src/components/ProgressMatrix.tsx:                                  {isEn ? "Commit to habit" : "Prihvati naviku"}
+src/components/ProgressMatrix.tsx:                    title={`${isEn ? "Day" : "Dan"} ${rawIdx + 1} (${d.label}) - ${logCount} ${t.completedCount}`}
+src/components/SettingsPanel.tsx:      language === "en" ? "Account" : language === "tr" ? "Hesap" : "Nalog",
+src/components/SettingsPanel.tsx:      language === "en" ? "Light" : language === "tr" ? "Açık" : "Svetla",
+src/components/SettingsPanel.tsx:      language === "en" ? "Dark" : language === "tr" ? "Koyu" : "Tamna",
+src/components/SettingsPanel.tsx:      language === "en" ? "Cancel" : language === "tr" ? "İptal Et" : "Otkaži",
+src/components/SettingsPanel.tsx:      language === "en" ? "LANGUAGE" : language === "tr" ? "DİL" : "JEZIK",
+src/components/SettingsPanel.tsx:                  {isEn ? "NATIVE APPLE MOCKUP" : "DIZAJNIRAN ZA POČETNI EKRAN"}
+src/components/SettingsPanel.tsx:                    {isEn ? (
+src/components/SettingsPanel.tsx:                    {isEn ? (
+src/components/SettingsPanel.tsx:                    {isEn ? (
+src/components/SettingsPanel.tsx:                  {isEn ? "Native Viewport" : "Native Prikaz"}
+src/components/SettingsPanel.tsx:                  {isEn ? "Fullscreen PWA" : "Ceo ekran bez Safari bara"}
+src/components/SettingsPanel.tsx:                  {isEn ? "Launch Time" : "Kvantno pokretanje"}
+src/components/SettingsPanel.tsx:                  {isEn ? "Instant (0.8s)" : "Skoro trenutno (~0.8s)"}
+src/components/SettingsPanel.tsx:            {isEn ? "DATA MANAGEMENT" : "UPRAVLJANJE PODACIMA"}
+src/components/SettingsPanel.tsx:                  title: isEn ? "Contrast Alignment" : "Validovana čitljivost",
+src/components/SettingsPanel.tsx:                    {isEn ? "RESTART" : "RESTARTUJ"}
+src/components/StrategyPlayground.tsx:  const language: string = isEn ? "en" : "sr";
+src/components/StrategyPlayground.tsx:              {isEn ? "items queued" : "misli na čekanju"}
+src/components/StrategyPlayground.tsx:                {isEn ? "Add" : "Dodaj"}
+src/components/StrategyPlayground.tsx:                  -- {isEn ? "Choose pre-defined factor" : "Izaberi ponuđeno"}{" "}
+src/components/StrategyPlayground.tsx:                    {isEn ? "Finish my coffee" : "Ispijem jutarnju kafu"}
+src/components/StrategyPlayground.tsx:                    {isEn ? "Power on laptop" : "Upalim laptop ujutru"}
+src/components/StrategyPlayground.tsx:                    {isEn ? "Finish eating lunch" : "Završim sa ručkom"}
+src/components/StrategyPlayground.tsx:                    📱 {isEn ? "Daily Screen Time" : "Sati ispred ekrana"}
+src/components/StrategyPlayground.tsx:                  <option value="career">{isEn ? "Career" : "Karijera"}</option>
+src/components/StrategyPlayground.tsx:                  <option value="health">{isEn ? "Health" : "Zdravlje"}</option>
+src/components/StrategyPlayground.tsx:                    {isEn ? "Finances" : "Finansije"}
+src/components/StrategyPlayground.tsx:                    {isEn ? "Relationships" : "Ljubav & brak"}
+src/components/StrategyPlayground.tsx:                    {isEn ? "Growth" : "Edukacija & lični rast"}
+src/components/StrategyPlayground.tsx:                    {isEn ? "Leisure" : "Zabava & Slobodno vreme"}
+src/components/StrategyPlayground.tsx:                name: isEn ? "Cognitive Psych." : "Kognitivni Psiholog",
+src/components/StrategyPlayground.tsx:                name: isEn ? "Senior Advisor" : "Sistemski Savetnik",
+src/components/StrategyPlayground.tsx:                role: isEn ? "System Monitor" : "Glavni Savetnik",
+src/components/StrategyPlayground.tsx:                name: isEn ? "Rational Coach" : "Racionalni Trener",
+src/components/StrategyPlayground.tsx:                name: isEn ? "Neuro-Dopamine" : "Dopaminski Agent",
+src/components/StrategyPlayground.tsx:                role: isEn ? "Neuro-Regulator" : "Regulator Dopamina",
+src/components/StrategyPlayground.tsx:                name: isEn ? "Biohacker Expert" : "Biohaker Savetnik",
+src/components/StrategyPlayground.tsx:                role: isEn ? "Energy Optimizer" : "Optimizator Energije",
+src/components/TaskForm.tsx:                      placeholder={language === "en" ? "E.g. 45" : "Npr. 45"}
+src/components/TaskForm.tsx:                        placeholder={language === "en" ? "E.g. 45" : "Npr. 45"}
+src/components/TaskForm.tsx:                              {language === "en" ? "Error" : "Greška"}
+src/components/TaskList.tsx:  let title = isEn ? "No tasks to display" : "Nema zadataka za prikaz";
+src/components/TaskList.tsx:    title = isEn ? "Absolute Clean Slate" : "Potpuno čist horizont";
+src/components/TaskList.tsx:    badgeText = isEn ? "Zen Mode" : "Zen Stanje";
+src/components/TaskList.tsx:    title = isEn ? "All Clear & Done" : "Sve je završeno!";
+src/components/TaskList.tsx:    badgeText = isEn ? "Victory" : "Pobeda";
+src/components/TaskList.tsx:      A: isEn ? "Must Do (A)" : "Prioritet (A)",
+src/components/TaskList.tsx:      B: isEn ? "Should Do (B)" : "Trebalo bi (B)",
+src/components/TaskList.tsx:      C: isEn ? "Nice to Do (C)" : "Bilo bi lepo (C)",
+src/components/TaskList.tsx:      D: isEn ? "Delegate (D)" : "Delegiraj (D)",
+src/components/TaskList.tsx:      E: isEn ? "Eliminate (E)" : "Eliminiši (E)",
+src/components/TaskList.tsx:    badgeText = isEn ? `Category ${catFilter}` : `Kategorija ${catFilter}`;
+src/components/TaskList.tsx:    title = isEn ? "Awaiting Done Tasks" : "Prvi korak čeka na vas";
+src/components/TaskList.tsx:    badgeText = isEn ? "Getting Started" : "Pokretanje";
+src/components/TaskList.tsx:          {isEn ? "Reset Applied Filters" : "Ukloni filtere"}
+src/components/TaskList.tsx:                  {language === "en" ? "Select All" : "Izaberi sve"}
+src/components/TaskList.tsx:            {language === "en" ? "Category Legend:" : "Legenda kategorija:"}
+src/components/TaskList.tsx:            title={language === "en" ? "Must Do" : "Moraju se uraditi"}
+src/components/TaskList.tsx:            title={language === "en" ? "Should Do" : "Trebalo bi uraditi"}
+src/components/TaskList.tsx:            title={language === "en" ? "Nice to Do" : "Bilo bi lepo uraditi"}
+src/components/TaskList.tsx:            title={language === "en" ? "Delegate" : "Delegiraj"}
+src/components/TaskList.tsx:            title={language === "en" ? "Eliminate" : "Eliminiši"}
+src/components/TaskList.tsx:                      {language === "en" ? "Complete" : "Završi"}
+src/components/TaskList.tsx:                      {language === "en" ? "Delete" : "Obriši"}
+src/components/TaskList.tsx:                                🔁 {language === "en" ? "Once" : "Jednom"}
+src/components/TaskList.tsx:                                🔁 {language === "en" ? "Daily" : "Dnevno"}
+src/components/TaskList.tsx:                                🔁 {language === "en" ? "Weekly" : "Nedeljno"}
+src/components/TaskList.tsx:                                🔁 {language === "en" ? "Monthly" : "Mesečno"}
+src/components/TaskList.tsx:                                {language === "en" ? "PRESETS:" : "ŠABLONI:"}
+src/components/TaskList.tsx:                  {language === "en" ? "Cancel" : "Otkaži"}
+src/components/TaskList.tsx:                  {language === "en" ? "Save Reminder" : "Sačuvaj podsetnik"}
+src/components/TaskList.tsx:                  {language === "en" ? "Cancel" : "Otkaži"}
+src/components/TaskList.tsx:                  {language === "en" ? "Save Deadline" : "Sačuvaj rok"}
+src/components/TodayOperatingPlan.tsx:          isEn ? "Failed with network error." : "Snašla nas je mrežna greška.",
+src/components/TodayOperatingPlan.tsx:          label: isEn ? "Overloaded" : "Preopterećen",
+src/components/TodayOperatingPlan.tsx:          label: isEn ? "Drained" : "Iscrpljen",
+src/components/TodayOperatingPlan.tsx:          label: isEn ? "Focused" : "Fokusiran",
+src/components/TodayOperatingPlan.tsx:          label: isEn ? "Balanced" : "Uravnotežen",
+src/components/TodayOperatingPlan.tsx:              {isEn ? "KAIZEN OPERATING CORE" : "KAIZEN OPERATIVNO JEZGRO"}
+src/components/TodayOperatingPlan.tsx:                <span>🔒 {isEn ? "Locked" : "Zaključano"}</span>
+src/components/TodayOperatingPlan.tsx:                📥 {isEn ? "Universal Inbox Vault" : "Zapečaćeni Task Inbox"}
+src/components/TodayOperatingPlan.tsx:                {isEn ? "CLEAR VAULT" : "ISPRAZNI SVE"}
+src/components/TodayOperatingPlan.tsx:                            {isEn ? "MOVE TO BOARD:" : "PREBACI NA TABLU:"}
+src/components/TodayOperatingPlan.tsx:                        title={isEn ? "Remove Seed" : "Ukloni signal"}
+src/components/TodayOperatingPlan.tsx:                ➕ {isEn ? "Direct Port Input" : "Brzi upis u task inbox"}
+src/components/TodayOperatingPlan.tsx:                  {isEn ? "Source origin:" : "Izvor porekla:"}
+src/components/TodayOperatingPlan.tsx:                    {isEn ? "Manual input" : "Ručni unos"}
+src/components/TodayOperatingPlan.tsx:                  {isEn ? "Life Area Area:" : "Oblast života:"}
+src/components/TodayOperatingPlan.tsx:                  <option value="Career">{isEn ? "Career" : "Karijera"}</option>
+src/components/TodayOperatingPlan.tsx:                    {isEn ? "Growth" : "Lični razvoj"}
+src/components/TodayOperatingPlan.tsx:                    {isEn ? "Wealth" : "Finansije"}
+src/components/TodayOperatingPlan.tsx:                  <option value="Health">{isEn ? "Health" : "Zdravlje"}</option>
+src/components/TodayOperatingPlan.tsx:                    {isEn ? "Relationships" : "Odnosi"}
+src/components/TodayOperatingPlan.tsx:                    {isEn ? "Productivity" : "Produktivnost"}
+src/components/TodayOperatingPlan.tsx:                {isEn ? "Collect Raw Thought" : "Ubaci u inbox za usisavanje"}
+src/components/TodayOperatingPlan.tsx:                      {isEn ? "Analysis Complete!" : "Optimzacija uspešna!"}
+src/components/TodayOperatingPlan.tsx:                    <span>{isEn ? "Error" : "Greška"}</span>
+src/components/TodayOperatingPlan.tsx:                    {isEn ? "PLAN INSTALLED" : "OPERATIVNI PLAN INTEGRISAN"}
+src/components/TodayOperatingPlan.tsx:                      {isEn ? "Combined" : "Spojeni srodni unosi"}{" "}
+src/components/TodayOperatingPlan.tsx:                          isEn ? "Action Plan Task" : "Operativni Zadatak",
+src/components/TodayOperatingPlan.tsx:                              {isEn ? "SCORING:" : "INDEKS:"}
+src/components/TodayOperatingPlan.tsx:                                  {isEn ? "URGENCY" : "HITNOST"}
+src/components/TodayOperatingPlan.tsx:                                  {isEn ? "IMPORTANT" : "BITNOST"}
+src/components/TodayOperatingPlan.tsx:                                  {isEn ? "DAMAGE REGRET" : "KONSEKVENCE"}
+src/components/TodayOperatingPlan.tsx:                                  {isEn ? "ENERGY FIT" : "NIVO ENERGIJE"}
+src/components/TodayOperatingPlan.tsx:                                  {isEn ? "GOALS FIT" : "USKLAĐENOST"}
+src/components/TodayOperatingPlan.tsx:                                  {isEn ? "RELIEF" : "OLAKŠANJE"}
+src/components/VisionStrategy.tsx:      dateSaved: new Date().toLocaleDateString(isEn ? "en-US" : "sr-RS", {
+src/components/VisionStrategy.tsx:    btnAnalyze: isEn ? "Walk Through Chambers" : "Kreni kroz kreativne odaje",
+src/components/VisionStrategy.tsx:    weightLabel: isEn ? "Difficulty Level:" : "Stepen težine:",
+src/components/VisionStrategy.tsx:    weightLako: isEn ? "Easy (Weight 1)" : "Lako (Težina 1)",
+src/components/VisionStrategy.tsx:    weightSrednje: isEn ? "Medium (Weight 2)" : "Srednje (Težina 2)",
+src/components/VisionStrategy.tsx:    weightTeško: isEn ? "Hard (Weight 3)" : "Teško (Težina 3)",
+src/components/VisionStrategy.tsx:    btnDecompose: isEn ? "Decompose Step" : "Razloži u korake",
+src/components/VisionStrategy.tsx:    btnHabit: isEn ? "Make Daily Habit" : "Pretvori u naviku",
+src/components/VisionStrategy.tsx:            1. {isEn ? "Room Concept" : "Koncept vizije"}
+src/components/VisionStrategy.tsx:            2. {isEn ? "Chambers Check" : "Tri odaje"}
+src/components/VisionStrategy.tsx:            3. {isEn ? "Roadmap Plan" : "Strateški put"}
+src/components/VisionStrategy.tsx:              <span>{isEn ? cat.labelEn : cat.labelSr}</span>
+src/components/VisionStrategy.tsx:                    {isEn ? "Idea Vault" : "Trezor Strateških ideja"}
+src/components/VisionStrategy.tsx:                  title={isEn ? "Add Idea" : "Dodaj ideju"}
+src/components/VisionStrategy.tsx:                                      isEn ? "Mind Map Idea" : "Ideja Mape Uma",
+src/components/VisionStrategy.tsx:                                  {isEn ? "To Daily ABCDE" : "U Dnevni Plan"}
+src/components/VisionStrategy.tsx:                                  <span>{isEn ? "To REBT" : "U REBT"}</span>
+src/components/VisionStrategy.tsx:                            title={isEn ? "Delete Idea" : "Obriši ideju"}
+src/components/VisionStrategy.tsx:                        +{inboxItems.length - 3} {isEn ? "more..." : "više..."}
+src/components/VisionStrategy.tsx:                      label: isEn ? "3 Months" : "3 Meseca",
+src/components/VisionStrategy.tsx:                      label: isEn ? "6 Months" : "6 Meseci",
+src/components/VisionStrategy.tsx:                      label: isEn ? "1 Year" : "1 Godina",
+src/components/VisionStrategy.tsx:                      label: isEn ? "2 Years" : "2 Godine",
+src/components/VisionStrategy.tsx:                      label: isEn ? "3 Years" : "3 Godine",
+src/components/VisionStrategy.tsx:                      label: isEn ? "5 Years" : "5 Godina",
+src/components/VisionStrategy.tsx:                      label: isEn ? "10 Years" : "10 Godina",
+src/components/VisionStrategy.tsx:                      placeholder={isEn ? "Custom (e.g. 8 Mo)" : "Prilagođeno"}
+src/components/VisionStrategy.tsx:                            {isEn ? "ORIGINAL AMBITION" : "PRVOBITNA AMBICIJA"}
+src/components/VisionStrategy.tsx:                    {savedVisions.length} {isEn ? "saved" : "sačuvano"}
+src/components/VisionStrategy.tsx:                                {isEn ? catInfo?.labelEn : catInfo?.labelSr}
+src/components/VisionStrategy.tsx:                                🗺️ {isEn ? "Roadmap Ready" : "Vremenska osa"}
+src/components/VisionStrategy.tsx:                      isEn ? "3 Months" : "3 Meseca",
+src/components/VisionStrategy.tsx:                      isEn ? "6 Months" : "6 Meseci",
+src/components/VisionStrategy.tsx:                      isEn ? "1 Year" : "1 Godina",
+src/components/VisionStrategy.tsx:                      isEn ? "2 Years" : "2 Godine",
+src/components/VisionStrategy.tsx:                      isEn ? "3 Years" : "3 Godine",
+src/components/VisionStrategy.tsx:                      isEn ? "5 Years" : "5 Godina",
+src/components/VisionStrategy.tsx:                      isEn ? "10 Years" : "10 Godina",
+src/components/VisionStrategy.tsx:                    {isEn ? "Back" : "Nazad"}
+src/components/VisionStrategy.tsx:                    <span>{isEn ? "Save" : "Sačuvaj"}</span>
+src/components/VisionStrategy.tsx:                    {isEn ? "Completed weight" : "Ostvarena težina"}:{" "}
+src/components/VisionStrategy.tsx:                <span>0% {isEn ? "Start" : "Početak"}</span>
+src/components/VisionStrategy.tsx:                  {percentageProgress}% {isEn ? "Complete" : "Efikasnosti"}
+src/components/VisionStrategy.tsx:                <span>100% {isEn ? "Dream Mastered" : "Cilj ostvaren"}</span>
+src/components/VisionStrategy.tsx:                      {isEn ? "ULTIMATE DREAM GOAL" : "SREDIŠNJI CILJ I VIZIJA"}
+src/components/VisionStrategy.tsx:                              <span>{isEn ? "Habit Plan" : "Navika"}</span>
+src/components/VisionStrategy.tsx:                                {isEn ? "To Daily ABCDE" : "U Dnevni Plan"}
+src/components/VisionStrategy.tsx:                                <span>{isEn ? "To REBT" : "U REBT"}</span>
+src/components/VisionStrategy.tsx:                                        {isEn ? "Import to ABCDE" : "U ABCDE"}
+src/components/VisionStrategy.tsx:                        {isEn ? "Verified" : "Provereno"}
+src/components/VisionStrategy.tsx:                    {isEn ? "Roadmap Guidelines" : "Uputstvo za Strateški Put"}
+src/components/VisionStrategy.tsx:                      {isEn ? "Reset Concept" : "Koriguj iz početka"}
+src/components/VisionStrategy.tsx:                    {isEn ? "Integrate New Task?" : "Uvezi zadatak u tabelu?"}
+src/components/VisionStrategy.tsx:                  {isEn ? "Cancel" : "Otkaži"}
+src/components/VisionStrategy.tsx:                  {isEn ? "Import Task" : "Upiši zadatak"}
+src/components/VisionStrategy.tsx:                    {isEn ? "All" : "Sve"}
+src/components/VisionStrategy.tsx:                    {isEn ? "None" : "Ništa"}
+src/components/VisionStrategy.tsx:                    {isEn ? "Card Preview" : "Pregled zadatka"}:
+src/components/VisionStrategy.tsx:                    <span>{isEn ? "Prev" : "Prethodni"}</span>
+src/components/VisionStrategy.tsx:                    <span>{isEn ? "Next" : "Sledeći"}</span>
+src/components/VisionStrategy.tsx:                  {isEn ? "Cancel" : "Otkaži"}
+src/components/WheelOfLife.tsx:                        title={isEn ? "Remove category" : "Obriši oblast"}
+src/components/WheelOfLife.tsx:                    {isEn ? "Coaching Analysis..." : "Trener balansira krug..."}
+src/components/WheelOfLife.tsx:                    {isEn ? "Analysis Complete!" : "Analiza uspešna!"}
+src/components/WheelOfLife.tsx:                  <span>{isEn ? "Error" : "Greška"}</span>
+src/components/WheelOfLife.tsx:                const fullText = `[${isEn ? "Balance Analysis" : "Analiza harmonije"}]\n${coachResponse.overallAnalysis || ""}\n\n[${isEn ? "Strengths & Wins" : "Snaga i pobede"}]\n${coachResponse.positiveFeedback || ""}\n\n${taInsight ? `[PAC Analysis]\n${taInsight}\n\n` : ""}[${isEn ? "Actionable Recommendations" : "Preporuke za akciju"}]\n${recsText}\n\n${questionsText ? `[Questions]\n${questionsText}` : ""}`;
+src/components/WheelOfLife.tsx:              title={isEn ? "Copy all coach feedback" : "Kopiraj sve savete"}
+src/components/WheelOfLife.tsx:                    {isEn ? "Copied" : "Kopirano"}
+src/components/WheelOfLife.tsx:                    {isEn ? "Copy Coach Feedback" : "Kopiraj sve savete"}
+src/components/WheelOfLife.tsx:                  🧘 {isEn ? "Balance Analysis" : "Analiza harmonije"}
+src/components/WheelOfLife.tsx:                      isEn ? "Coaching Vision" : "Savetnik",
+src/components/WheelOfLife.tsx:                    🔍 {isEn ? "CLICK TO ZOOM" : "KLIKNI ZA UVELIČAVANJE"}
+src/components/WheelOfLife.tsx:                      isEn ? "Coaching Vision" : "Savetnik",
+src/components/WheelOfLife.tsx:                    🔍 {isEn ? "CLICK TO ZOOM" : "KLIKNI ZA UVELIČAVANJE"}
+src/components/WheelOfLife.tsx:                        isEn ? "Deep Mental Insight" : "Mentalni Model",
+src/components/WheelOfLife.tsx:                        isEn ? "Coaching Vision" : "Savetnik",
+src/components/WheelOfLife.tsx:                      🔍 {isEn ? "CLICK TO ZOOM" : "KLIKNI ZA UVELIČAVANJE"}
+src/components/WheelOfLife.tsx:                              isEn ? "My answer..." : "Moj odgovor..."
+src/components/WheelOfLife.tsx:                              (isEn ? "No response" : "Nema unetog odgovora");
+src/components/WheelOfLife.tsx:                        isEn ? "Action Step" : "Preporuka",
+src/components/WheelOfLife.tsx:                        {isEn ? "Goal Task Idea:" : "Predlog mikro-zadatka:"}
+src/App.tsx:            language === "en" ? "Organic Treat 🎋" : "Super Porcija 🎋";
+src/App.tsx:            language === "en" ? "Organic Treat 🎋" : "Super Porcija 🎋";
+src/App.tsx:    return language === "en" ? daysEn[dayIdx] : daysSr[dayIdx];
+src/App.tsx:              {language === "en" ? "Hub" : "Home"}
+src/App.tsx:              {language === "en" ? "Tasks" : "Zadaci"}
+src/App.tsx:              {language === "en" ? "Life" : "Život"}
+src/App.tsx:              {language === "en" ? "More" : "Meni"}
+src/App.tsx:                  {language === "en" ? "Open Board" : "Vidi Tablu"}
+src/App.tsx:                                    {language === "en" ? "Collapse" : "Skupi"}
+src/App.tsx:                            {language === "en" ? "Team Sync" : "Sinhronizacija"}
+src/App.tsx:                          {language === "en" ? "ABCDE Matrix" : "ABCDE Matrica"}
+src/App.tsx:                          {language === "en" ? "Add & Focus" : "Unos i Fokus"}
+src/App.tsx:                          {language === "en" ? "Task List" : "Lista zadataka"}
+src/App.tsx:                        {language === "en" ? item.labelEn : item.labelSr}
+src/App.tsx:              {language === "en" ? "Hub" : "Početna"}
+src/App.tsx:              {language === "en" ? "Tasks" : "Zadaci"}
+src/App.tsx:              {language === "en" ? "Life" : "Život"}
+src/App.tsx:              {language === "en" ? "More" : "Meni"}
+src/App.tsx:                title={language === "en" ? "Close Dialog" : "Zatvori prozor"}
+src/App.tsx:                  {language === "en" ? "Proceed" : "Razumem, idemo dalje"}

@@ -1,0 +1,134 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Stores user settings, current identity statement, and Kaizen energy state",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "identity": { "type": "string" },
+        "kaizenState": { "type": "string" },
+        "language": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Task": {
+      "title": "User Task",
+      "description": "A specific task with ABCDE categorization and priorities",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "subPriority": { "type": "number" },
+        "done": { "type": "boolean" },
+        "repeat": { "type": "string" },
+        "energy": { "type": "string" },
+        "estimatedMinutes": { "type": "number" },
+        "delegatedTo": { "type": "string" },
+        "eliminationReason": { "type": "string" },
+        "createdTime": { "type": "string" },
+        "ownerId": { "type": "string" }
+      },
+      "required": ["id", "title", "category", "done"]
+    },
+    "InboxItem": {
+      "title": "Mental Inbox Item",
+      "description": "An unprocessed thought or raw brain dump captured by the user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "content": { "type": "string" },
+        "processed": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "ownerId": { "type": "string" }
+      },
+      "required": ["id", "content", "processed"]
+    },
+    "Habit": {
+      "title": "Micro Routine / Habit",
+      "description": "A simplified, atomic routine using the 2-Minute Rule",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "twoMinVersion": { "type": "string" },
+        "isTwoMinActive": { "type": "boolean" },
+        "ownerId": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "HabitStack": {
+      "title": "Habit Stacking Formula",
+      "description": "Formula linking current and new behaviors: After X, I will Y",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "currentHabit": { "type": "string" },
+        "newHabit": { "type": "string" },
+        "ownerId": { "type": "string" }
+      },
+      "required": ["id", "currentHabit", "newHabit"]
+    },
+    "Intention": {
+      "title": "Implementation Intention",
+      "description": "A clear trigger definition: I will behavior at time in location",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "behavior": { "type": "string" },
+        "time": { "type": "string" },
+        "location": { "type": "string" },
+        "ownerId": { "type": "string" }
+      },
+      "required": ["id", "behavior", "time", "location"]
+    },
+    "HabitLog": {
+      "title": "Habit Completion Log",
+      "description": "Stores completed habit IDs for a specific date",
+      "type": "object",
+      "properties": {
+        "dateStr": { "type": "string" },
+        "habitIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "ownerId": { "type": "string" }
+      },
+      "required": ["dateStr", "habitIds"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "The custom user document"
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Active ABCDE tasks belonging to private user accounts"
+    },
+    "/users/{userId}/inbox/{inboxId}": {
+      "schema": "InboxItem",
+      "description": "Mental logs and inbox brain dumps"
+    },
+    "/users/{userId}/habits/{habitId}": {
+      "schema": "Habit",
+      "description": "User micro habits/routines list"
+    },
+    "/users/{userId}/stacks/{stackId}": {
+      "schema": "HabitStack",
+      "description": "User habit stacking triggers"
+    },
+    "/users/{userId}/intentions/{intentionId}": {
+      "schema": "Intention",
+      "description": "Implementation intention details"
+    },
+    "/users/{userId}/logs/{dateKey}": {
+      "schema": "HabitLog",
+      "description": "Daily habit logs trackers"
+    }
+  }
+}

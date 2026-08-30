@@ -1,0 +1,111 @@
+.app-a-root {
+  --app-a-accent: #0a84ff;
+  --app-a-bg: #f5f5f7;
+  --app-a-surface: rgba(255, 255, 255, 0.92);
+  --app-a-surface-solid: #ffffff;
+  --app-a-text: #1d1d1f;
+  --app-a-secondary: #6e6e73;
+  --app-a-border: rgba(60, 60, 67, 0.15);
+  --app-a-radius: 18px;
+  color: var(--app-a-text);
+  background: var(--app-a-bg);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.app-a-surface {
+  background: var(--app-a-surface);
+  border: 1px solid var(--app-a-border);
+  border-radius: var(--app-a-radius);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.app-a-field {
+  border: 1px solid var(--app-a-border);
+  background: var(--app-a-surface-solid);
+  border-radius: 12px;
+  color: var(--app-a-text);
+}
+
+.app-a-field:focus {
+  border-color: var(--app-a-accent);
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.18);
+  outline: none;
+}
+
+.app-a-primary-button {
+  min-height: 50px;
+  border-radius: 12px;
+  background: var(--app-a-accent);
+  color: white;
+  font-size: 17px;
+  font-weight: 600;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.06);
+}
+
+.app-a-primary-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.app-a-secondary-button {
+  min-height: 48px;
+  border-radius: 12px;
+  background: rgba(118, 118, 128, 0.12);
+  color: var(--app-a-text);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.app-a-focus-ring:focus-visible {
+  outline: 3px solid rgba(10, 132, 255, 0.38);
+  outline-offset: 2px;
+}
+
+.app-a-eyebrow {
+  margin-bottom: 0.5rem;
+  color: #0071e3;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.app-a-page-title {
+  margin-bottom: 0.75rem;
+  color: var(--app-a-text);
+  font-size: clamp(2rem, 5vw, 2.375rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+
+.app-a-page-intro {
+  max-width: 620px;
+  color: var(--app-a-secondary);
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+@media (prefers-color-scheme: dark) {
+  .app-a-root {
+    --app-a-bg: #000000;
+    --app-a-surface: rgba(28, 28, 30, 0.94);
+    --app-a-surface-solid: #1c1c1e;
+    --app-a-text: #f5f5f7;
+    --app-a-secondary: #aeaeb2;
+    --app-a-border: rgba(84, 84, 88, 0.65);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-a-root *,
+  .app-a-root *::before,
+  .app-a-root *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

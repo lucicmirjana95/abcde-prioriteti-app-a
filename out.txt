@@ -1,0 +1,16 @@
+209:    if (activeMood === "sleeping") {
+218:    if (activeMood === "sad" || isSick) {
+231:    if (activeMood === "excited") {
+246:    if (activeMood === "happy") {
+276:    if (activeMood === "sleeping") {
+279:    if (activeMood === "sad" || isSick) {
+288:    if (activeMood === "excited") {
+771:            {activeMood === "sleeping" ? (
+779:            ) : activeMood === "sad" || isSick ? (
+794:            ) : activeMood === "excited" ? (
+1065:            {activeMood === "sleeping" ? (
+1071:            ) : activeMood === "sad" || isSick ? (
+1084:            ) : activeMood === "excited" ? (
+1175:            {activeMood === "sleeping" ? (
+1181:            ) : activeMood === "sad" || isSick ? (
+1193:            ) : activeMood === "excited" ? (

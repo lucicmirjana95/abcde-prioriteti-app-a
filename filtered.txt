@@ -1,0 +1,45 @@
+1297:          <p className="text-xs text-[#3C3C43] font-medium">
+1426:                <div className="flex justify-between items-center text-[13px] text-[#3C3C43] font-medium">
+1428:                    <span className="text-[#3C3C43]">
+1432:                      className={`${brainDumpText.length >= 500 ? "text-[#34C759] font-semibold" : brainDumpText.length >= 150 ? "text-[#FF9500]" : "text-[#3C3C43]"}`}
+1439:                    <span className="text-[#3C3C43] font-semibold">
+1475:                    <p className="text-[13px] text-[#3C3C43] font-medium">
+1568:                    <div className="flex justify-between items-center text-[13px] text-[#3C3C43] font-medium">
+1604:                    <div className="flex justify-between items-center text-[13px] text-[#3C3C43] font-medium">
+1748:                            <div className="flex items-center gap-2 font-semibold text-[13px] text-[#3C3C43] tracking-wide">
+1755:                                    ? "text-[#3C3C43]"
+1773:                            <p className="text-[13px] text-[#3C3C43] leading-normal">
+1799:                <div className="text-[13px] font-semibold text-[#3C3C43] leading-normal text-center sm:text-left">
+1814:                      <Trash2 className="w-3.5 h-3.5 text-[#3C3C43]" />
+1911:                      <p className="text-xs text-[#3C3C43] font-semibold h-8 flex items-center justify-center">
+1952:                <p className="text-xs text-[#3C3C43] font-semibold leading-none">
+1975:                      <span className="text-[13px] text-[#3C3C43] block font-medium">
+1982:                      <span className="absolute top-3.5 right-3.5 w-4 h-4 bg-[#FF9500] dark:bg-[#FF9F0A] rounded-full flex items-center justify-center text-[13px] text-[#3C3C43] font-medium">
+1997:                  <label className="text-[13px] font-semibold text-[#3C3C43] block">
+2059:                <p className="text-xs text-[#3C3C43] font-semibold leading-relaxed">
+2148:                <div className="flex justify-between items-center text-[13px] text-[#3C3C43] font-medium">
+2150:                    <span className="text-[#3C3C43]">
+2154:                      className={`${brainDumpText.length >= 500 ? "text-[#34C759] font-semibold" : brainDumpText.length >= 150 ? "text-[#FF9500]" : "text-[#3C3C43]"}`}
+2161:                    <span className="text-[#3C3C43] font-semibold">
+2298:                      <p className="text-xs text-[#3C3C43] font-semibold h-8 flex items-center justify-center">
+2339:                <p className="text-xs text-[#3C3C43] font-semibold">
+2388:                <div className="p-6 bg-[#F2F2F7] dark:bg-[#1C1C1E] border border-black/5 dark:border-white/5 rounded-xl flex flex-col justify-between h-auto gap-4 text-[13px] text-[#3C3C43] font-medium">
+2390:                    <span className="text-[13px] text-[#3C3C43] block font-medium">
+2397:                  <div className="space-y-2 pt-1 text-[#3C3C43]">
+2437:                      <span className="text-[13px] text-[#3C3C43] font-semibold block">
+2455:                      <span className="text-[13px] text-[#3C3C43] font-semibold block">
+2472:                      <span className="text-[13px] text-[#3C3C43] font-semibold block">
+2634:                  <label className="text-[13px] font-semibold text-[#3C3C43] block">
+2666:                  <label className="text-[13px] font-semibold text-[#3C3C43] block">
+2701:                          className={`w-4 items-center justify-center flex h-4 rounded border text-[13px] text-[#3C3C43] ${isChecked ? "bg-[#007AFF] border-black/5 dark:border-white/5 text-white" : "border-black/5 dark:border-white/5"}`}
+2783:                <p className="text-xs text-[#3C3C43] font-semibold leading-relaxed">
+2985:                      <p className="text-xs text-[#3C3C43] font-semibold italic text-center py-4">
+3088:                      <p className="text-xs text-[#3C3C43] font-semibold italic py-2 text-center">
+3177:                      <p className="text-xs text-[#3C3C43] font-semibold italic py-2 text-center">
+3267:                      <p className="text-xs text-[#3C3C43] font-semibold italic py-2 text-center">
+3324:                        <p className="italic text-[13px] text-[#3C3C43] text-center">
+3334:                    <h4 className="text-[13px] font-semibold text-[#3C3C43] flex items-center gap-1.5 leading-none">
+3377:                        <p className="italic text-[13px] text-[#3C3C43] text-center">
+3426:                    className="p-4 bg-[#F2F2F7] dark:bg-[#000000] border border-black/5 dark:border-white/5 text-[#3C3C43] rounded-xl font-semibold text-xs space-y-1 font-sans cursor-pointer hover:border-[#FF9500]/50 transition-colors">
+3494:                          <p className="text-[13px] text-[#3C3C43] font-semibold">{isEn ? "Event (Trigger)" : "Događaj (Okidač)"}</p>
+3582:                          <p className="text-[13px] text-[#3C3C43]">{isEn ? "Why it helps" : "Zašto ovo pomaže"}</p>

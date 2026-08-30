@@ -1,0 +1,1050 @@
+1:import { useState, useEffect, useRef } from "react";
+2:import { Task, AIRasterizedTask, SavedBoard } from "./types";
+34:} from "lucide-react";
+35:import { motion, AnimatePresence } from "motion/react";
+36:import { db, auth, handleFirestoreError, OperationType } from "./lib/firebase";
+47:} from "firebase/firestore";
+57:} from "firebase/auth";
+62:} from "./components/TodayOperatingPlan";
+68:} from "./translations";
+74:import HomePortal, { TabType } from "./components/HomePortal";
+78:import { ZoomableGroup } from "./components/ZoomableGroup";
+79:import { renderCleanText } from "./lib/formatter";
+80:import AdrenalineModal, { AdrenalineType } from "./components/AdrenalineModal";
+101:      }
+102:    }, 10);
+103:  }, [activeTab]);
+109:    });
+111:  }, []);
+116:      provider.setCustomParameters({ prompt: "select_account" });
+122:      });
+123:    } catch (err: any) {
+127:          language === "en" ? `Sign-in failed: ${err.message}` : language === "tr" ? `Oturum açma başarısız oldu: ${err.message}` : `Greška pri prijavi: ${err.message}`,
+129:      });
+131:    }
+132:  };
+145:      await updateProfile(userCredential.user, { displayName: name });
+146:      setCurrentUser({ ...userCredential.user, displayName: name });
+147:    }
+152:    });
+153:  };
+161:    });
+162:  };
+171:      });
+172:    } catch (err: any) {
+174:    }
+175:  };
+185:      });
+191:      });
+195:    } catch (err) {
+197:    }
+198:  };
+203:    };
+211:    };
+212:  }, []);
+237:    } else if (f <= 4 || r <= 4) {
+240:    } else {
+244:    }
+246:    return { state, score: finalScore };
+247:  };
+270:      if (!safeStorage.getItem(`adrenaline_morning_${today}`)) {
+271:        safeStorage.setItem(`adrenaline_morning_${today}`, "true");
+273:      }
+274:    }
+278:      if (!safeStorage.getItem(`adrenaline_evening_${today}`)) {
+279:        safeStorage.setItem(`adrenaline_evening_${today}`, "true");
+281:      }
+282:    }
+300:        }
+312:      } catch (e) {}
+313:    }
+314:  };
+320:  }, []);
+324:    window.scrollTo({ top: 0, behavior: "instant" });
+327:  }, [activeTab]);
+331:  });
+339:  });
+346:      } catch (e) {
+348:      }
+349:    },
+356:  });
+363:  }, [universalInbox]);
+367:  }, [kaizenState]);
+374:      const key = boardId ? `abcde_tasks_${boardId}` : "abcde_tasks";
+379:      }
+380:    } catch (e) {}
+382:  });
+395:  });
+407:    } else if (appFontSize === "extra") {
+410:    }
+422:    }
+425: font-size: ${scalePercent} !important;
+426: }
+429: font-size: ${headerScale} !important;
+430: }
+432:  }, [appFontSize]);
+435:    { id: string; taskTitle: string; time: string }[]
+468:  }, []);
+476:          promise.catch(() => {});
+477:        }
+478:      }
+479:    } catch (e) {
+481:    }
+482:  }, []);
+495:        } else {
+497:        }
+498:      }
+499:    };
+520:        }
+521:      }
+527:      } catch (authErr) {
+529:      }
+537:      }, 50);
+538:    };
+543:    };
+550:    };
+551:  }, []);
+561:        });
+562:      }
+563:    };
+567:  }, []);
+574:    } catch (e) {
+576:    }
+577:  });
+582:  });
+588:  } | null>(null);
+594:      }, 5000);
+596:    }
+597:  }, [generalToast]);
+603:  });
+607:  });
+622:  }>(() => {
+626:    } catch (e) {}
+632:    };
+633:  });
+639:      const current = { ...prev, [key]: !prev[key] };
+642:    });
+643:  };
+650:  });
+655:  });
+660:    }
+662:  });
+669:    };
+672:  }, []);
+679:  });
+691:  };
+713:    } else {
+715:    }
+716:  }, [isDarkUi]);
+729:      });
+733:        headers: { "Content-Type": "application/json" },
+736:          message: `JA: Danas sam ostvario pobedu: "${eveningWin}". Energiju sam prosuo ovde: "${eveningLoss}". Daj mi koristan savet za bolju higijenu sna i zatvaranje dana.`,
+739:        }),
+740:      });
+766:    } catch (e) {
+768:    } finally {
+770:    }
+771:  };
+790:  };
+796:    }
+797:  }, [isNightTime]);
+805:  } | null>(null);
+812:      }
+813:    };
+822:          detail: { title, content, emoji, subtitle },
+823:        }),
+825:    };
+830:    };
+831:  }, []);
+836:    };
+842:    };
+843:  }, []);
+865:    } catch (err) {
+868:    }
+869:  };
+875:      shareUrl += `?board=${currentBoardId}`;
+876:    }
+881:    };
+888:        })
+892:          }
+893:        });
+894:    } else {
+897:      }
+898:    }
+899:  };
+905:    };
+911:      } catch (e) {
+913:      }
+914:    };
+925:    };
+926:  }, []);
+931:      ? `abcde_tasks_${currentBoardId}`
+934:  }, [tasks, currentBoardId]);
+940:    }, 1000);
+942:  }, []);
+952:        const key = boardId ? `abcde_tasks_${boardId}` : "abcde_tasks";
+969:                return { ...t, done: isDone };
+970:              }
+971:            }
+973:          });
+975:        }
+987:                  };
+988:                } else if (task.repeat === "weekly") {
+997:                    };
+998:                  }
+999:                } else if (task.repeat === "monthly") {
+1008:                    };
+1009:                  }
+1010:                }
+1011:              }
+1013:            });
+1016:        }
+1043:                language === "en" ? `⚡ ${habit.isTwoMinActive ? "[Micro-routine]" : "[Habit]"} ${habit.isTwoMinActive ? habit.twoMinVersion : habit.name}` : language === "tr" ? `⚡ ${habit.isTwoMinActive ? "[Micro-routine]" : "[Habit]"} ${habit.isTwoMinActive ? habit.twoMinVersion : habit.name}` : `⚡ ${habit.isTwoMinActive ? "[Mikro-korak]" : "[Navika]"} ${habit.isTwoMinActive ? habit.twoMinVersion : habit.name}`;
+1055:              };
+1058:            }
+1059:          });
+1064:          }
+1066:        });
+1067:      } catch (err) {
+1069:      }
+1070:    };
+1079:    };
+1080:  }, [language]);
+1086:      const newUrl = `${window.location.origin}${window.location.pathname}?board=${boardId}`;
+1087:      window.history.pushState({ path: newUrl }, "", newUrl);
+1088:    } catch (e) {
+1090:    }
+1093:      const saved = safeStorage.getItem(`abcde_tasks_${boardId}`);
+1095:    } catch (e) {
+1097:    }
+1098:  };
+1103:      const newUrl = `${window.location.origin}${window.location.pathname}`;
+1104:      window.history.pushState({ path: newUrl }, "", newUrl);
+1105:    } catch (e) {
+1107:    }
+1112:    } catch (e) {
+1114:    }
+1115:  };
+1120:  };
+1130:          name: `Tabla ${boardId}`,
+1133:        },
+1134:        { merge: true },
+1136:    } catch (err) {
+1137:      handleFirestoreError(err, OperationType.CREATE, `boards/${boardId}`);
+1138:    }
+1139:  };
+1145:    } else if (currentUser) {
+1147:    }
+1149:  };
+1160:      }
+1181:          });
+1182:        }
+1183:      });
+1185:    } catch (err) {
+1187:        ? `boards/${currentBoardId}/tasks`
+1188:        : `users/${currentUser?.uid}/tasks`;
+1190:    }
+1191:  };
+1199:      } catch (err) {
+1201:          ? `boards/${currentBoardId}/tasks/${taskId}`
+1202:          : `users/${currentUser?.uid}/tasks/${taskId}`;
+1204:      }
+1205:    }
+1206:  };
+1237:          });
+1238:        });
+1249:          } catch (e) {
+1251:          }
+1277:              });
+1278:            });
+1281:            } catch (err) {
+1283:            }
+1285:          }
+1286:        }
+1294:          }
+1296:        });
+1298:      },
+1303:          `users/${currentUser.uid}/tasks`,
+1305:      },
+1309:  }, [currentUser, currentBoardId]);
+1340:          });
+1341:        });
+1348:          }
+1350:        });
+1352:      },
+1357:          `boards/${currentBoardId}/tasks`,
+1359:      },
+1363:  }, [currentBoardId]);
+1371:        const alarmKey = `${task.id}_${currentHHMM}`;
+1381:            },
+1393:                ? ` [${task.category.toUpperCase()}]`
+1396:                language === "en" ? `Task Reminder${categoryLabel}! ⏰` : language === "tr" ? `Görev Hatırlatıcı${categoryLabel}! ⏰` : `Podsetnik za zadatak${categoryLabel}! ⏰`;
+1404:              } else if (cat === "B") {
+1406:              } else if (cat === "C") {
+1408:              } else {
+1410:              }
+1413:                body: `"${task.title}" (${currentHHMM})\n${adviceBody}`,
+1416:              });
+1417:            } catch (err) {
+1419:            }
+1420:          }
+1421:        }
+1422:      }
+1423:    });
+1424:  }, [tasks, currentTime, triggeredAlarmKeys, language]);
+1439:      .map((t, idx) => ({ ...t, subPriority: idx + 1 }));
+1445:      .map((t, idx) => ({ ...t, subPriority: idx + 1 }));
+1451:  };
+1458:        headers: { "Content-Type": "application/json" },
+1459:        body: JSON.stringify({ text: rawText, language }),
+1460:      });
+1467:        } catch {
+1469:        }
+1471:      }
+1476:      }
+1479:    } catch (e: any) {
+1484:      });
+1485:    } finally {
+1487:    }
+1488:  };
+1494:    },
+1509:    };
+1522:            logs: {},
+1523:          });
+1528:        }
+1529:      } catch (e) {}
+1530:    }
+1548:        }
+1549:      } catch (e) {}
+1550:    }
+1560:        }
+1576:        });
+1577:      } catch (err) {
+1579:          ? `boards/${currentBoardId}/tasks/${id}`
+1580:          : `users/${currentUser?.uid}/tasks/${id}`;
+1582:      }
+1583:    }
+1586:  };
+1592:        return { ...t, subPriority: t.subPriority + 1 };
+1593:      }
+1595:    });
+1609:        }
+1619:              });
+1620:            }
+1621:          }
+1622:        });
+1636:          });
+1637:        }
+1640:      } catch (err) {
+1642:          ? `boards/${currentBoardId}/tasks`
+1643:          : `users/${currentUser?.uid}/tasks`;
+1645:      }
+1646:    }
+1647:  };
+1661:      lifeArea: aiTask.category ? `Area ${aiTask.category}` : "Uncategorized",
+1666:    }));
+1672:    });
+1679:        const key = boardId ? `abcde_tasks_${boardId}` : "abcde_tasks";
+1693:        }));
+1698:      });
+1700:    }
+1706:    });
+1707:  };
+1725:    };
+1730:    });
+1748:      ? `Queued "${title.substring(0, 32)}${title.length > 32 ? "..." : ""}" from ${sourceLabel} to Daily ABCDE! ⚡`
+1749:      : `Zadatak "${title.substring(0, 32)}${title.length > 32 ? "..." : ""}" iz modula "${sourceLabel}" je dodat u Dnevni Plan! ⚡`;
+1754:    });
+1755:  };
+1762:    });
+1763:  };
+1768:  };
+1775:    };
+1778:      const combinedText = `${pt.title || ""} ${pt.description || ""}`;
+1804:      };
+1805:    });
+1814:        }
+1822:            });
+1823:          }
+1824:        });
+1826:      } catch (err) {
+1828:          ? `boards/${currentBoardId}/tasks`
+1829:          : `users/${currentUser?.uid}/tasks`;
+1831:      }
+1832:    } else {
+1837:      });
+1838:    }
+1839:  };
+1852:    } else {
+1854:    }
+1873:        } else {
+1877:        }
+1878:      } else if (targetTask.category === "B") {
+1886:        } else {
+1890:        }
+1891:      } else if (targetTask.category === "C") {
+1897:        }
+1898:      } else {
+1900:      }
+1910:      }
+1917:      }
+1922:      }
+1926:          ? `Task Completed! Earned +${coinReward} 🪙${lootMessage ? ` and found a ${lootMessage}!` : ""}`
+1927:          : `Zadatak završen! Osvojeno +${coinReward} 🪙${lootMessage ? ` i pronađen: ${lootMessage}!` : ""}`;
+1936:    }
+1946:          }
+1967:            habits[habitIdx].logs = habits[habitIdx].logs || {};
+1972:          }
+1973:        }
+1974:      } catch (err) {
+1976:      }
+1977:    }
+1999:            },
+2000:            { merge: true },
+2002:        }
+2003:      });
+2007:          ? `boards/${currentBoardId}/tasks`
+2008:          : `users/${currentUser?.uid}/tasks`;
+2010:      });
+2011:    }
+2012:  };
+2022:    }
+2035:    const key = boardId ? `abcde_tasks_${boardId}` : "abcde_tasks";
+2050:      } else {
+2052:      }
+2069:            },
+2070:            { merge: true },
+2072:        }
+2073:      });
+2077:      } catch (err) {
+2079:          ? `boards/${currentBoardId}/tasks`
+2080:          : `users/${currentUser?.uid}/tasks`;
+2082:      }
+2083:    }
+2087:  };
+2099:    });
+2105:    });
+2120:        }
+2121:      });
+2137:            },
+2138:            { merge: true },
+2140:        }
+2141:      });
+2145:      } catch (err) {
+2147:          ? `boards/${currentBoardId}/tasks`
+2148:          : `users/${currentUser?.uid}/tasks`;
+2150:      }
+2151:    }
+2154:  };
+2165:    });
+2180:        }
+2181:      });
+2197:            },
+2198:            { merge: true },
+2200:        }
+2201:      });
+2205:      } catch (err) {
+2207:          ? `boards/${currentBoardId}/tasks`
+2208:          : `users/${currentUser?.uid}/tasks`;
+2210:      }
+2211:    }
+2212:  };
+2224:    });
+2228:    }
+2241:        }
+2247:        } else if (isUser && currentUser) {
+2249:        }
+2261:          });
+2262:        }
+2263:      });
+2277:            language === "en" ? `Successfully archived ${oldCompleted.length} tasks completed over 30 days ago to separate collection in Firestore.` : language === "tr" ? `Firestore'da koleksiyonu ayırmak için 30 günden uzun bir süre önce tamamlanan ${oldCompleted.length} görev başarıyla arşivlendi.` : `Uspešno arhivirano ${oldCompleted.length} završenih zadataka starijih od 30 dana u zasebnu arhivsku kolekciju u Firestore-u.`,
+2279:        });
+2280:      } catch (err: any) {
+2283:          ? `boards/${currentBoardId}/archive`
+2284:          : `users/${currentUser?.uid}/archive`;
+2286:      }
+2287:    } else {
+2308:          ? `abcde_tasks_${currentBoardId}`
+2314:            language === "en" ? `Successfully archived ${oldCompleted.length} tasks completed over 30 days ago to local storage.` : language === "tr" ? `30 günden uzun bir süre önce tamamlanan ${oldCompleted.length} görev yerel depolama alanında başarıyla arşivlendi.` : `Uspešno arhivirano ${oldCompleted.length} završenih zadataka starijih od 30 dana u lokalnu arhivu.`,
+2316:        });
+2317:      } catch (err) {
+2319:      }
+2320:    }
+2321:  };
+2330:    } catch (e) {}
+2335:      } catch (e) {}
+2339:      }, 1500);
+2341:    }
+2342:  }, [tasks]);
+2363:          return { ...t, subPriority: prevRank };
+2364:        }
+2366:          return { ...t, subPriority: currentRank };
+2367:        }
+2369:      });
+2370:    });
+2380:        batch.update(taskRef, { subPriority: prevRank });
+2381:        batch.update(siblingRef, { subPriority: currentRank });
+2382:      }
+2386:      } catch (err) {
+2388:          ? `boards/${currentBoardId}/tasks`
+2389:          : `users/${currentUser?.uid}/tasks`;
+2391:      }
+2392:    }
+2393:  };
+2418:          return { ...t, subPriority: nextRank };
+2419:        }
+2421:          return { ...t, subPriority: currentRank };
+2422:        }
+2424:      });
+2425:    });
+2435:        batch.update(taskRef, { subPriority: nextRank });
+2436:        batch.update(siblingRef, { subPriority: currentRank });
+2437:      }
+2441:      } catch (err) {
+2443:          ? `boards/${currentBoardId}/tasks`
+2444:          : `users/${currentUser?.uid}/tasks`;
+2446:      }
+2447:    }
+2448:  };
+2479:    }));
+2486:          return { ...t, subPriority: update.subPriority };
+2487:        }
+2489:      });
+2490:    });
+2500:          batch.update(taskRef, { subPriority: u.subPriority });
+2501:        }
+2502:      });
+2506:      } catch (err) {
+2508:          ? `boards/${currentBoardId}/tasks`
+2509:          : `users/${currentUser?.uid}/tasks`;
+2511:      }
+2512:    }
+2513:  };
+2519:      prev.map((t) => (t.id === id ? { ...t, reminderTime: time } : t)),
+2531:          });
+2532:        }
+2533:      } catch (err) {
+2535:          ? `boards/${currentBoardId}/tasks/${id}`
+2536:          : `users/${currentUser?.uid}/tasks/${id}`;
+2538:      }
+2539:    }
+2540:  };
+2549:      prev.map((t) => (t.id === id ? { ...t, deadline: deadlineDate } : t)),
+2561:          });
+2562:        }
+2563:      } catch (err) {
+2565:          ? `boards/${currentBoardId}/tasks/${id}`
+2566:          : `users/${currentUser?.uid}/tasks/${id}`;
+2568:      }
+2569:    }
+2570:  };
+2580:    };
+2584:      const combinedText = `${fields.title !== undefined ? fields.title : task.title} ${fields.description !== undefined ? fields.description : task.description || ""}`;
+2587:    }
+2595:        };
+2596:      }
+2598:    });
+2617:          };
+2618:        }
+2620:      });
+2625:    }
+2649:            },
+2650:            { merge: true },
+2652:        }
+2653:      });
+2657:      } catch (err) {
+2659:          ? `boards/${currentBoardId}/tasks`
+2660:          : `users/${currentUser?.uid}/tasks`;
+2662:      }
+2663:    }
+2664:  };
+2668:  };
+2681:      }
+2683:    })[0];
+2684:  };
+2709:  };
+2715:    return `${hours}:${minutes}:${seconds}`;
+2716:  };
+2723:    return language === "en" ? `${dayName}, ${month}/${day}/${year}` : language === "tr" ? `${dayName}, ${month}/${day}/${year}` : `${dayName}, ${day}.${month}.${year}.`;
+2724:  };
+2739:      className={`h-screen w-full flex overflow-hidden transition-all duration-300 hig-bg`}
+2742:      {/* HIG Sidebar (Desktop/iPad) */}
+2747:            onClick={() => setActiveTab("home")}
+2754:                {t.title}
+2757:                {t.subtitle}
+2767:              }}
+2768:              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[15px] transition-colors ${activeTab === "home" ? "bg-[#007AFF] text-white font-medium" : "hover:bg-black/5 dark:hover:bg-white/5 text-[#3C3C43] dark:text-[#EBEBF5]/80"}`}
+2770:              <LayoutGrid className="w-5 h-5 mb-0.5" strokeWidth={2} />{" "}
+2771:              {language === "en" ? "Hub" : language === "tr" ? "Merkez" : "Home"}
+2777:              }}
+2778:              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[15px] transition-colors ${activeTab === "board" ? "bg-[#007AFF] text-white font-medium" : "hover:bg-black/5 dark:hover:bg-white/5 text-[#3C3C43] dark:text-[#EBEBF5]/80"}`}
+2780:              <CheckSquare className="w-5 h-5" strokeWidth={2} />{" "}
+2781:              {language === "en" ? "Tasks" : language === "tr" ? "Görevler" : "Zadaci"}
+2787:              }}
+2788:              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[15px] transition-colors ${activeTab === "wheel" ? "bg-[#007AFF] text-white font-medium" : "hover:bg-black/5 dark:hover:bg-white/5 text-[#3C3C43] dark:text-[#EBEBF5]/80"}`}
+2790:              <Globe className="w-5 h-5" strokeWidth={2} />{" "}
+2791:              {language === "en" ? "Life" : language === "tr" ? "Hayat" : "Život"}
+2794:              onClick={() => setIsNavOpen(!isNavOpen)}
+2795:              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[15px] transition-colors ${isNavOpen || ["habitat", "mindset", "pareto", "Vision", "progress", "dopamine"].includes(activeTab) ? "bg-[#007AFF] text-white font-medium" : "hover:bg-black/5 dark:hover:bg-white/5 text-[#3C3C43] dark:text-[#EBEBF5]/80"}`}
+2802:              {language === "en" ? "More" : language === "tr" ? "Daha" : "Meni"}
+2807:      {/* Main Content Area */}
+2809:        {/* Toast notifications */}
+2811:          alarms={activeAlarms}
+2812:          onDismiss={handleDismissAlarm}
+2813:          language={language}
+2816:        {/* Copy notification toast */}
+2820:              initial={{ opacity: 0, y: -40, scale: 0.95 }}
+2821:              animate={{ opacity: 1, y: 0, scale: 1 }}
+2822:              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+2830:                  {t.copiedPublicLink}
+2840:          )}
+2844:              initial={{ opacity: 0, y: 50, scale: 0.95 }}
+2845:              animate={{ opacity: 1, y: 0, scale: 1 }}
+2846:              exit={{ opacity: 0, y: 30, scale: 0.95 }}
+2851:              }`}
+2859:                  {language === "en" ? "INTEGRATED LIFE FLOW" : language === "tr" ? "ENTEGRE YAŞAM AKIŞI" : "SINHRONIZACIJA MODULA"}
+2862:                  {generalToast.message}
+2867:                  onClick={() => setGeneralToast(null)}
+2876:                  }}
+2879:                  {language === "en" ? "Open Board" : language === "tr" ? "Açık Pano" : "Vidi Tablu"}
+2883:          )}
+2886:        {/* Top Header navbar with digital clock and statistics */}
+2888:          className={`border-b border-black/10 dark:border-white/10 sticky top-0 z-30 px-4 transition-all duration-300 hig-glass flex items-center justify-center md:hidden h-[44px]`}
+2891:            {/* If we had a back button, it would go here */}
+2894:          {/* Centered Title */}
+2902:                  : language === "en" ? "Tools" : language === "tr" ? "Aletler" : "Alati"}
+2905:          {/* Trailing actions */}
+2909:        {/* Main Container */}
+2912:            ref={mainScrollRef}
+2913:            className={`flex-1 overflow-y-auto w-full mx-auto ${activeTab === "settings" ? "max-w-3xl p-0 md:p-4" : "max-w-[1200px] p-4 sm:p-6 lg:p-8 space-y-8"} pb-24 md:pb-12 transition-all duration-300`}
+2915:            {/* Top-Level Sub Navigation pill-bars based on current active tab */}
+2926:              };
+2932:              }
+2935:              }
+2945:                      onClick={() => setActiveTab("board")}
+2950:                      }`}
+2956:                      onClick={() => setActiveTab("pareto")}
+2961:                      }`}
+2967:                      onClick={() => setActiveTab("progress")}
+2972:                      }`}
+2974:                      ⚡{" "}
+2975:                      {language === "en" ? "Micro-Routines" : language === "tr" ? "Mikro Rutinler" : "Mikrorutine & Doslednost"}
+2979:              }
+2982:            })()}
+2989:                    initial={{ opacity: 0, y: 10 }}
+2990:                    animate={{ opacity: 1, y: 0 }}
+2991:                    exit={{ opacity: 0, y: -10 }}
+2994:                    {/* EVENING REFLECTION PANEL SYSTEM (Noćni režim) */}
+3000:                          }
+3001:                        }}
+3006:                        }
+3012:                            } else {
+3014:                            }
+3015:                          }}
+3020:                          }`}
+3028:                                  {language === "en" ? "NIGHT MODE: FORMAL REFLECTION" : language === "tr" ? "GECE MODU: RESMİ YANSIMA" : "NOĆNI REŽIM: SVEČANA REFLEKSIJA"}
+3039:                                    }}
+3042:                                    {language === "en" ? "Collapse" : language === "tr" ? "Yıkılmak" : "Skupi"}
+3044:                                )}
+3046:                                {/* Manual override button to go to Daytime dashboard */}
+3052:                                  }}
+3055:                                  ☀️{" "}
+3056:                                  {language === "en" ? "Go to Morning Hub / Modules" : language === "tr" ? "Sabah Merkezine / Modüllerine Git" : "Prikaži Dnevnu Tablu / Module"}
+3063:                                {language === "en" ? "Formal Evening Review - Lock Your Day" : language === "tr" ? "Resmi Akşam İncelemesi - Gününüzü Kilitleyin" : "Svečana Večernja Refleksija"}
+3067:                                  {language === "en" ? "Click to expand" : language === "tr" ? "Genişletmek için tıklayın" : "Kliknite da proširite"}
+3069:                              )}
+3074:                                {language === "en" ? "Click to open the guided reflective chamber, review today's achievements, log energy leaks, and safely archive your day." : language === "tr" ? "Kılavuzlu yansıtıcı odayı açmak, bugünün başarılarını gözden geçirmek, enerji sızıntılarını kaydetmek ve gününüzü güvenli bir şekilde arşivlemek için tıklayın." : "Svečani trenutak preispitivanja i smiraja. Kliknite ovde da otvorite vođenu refleksiju, proslavite pobede i bezbedno zaključate dan uz poboljšane kontraste."}
+3079:                                  {language === "en" ? "A quiet moment to formalize your daily achievements. Lock the day, release tensions, and let the System Advisor archive your thoughts." : language === "tr" ? "Günlük başarılarınızı resmileştirmek için sessiz bir an. Günü kilitleyin, gerginlikleri ortadan kaldırın ve Sistem Danışmanının düşüncelerinizi arşivlemesine izin verin." : "Svečani trenutak preispitivanja i smiraja. Zaključajte dan, proslavite pobede i otpustite tenzije pre sna. Sistemski Savetnik obradiće podatke i zaključati arhivu."}
+3082:                                {/* Easy-to-use Morning Mode / Cognitive Agent Quick Transition buttons */}
+3085:                                  onClick={(e) => e.stopPropagation()}
+3092:                                    }}
+3097:                                        {language === "en" ? "Interactive Session" : language === "tr" ? "İnteraktif Oturum" : "Interaktivna Sekcija"}
+3100:                                        🌅{" "}
+3101:                                        {language === "en" ? "Switch to Morning Mode" : language === "tr" ? "Sabah Moduna Geç" : "Pređi u Jutarnji Mod"}
+3113:                                    }}
+3118:                                        {language === "en" ? "Active Coaching Agent" : language === "tr" ? "Aktif Koçluk Temsilcisi" : "Aktivni Savetnik"}
+3121:                                        🧠{" "}
+3122:                                        {language === "en" ? "Cognitive AI Coach Agent" : language === "tr" ? "Bilişsel Yapay Zeka Koçluk Temsilcisi" : "Aktiviraj Kognitivnog AI Agenta"}
+3135:                                      onClick={(e) => e.stopPropagation()}
+3140:                                            🏆{" "}
+3141:                                            {language === "en" ? "Today's Greatest Win" : language === "tr" ? "Bugünün En Büyük Kazanımı" : "Moja najveća pobeda danas"}
+3146:                                            value={eveningWin}
+3149:                                            }
+3152:                                            }
+3156:                                            isEvening={true}
+3157:                                            language={language}
+3160:                                            }
+3163:                                            }
+3171:                                            ⚠️{" "}
+3172:                                            {language === "en" ? "Where Energy was Lost" : language === "tr" ? "Enerjinin Kaybolduğu Yer" : "Gde sam prosuo energiju i zamke"}
+3177:                                            value={eveningLoss}
+3180:                                            }
+3183:                                            }
+3187:                                            isEvening={true}
+3188:                                            language={language}
+3191:                                            }
+3194:                                            }
+3200:                                    {/* Display sleep advice once analyzed */}
+3203:                                        initial={{ opacity: 0, y: 5 }}
+3204:                                        animate={{ opacity: 1, y: 0 }}
+3215:                                          )}
+3218:                                    )}
+3222:                                      onClick={(e) => e.stopPropagation()}
+3225:                                        onClick={handleSendEveningReflection}
+3230:                                        }
+3235:                                          : language === "en" ? "Seal the Day and Archive" : language === "tr" ? "Günü Mühürle ve Arşivle" : "Zapečati dan i pošalji u Arhivu"}
+3241:                                    initial={{ opacity: 0, scale: 0.98 }}
+3242:                                    animate={{ opacity: 1, scale: 1 }}
+3244:                                    onClick={(e) => e.stopPropagation()}
+3246:                                    {/* Completed tasks check in night mode */}
+3254:                                            {language === "en" ? "Today's Productive Wins" : language === "tr" ? "Bugünün Üretken Kazanımları" : "Današnje Pobede i Zadaci"}
+3272:                                                {language === "en" ? "No tasks completed today. Keep striving! Tomorrow is a beautiful new blank page." : language === "tr" ? "Bugün hiçbir görev tamamlanmadı. Çabalamaya devam edin! Yarın güzel, yeni, boş bir sayfa." : "Nema obeleženih zadataka danas. Sutra je nova prilika za sjajan fokus!"}
+3277:                                                  key={t.id}
+3282:                                                    {t.title}
+3287:                                          })()}
+3290:                                          {language === "en" ? "Overall focus stats and metrics are safely stored in your account database." : language === "tr" ? "Genel odak istatistikleri ve metrikleri hesap veritabanınızda güvenle saklanır." : "Sveukupni fokus nivo i statistika su bezbedno zabeleženi na vašem nalogu."}
+3294:                                      {/* Interactive bedtime hygiene protocols */}
+3299:                                            {language === "en" ? "Active Bedtime Recovery protocol" : language === "tr" ? "Aktif Uyku Zamanı Kurtarma protokolü" : "Večernja higijena za dubok san"}
+3311:                                            },
+3318:                                            },
+3325:                                            },
+3332:                                            },
+3335:                                              key={item.key}
+3344:                                                }
+3349:                                                }
+3355:                                                  : item.labelSr}
+3358:                                          ))}
+3363:                                    {/* Display sleep advice once analyzed inside the locked state */}
+3375:                                          )}
+3378:                                    )}
+3384:                                          {language === "en" ? "Day Completed & Locked ✓" : language === "tr" ? "Gün Tamamlandı ve Kilitlendi ✓" : "Sve pobede su zaključane! ✓"}
+3389:                                        onClick={handleUnlockDay}
+3392:                                        ☀️{" "}
+3393:                                        {language === "en" ? "Start New Day" : language === "tr" ? "Yeni Güne Başlayın" : "Započni novi dan"}
+3397:                                )}
+3399:                            )}
+3409:                                🌙{" "}
+3410:                                {language === "en" ? "Mindsync Night Override Active" : language === "tr" ? "Mindsync Geceyi Geçersiz Kılma Etkin" : "Noćni režim aktivan (Prisilna Dnevna Tabla)"}
+3413:                                {language === "en" ? "You have temporarily bypassed Night Mode. You can complete your day or do a reset anytime." : language === "tr" ? "Gece Modunu geçici olarak atladınız. İstediğiniz zaman gününüzü tamamlayabilir veya sıfırlama yapabilirsiniz." : "Privremeno ste prešli na dnevnu tablu. Možete završiti analize ili zadatke, pa se vratiti."}
+3418:                              onClick={() => setForceMorningHub(false)}
+3421:                              🌙{" "}
+3422:                              {language === "en" ? "Return to Evening Reflection" : language === "tr" ? "Akşam Yansımasına Dönüş" : "Prikaži Večernju Refleksiju"}
+3425:                        )}
+3427:                          language={language}
+3428:                          activeTab={activeTab}
+3431:                          }}
+3437:                            })
+3438:                          }
+3439:                          onAddMultipleTasks={handleAddMultipleTasks}
+3446:                          }}
+3447:                          isDayLocked={isDayLocked}
+3448:                          isEvening={isEvening}
+3449:                          eveningAdvice={eveningAdvice}
+3450:                          eveningWin={eveningWin}
+3451:                          eveningLoss={eveningLoss}
+3452:                          onSendToMichaelVance={handleSendToMichaelVance}
+3453:                          isBrainDumpProcessing={isBrainDumpProcessing}
+3454:                          tasks={tasks}
+3455:                          onToggleTask={handleToggleTask}
+3456:                          onMoveUp={handleMoveUp}
+3457:                          onUnlockDay={handleUnlockDay}
+3458:                          currentUser={currentUser}
+3461:                    )}
+3463:                )}
+3468:                    initial={{ opacity: 0, y: 10 }}
+3469:                    animate={{ opacity: 1, y: 0 }}
+3470:                    exit={{ opacity: 0, y: -10 }}
+3473:                    {/* Header block with Collaboration Icon Toggle */}
+3480:                          📋{" "}
+3481:                          {language === "en" ? "ABCDE Priority Control Chamber" : language === "tr" ? "ABCDE Öncelik Kontrol Odası" : "Upravljački ABCDE prioritetni centar"}
+3484:                          {language === "en" ? "Streamlined list-prioritization and daily execution tracking." : language === "tr" ? "Kolaylaştırılmış liste önceliklendirme ve günlük yürütme takibi." : "Efikasno sortiranje vaših obaveza i svedena kontrola dnevnog fokusa."}
+3488:                      {/* Collaboration Interactive Icon - Clicking it gives more details */}
+3492:                          onClick={() => setCollabExpanded(!collabExpanded)}
+3499:                          }`}
+3504:                            {language === "en" ? "Team Sync" : language === "tr" ? "Takım Senkronizasyonu" : "Sinhronizacija"}
+3509:                              className={`relative inline-flex rounded-full h-2 w-2 ${currentBoardId ? "bg-[#34C759] dark:bg-[#30D158]" : "bg-[#007AFF]"}`}
+3516:                    {/* Expandable Collaboration Panel Detail view */}
+3517:                    <AnimatePresence initial={false}>
+3520:                          initial={{ height: 0, opacity: 0 }}
+3521:                          animate={{ height: "auto", opacity: 1 }}
+3522:                          exit={{ height: 0, opacity: 0 }}
+3523:                          transition={{ duration: 0.25, ease: "easeInOut" }}
+3528:                              currentBoardId={currentBoardId}
+3529:                              onJoinBoard={handleJoinBoard}
+3530:                              onLeaveBoard={handleLeaveBoard}
+3531:                              language={language}
+3532:                              currentUser={currentUser}
+3533:                              onGoogleSignIn={() => setShowAuthModal(true)}
+3534:                              onSignOut={handleSignOut}
+3538:                      )}
+3541:                    {/* Today's Operating Plan & Universal Inbox */}
+3543:                      language={language}
+3544:                      universalInbox={universalInbox}
+3545:                      onRemoveInboxTask={handleRemoveInboxTask}
+3546:                      onClearInbox={handleClearInbox}
+3547:                      onAddInboxTask={handleAddInboxTask}
+3548:                      kaizenState={kaizenState}
+3549:                      onSetKaizenState={setKaizenState}
+3550:                      onSyncToABCDEBoard={handleSyncToABCDEBoard}
+3551:                      isEvening={isEvening}
+3554:                    {/* Metric stats and the Iron Rule (inside Priorities) */}
+3559:                      {/* Progress Circle Panel */}
+3563:                            {t.todayProgress}
+3566:                            {completedCount} / {totalCount} {t.completed}
+3570:                              "{percent}",
+3572:                            )}
+3575:                        {/* Visual Ring */}
+3590:                              strokeDasharray={`${progressPercent}, 100`}
+3599:                            {progressPercent}%
+3604:                      {/* Critical Priorities Stats */}
+3611:                            {t.categoryATasks}
+3614:                            {completedCritical} / {criticalTasks.length}{" "}
+3615:                            {t.completed}
+3619:                              "{count}",
+3621:                            )}
+3626:                      {/* Guide Quick-Info block */}
+3633:                            ⭐ {t.goldenRule}
+3636:                            {t.ironDisciplineRule}
+3639:                            {t.goldenRuleText}
+3645:                    {/* Mobile Sub-Navigation Tabs inside Board - only shown on mobile screen 'md:hidden' */}
+3652:                        onClick={() => setBoardSubTab("matrix")}
+3657:                        }`}
+3661:                          {language === "en" ? "ABCDE Matrix" : language === "tr" ? "ABCDE Matrisi" : "ABCDE Matrica"}
+3666:                        onClick={() => setBoardSubTab("add")}
+3671:                        }`}
+3675:                          {language === "en" ? "Add & Focus" : language === "tr" ? "Ekle ve Odaklan" : "Unos i Fokus"}
+3680:                        onClick={() => setBoardSubTab("list")}
+3685:                        }`}
+3689:                          {language === "en" ? "Task List" : language === "tr" ? "Görev Listesi" : "Lista zadataka"}
+3694:                    {/* Priority Matrix Overview Dashboard Display */}
+3697:                      className={`w-full ${boardSubTab === "matrix" ? "block" : "hidden md:block"}`}
+3700:                        tasks={tasks}
+3701:                        language={language}
+3702:                        onUpdateTask={handleUpdateTask}
+3703:                        onToggleTask={handleToggleTask}
+3704:                        onDeleteTask={handleDeleteTask}
+3705:                        onMoveUp={handleMoveUp}
+3706:                        onMoveDown={handleMoveDown}
+3712:                          })
+3713:                        }
+3714:                        onViewTaskList={() => setBoardSubTab("list")}
+3718:                    {/* Dashboard split content area */}
+3723:                      {/* Left Column (Forms & Active Spotlight) - takes 5 cols */}
+3725:                        className={`lg:col-span-5 space-y-6 ${boardSubTab === "add" ? "block" : "hidden md:block"}`}
+3728:                          onAddTask={handleAddTask}
+3729:                          onAddMultipleTasks={handleAddMultipleTasks}
+3730:                          language={language}
+3733:                          nextTask={nextFocusTask}
+3734:                          onCompleteTask={handleToggleTask}
+3735:                          language={language}
+3739:                      {/* Right Column (The comprehensive master sorting list) - takes 7 cols */}
+3741:                        className={`lg:col-span-7 ${boardSubTab === "list" ? "block" : "hidden md:block"}`}
+3744:                          tasks={tasks}
+3745:                          onToggleTask={handleToggleTask}
+3746:                          onDeleteTask={handleDeleteTask}
+3747:                          onDeleteMultipleTasks={handleDeleteMultipleTasks}
+3748:                          onMoveUp={handleMoveUp}
+3749:                          onMoveDown={handleMoveDown}
+3750:                          onReorderTasks={handleReorderTasks}
+3751:                          onClearCompleted={handleClearCompleted}
+3752:                          onSetReminder={handleSetReminder}
+3753:                          onSetDeadline={handleSetDeadline}
+3754:                          onUpdateTask={handleUpdateTask}
+3755:                          language={language}
+3760:                )}
+3765:                    initial={{ opacity: 0, y: 10 }}
+3766:                    animate={{ opacity: 1, y: 0 }}
+3767:                    exit={{ opacity: 0, y: -10 }}
+3770:                      language={language}
+3776:                        })
+3777:                      }
+3778:                      onAddMultipleTasks={handleAddMultipleTasks}
+3784:                          { lifeArea: lifeArea || "Vision" },
+3786:                      }
+3807:                          });
+3811:                        } catch (e) {}
+3812:                      }}
+3813:                      isEvening={isEvening}
+3816:                )}
+3821:                    initial={{ opacity: 0, y: 10 }}
+3822:                    animate={{ opacity: 1, y: 0 }}
+3823:                    exit={{ opacity: 0, y: -10 }}
+3826:                      language={language}
+3827:                      tasks={tasks}
+3828:                      isEvening={isEvening}
+3834:                          { lifeArea: "Health" },
+3836:                      }
+3839:                )}
+3844:                    initial={{ opacity: 0, y: 10 }}
+3845:                    animate={{ opacity: 1, y: 0 }}
+3846:                    exit={{ opacity: 0, y: -10 }}
+3849:                      language={language}
+3850:                      currentUser={currentUser}
+3856:                          { lifeArea: category },
+3858:                      }
+3859:                      isEvening={isEvening}
+3862:                )}
+3867:                    initial={{ opacity: 0, y: 10 }}
+3868:                    animate={{ opacity: 1, y: 0 }}
+3869:                    exit={{ opacity: 0, y: -10 }}
+3872:                      language={language}
+3873:                      tasks={tasks}
+3880:                        })
+3881:                      }
+3882:                      isEvening={isEvening}
+3885:                )}
+3890:                    initial={{ opacity: 0, y: 10 }}
+3891:                    animate={{ opacity: 1, y: 0 }}
+3892:                    exit={{ opacity: 0, y: -10 }}
+3895:                      tasks={tasks}
+3896:                      language={language}
+3897:                      isEvening={isEvening}
+3898:                      onAddMultipleTasks={handleAddMultipleTasks}
+3901:                )}
+3906:                    initial={{ opacity: 0, y: 10 }}
+3907:                    animate={{ opacity: 1, y: 0 }}
+3908:                    exit={{ opacity: 0, y: -10 }}
+3911:                      language={language}
+3912:                      isEvening={isEvening}
+3913:                      tasks={tasks}
+3914:                      onToggleTask={handleToggleTask}
+3917:                )}
+3922:                    initial={{ opacity: 0, scale: 0.98 }}
+3923:                    animate={{ opacity: 1, scale: 1 }}
+3924:                    exit={{ opacity: 0, scale: 0.98 }}
+3926:                    <MindsetCoach language={language} isEvening={isEvening} />
+3928:                )}
+3933:                    initial={{ opacity: 0, y: 10 }}
+3934:                    animate={{ opacity: 1, y: 0 }}
+3935:                    exit={{ opacity: 0, y: -10 }}
+3938:                      language={language}
+3939:                      onLanguageChange={(lang) => handleLanguageChange(lang)}
+3940:                      currentUser={currentUser}
+3941:                      onSignIn={() => setShowAuthModal(true)}
+3942:                      onSignOut={handleSignOut}
+3943:                      themeMode={themeMode}
+3947:                      }}
+3948:                      sunriseTime={sunriseTime}
+3952:                      }}
+3953:                      sunsetTime={sunsetTime}
+3957:                      }}
+3958:                      followSystemTheme={followSystemTheme}
+3965:                      }}
+3966:                      autoProcessVoice={autoProcessVoice}
+3973:                      }}
+3974:                      onResetUserData={handleResetUserData}
+3977:                )}
+3983:        {/* Footer footer */}
+3989:          }`}
+3997:                {t.footerText}
+4003:                {t.footerSubtext}
+4009:        {/* Dynamic Privacy PIN Overlays */}
+4023:                title={currentBoardConfig.name}
+4024:                expectedPin={currentBoardConfig.pinCode!}
+4027:                }
+4028:                onCancel={handleLeaveBoard}
+4029:                language={language}
+4030:                isLocalMode={false}
+4033:          }
+4045:                }
+4046:                expectedPin={appPin}
+4047:                onUnlockSuccess={() => setIsAppUnlocked(true)}
+4048:                onCancel={() => setIsAppUnlocked(false)}
+4049:                language={language}
+4050:                isLocalMode={true}
+4053:          }
+4056:        })()}
+4058:        {/* Dropdown / More Action Menu */}
+4063:                initial={{ opacity: 0 }}
+4064:                animate={{ opacity: 1 }}
+4065:                exit={{ opacity: 0 }}
+4066:                onClick={() => setIsNavOpen(false)}
+4070:                initial={{ opacity: 0, y: 100, scale: 0.95 }}
+4071:                animate={{ opacity: 1, y: 0, scale: 1 }}
+4072:                exit={{ opacity: 0, y: 100, scale: 0.95 }}
+4073:                transition={{ type: "spring", stiffness: 350, damping: 25 }}
+4078:                }`}
+4087:                          strokeWidth={2}
+4094:                    },
+4100:                          strokeWidth={2}
+4107:                    },
+4113:                          strokeWidth={2}
+4120:                    },
+4126:                          strokeWidth={2}
+4133:                    },
+4139:                          strokeWidth={2}
+4146:                    },
+4152:                          strokeWidth={2}
+4159:                    },
+4165:                          strokeWidth={2}
+4172:                    },
+4175:                      key={item.id}
+4179:                      }}
+4188:                      }`}
+4191:                        className={`w-8 h-8 rounded-[7px] flex items-center justify-center shrink-0 ${item.bgClass}`}
+4193:                        {item.icon}
+4196:                        {language === "en" ? item.labelEn : language === "tr" ? item.labelTr : item.labelSr}
+4199:                  ))}
+4203:          )}
+4206:        {/* Bottom Navigation Bar */}
+4208:          className={`md:hidden fixed bottom-0 left-0 right-0 w-full hig-glass border-t border-black/10 dark:border-white/10 pt-3 px-4 pb-[calc(14px+env(safe-area-inset-bottom,16px))] min-h-[70px] z-50 flex justify-around items-center transition-all duration-300`}
+4211:          {/* Tab 1: Strategy Hub */}
+4216:            }}
+4225:            }`}
+4230:              strokeWidth={2}
+4233:              {language === "en" ? "Hub" : language === "tr" ? "Merkez" : "Početna"}
+4237:          {/* Tab 2: Execution Engine */}
+4242:            }}
+4251:            }`}
+4256:              strokeWidth={2}
+4259:              {language === "en" ? "Tasks" : language === "tr" ? "Görevler" : "Zadaci"}
+4263:          {/* Tab 3: Life Blueprint */}
+4268:            }}
+4277:            }`}
+4282:              strokeWidth={2}
+4285:              {language === "en" ? "Life" : language === "tr" ? "Hayat" : "Život"}
+4289:          {/* Tab 4: More / Dropdown */}
+4291:            onClick={() => setIsNavOpen(!isNavOpen)}
+4308:            }`}
+4317:              {language === "en" ? "More" : language === "tr" ? "Daha" : "Meni"}
+4322:        {/* Auth Modal overlay for sign up and sign in */}
+4326:              isOpen={showAuthModal}
+4327:              onClose={() => setShowAuthModal(false)}
+4328:              language={language}
+4329:              isEvening={isEvening}
+4330:              onGoogleSignIn={handleGoogleSignIn}
+4331:              onEmailSignUp={handleEmailSignUp}
+4332:              onEmailSignIn={handleEmailSignIn}
+4334:          )}
+4336:      </div>{" "}
+4337:      {/* End of Main Content Area */}
+4338:      {/* Global Card Zoom Overlay (Delightful, Premium Full Screen) */}
+4342:            initial={{ opacity: 0 }}
+4343:            animate={{ opacity: 1 }}
+4344:            exit={{ opacity: 0 }}
+4346:            onClick={() => setGlobalZoomData(null)}
+4349:              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+4350:              animate={{ opacity: 1, scale: 1, y: 0 }}
+4351:              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+4352:              transition={{ type: "spring", damping: 25, stiffness: 350 }}
+4354:              onClick={(e) => e.stopPropagation()}
+4356:              {/* Close Button top-right */}
+4359:                onClick={() => setGlobalZoomData(null)}
+4361:                title={language === "en" ? "Close Dialog" : language === "tr" ? "İletişim Kutusunu Kapat" : "Zatvori prozor"}
+4366:              {/* Header inside popup */}
+4370:                    {globalZoomData.emoji}
+4372:                )}
+4376:                      {globalZoomData.subtitle}
+4378:                  )}
+4380:                    {globalZoomData.title}
+4385:              {/* Scrollable Immersive Detail Content */}
+4389:                    {globalZoomData.content}
+4393:                )}
+4396:              {/* Scientific Trust Badge & Dismiss action */}
+4401:                    {language === "en" ? "Validated Scientific Concept" : language === "tr" ? "Doğrulanmış Bilimsel Konsept" : "Validovana Naučna Baza"}
+4406:                  onClick={() => setGlobalZoomData(null)}
+4409:                  {language === "en" ? "Proceed" : language === "tr" ? "İlerlemek" : "Razumem, idemo dalje"}
+4414:        )}
+4416:      {/* Global Notification Manager for morning/evening reminders */}
+4417:      <NotificationManager language={language} />
+4420:}

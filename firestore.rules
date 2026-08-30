@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny rule
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    // Boards resource
+    match /boards/{boardId} {
+      allow get, create, update: if isValidId(boardId);
+      allow list, delete: if false;
+
+      // Tasks sub-resource
+      match /tasks/{taskId} {
+        allow get, create, update, delete: if isValidId(boardId) && isValidId(taskId);
+        allow list: if isValidId(boardId);
+      }
+    }
+
+    // Individual authenticated user custom account spaces
+    match /users/{userId} {
+      allow get, create, update: if request.auth != null && request.auth.uid == userId && isValidId(userId);
+      allow list, delete: if false;
+
+      match /tasks/{taskId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId && isValidId(taskId);
+      }
+
+      match /inbox/{inboxId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId && isValidId(inboxId);
+      }
+
+      match /habits/{habitId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId && isValidId(habitId);
+      }
+
+      match /stacks/{stackId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId && isValidId(stackId);
+      }
+
+      match /intentions/{intentId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId && isValidId(intentId);
+      }
+
+      match /logs/{dateKey} {
+        allow read, write: if request.auth != null && request.auth.uid == userId && isValidId(dateKey);
+      }
+    }
+
+    // App A data is isolated from legacy task documents and is private to its owner.
+    match /appAUsers/{userId} {
+      allow get, create, update: if request.auth != null && request.auth.uid == userId && isValidId(userId);
+      allow list, delete: if false;
+
+      match /dailyResets/{dateKey} {
+        allow read, write: if request.auth != null && request.auth.uid == userId && isValidId(dateKey);
+      }
+    }
+  }
+}

@@ -1,0 +1,371 @@
+src/components/HomePortal.tsx:155:    const savedLogs = safeStorage.getItem("abcde_calendar_logs");
+src/components/HomePortal.tsx:198:    const saved = safeStorage.getItem("kaizen_focus_streak");
+src/components/HomePortal.tsx:199:    const timers = safeStorage.getItem("abcde_completed_timers_streak");
+src/components/HomePortal.tsx:208:    const saved = safeStorage.getItem("kaizen_focus_streak"); // Manual adjustment
+src/components/HomePortal.tsx:209:    const timersStreak = safeStorage.getItem("abcde_completed_timers_streak"); // System auto-increment from Pomodoros
+src/components/HomePortal.tsx:221:    safeStorage.setItem("kaizen_focus_streak", clamped.toString());
+src/components/HomePortal.tsx:248:      return safeStorage.getItem(`kaizen_daily_mit_${dateKey}`) || "";
+src/components/HomePortal.tsx:259:    safeStorage.setItem(`kaizen_daily_mit_${dateKey}`, mitInput.trim());
+src/components/HomePortal.tsx:268:      safeStorage.getItem(`kaizen_daily_mit_${dateKey}_done`) === "true";
+src/components/HomePortal.tsx:269:    safeStorage.setItem(
+src/components/HomePortal.tsx:281:      return safeStorage.getItem(`kaizen_daily_mit_${dateKey}_done`) === "true";
+src/components/AdrenalineModal.tsx:26:        const oldCoins = Number(safeStorage.getItem("bobi_coins") || "120");
+src/components/AdrenalineModal.tsx:27:        const oldXp = Number(safeStorage.getItem("bobi_xp") || "0");
+src/components/AdrenalineModal.tsx:28:        const oldLevel = Number(safeStorage.getItem("bobi_level") || "1");
+src/components/AdrenalineModal.tsx:41:        safeStorage.setItem("bobi_coins", String(nextCoins));
+src/components/AdrenalineModal.tsx:42:        safeStorage.setItem("bobi_xp", String(nextXp));
+src/components/AdrenalineModal.tsx:43:        safeStorage.setItem("bobi_level", String(nextLevel));
+src/components/AdrenalineModal.tsx:44:        safeStorage.setItem("bobi_happiness", "100");
+src/components/AdrenalineModal.tsx:45:        safeStorage.setItem("bobi_health_level", "100");
+src/components/AdrenalineModal.tsx:46:        safeStorage.setItem("bobi_toxicity_level", "0");
+src/components/AdrenalineModal.tsx:47:        safeStorage.setItem("bobi_mood", "excited");
+src/components/SettingsPanel.tsx:81:    () => safeStorage.getItem("abcde_notify_morning") !== "false",
+src/components/SettingsPanel.tsx:84:    () => safeStorage.getItem("abcde_notify_midday") !== "false",
+src/components/SettingsPanel.tsx:87:    () => safeStorage.getItem("abcde_notify_evening") !== "false",
+src/components/SettingsPanel.tsx:90:    () => safeStorage.getItem("abcde_notify_mindset") !== "false",
+src/components/SettingsPanel.tsx:93:    () => safeStorage.getItem("abcde_notify_sound") !== "false",
+src/components/SettingsPanel.tsx:103:    safeStorage.setItem("abcde_notify_morning", String(notifyMorning));
+src/components/SettingsPanel.tsx:106:    safeStorage.setItem("abcde_notify_midday", String(notifyMidday));
+src/components/SettingsPanel.tsx:109:    safeStorage.setItem("abcde_notify_evening", String(notifyEvening));
+src/components/SettingsPanel.tsx:112:    safeStorage.setItem("abcde_notify_mindset", String(notifyMindset));
+src/components/SettingsPanel.tsx:115:    safeStorage.setItem("abcde_notify_sound", String(notifySound));
+src/components/SettingsPanel.tsx:130:    safeStorage.clear();
+src/components/SettingsPanel.tsx:143:      safeStorage.clear();
+src/components/DopamineTracker.tsx:374:    Number(safeStorage.getItem("abcde_dopamine_focusLevel") || "5"),
+src/components/DopamineTracker.tsx:377:    Number(safeStorage.getItem("abcde_dopamine_stimulation") || "5"),
+src/components/DopamineTracker.tsx:380:    Number(safeStorage.getItem("abcde_dopamine_restfulness") || "5"),
+src/components/DopamineTracker.tsx:384:    () => safeStorage.getItem("dopamine_audit_completed") === "true",
+src/components/DopamineTracker.tsx:410:    safeStorage.removeItem("dopamine_wizard_answers");
+src/components/DopamineTracker.tsx:411:    safeStorage.removeItem("abcde_dopamine_focusLevel");
+src/components/DopamineTracker.tsx:412:    safeStorage.removeItem("abcde_dopamine_stimulation");
+src/components/DopamineTracker.tsx:413:    safeStorage.removeItem("abcde_dopamine_restfulness");
+src/components/DopamineTracker.tsx:414:    safeStorage.setItem("dopamine_audit_completed", "false");
+src/components/DopamineTracker.tsx:476:  // Initialize and load saved decisions from safeStorage (Durable Persistence)
+src/components/DopamineTracker.tsx:478:    const raw = safeStorage.getItem("dopamine_decisions");
+src/components/DopamineTracker.tsx:491:    safeStorage.setItem("dopamine_decisions", JSON.stringify(updated));
+src/components/DopamineTracker.tsx:497:    safeStorage.setItem("dopamine_decisions", JSON.stringify(updated));
+src/components/DopamineTracker.tsx:1154:                                      safeStorage.setItem(
+src/components/DopamineTracker.tsx:1214:                                      safeStorage.setItem(
+src/components/DopamineTracker.tsx:1218:                                      safeStorage.setItem(
+src/components/DopamineTracker.tsx:1222:                                      safeStorage.setItem(
+src/components/DopamineTracker.tsx:1596:                                  safeStorage.setItem(
+src/components/DopamineTracker.tsx:1600:                                  safeStorage.setItem(
+src/components/DopamineTracker.tsx:1604:                                  safeStorage.setItem(
+src/components/DopamineTracker.tsx:1608:                                  safeStorage.setItem(
+src/components/MindsetCoach.tsx:408:      const stored = safeStorage.getItem("mindset_nlp_history_v2");
+src/components/MindsetCoach.tsx:419:      const stored = safeStorage.getItem("mindset_omni_history_v2");
+src/components/MindsetCoach.tsx:441:      const stored = safeStorage.getItem("omni_suggested_prompts");
+src/components/MindsetCoach.tsx:455:      const stored = safeStorage.getItem("mindset_biohack_history_v2");
+src/components/MindsetCoach.tsx:466:      const stored = safeStorage.getItem("mindset_ta_history_v2");
+src/components/MindsetCoach.tsx:479:      safeStorage.setItem("mindset_nlp_history_v2", JSON.stringify(newHistory));
+src/components/MindsetCoach.tsx:484:      safeStorage.setItem(
+src/components/MindsetCoach.tsx:492:      safeStorage.setItem(
+src/components/MindsetCoach.tsx:500:      safeStorage.setItem("mindset_ta_history_v2", JSON.stringify(newHistory));
+src/components/MindsetCoach.tsx:696:    const pendingTab = safeStorage.getItem("abcde_pending_mindset_tab");
+src/components/MindsetCoach.tsx:706:      safeStorage.removeItem("abcde_pending_mindset_tab");
+src/components/MindsetCoach.tsx:711:      const stored = safeStorage.getItem("abcde_pending_mindset_thoughts");
+src/components/MindsetCoach.tsx:716:    const legacy = safeStorage.getItem("abcde_pending_mindset_thought");
+src/components/MindsetCoach.tsx:719:      safeStorage.removeItem("abcde_pending_mindset_thought");
+src/components/MindsetCoach.tsx:722:    const taInsight = safeStorage.getItem("abcde_pending_ta_insight") || "";
+src/components/MindsetCoach.tsx:723:    safeStorage.removeItem("abcde_pending_ta_insight");
+src/components/MindsetCoach.tsx:728:      safeStorage.removeItem("abcde_pending_mindset_thoughts");
+src/components/MindsetCoach.tsx:809:        safeStorage.setItem("mindset_nlp_history_v2", JSON.stringify(updated));
+src/components/MindsetCoach.tsx:887:        safeStorage.setItem(
+src/components/MindsetCoach.tsx:979:        safeStorage.setItem("mindset_rebt_history_v2", JSON.stringify(updated));
+src/components/MindsetCoach.tsx:1104:        safeStorage.setItem("mindset_ta_history_v2", JSON.stringify(updated));
+src/components/MindsetCoach.tsx:1571:                    safeStorage.removeItem("mindset_nlp_history_v2");
+src/components/MorningAIHub.tsx:200:    return safeStorage.getItem("kaizen_morning_username") || "Mirjana";
+src/components/MorningAIHub.tsx:427:      (safeStorage.getItem("morning_hub_layout_v2") as "slides" | "grid") ||
+src/components/MorningAIHub.tsx:583:      const saved = safeStorage.getItem("abcde_vchamber_inbox");
+src/components/MorningAIHub.tsx:589:      safeStorage.setItem("abcde_vchamber_inbox", JSON.stringify(VisionInbox));
+src/components/MorningAIHub.tsx:619:      const stored = safeStorage.getItem("abcde_pending_mindset_thoughts");
+src/components/MorningAIHub.tsx:623:    safeStorage.setItem(
+src/components/MorningAIHub.tsx:672:    safeStorage.setItem("abcde_pending_mindset_tab", pendingTab);
+src/components/MorningAIHub.tsx:741:      const saved = safeStorage.getItem("abcde_vchamber_inbox");
+src/components/MorningAIHub.tsx:747:      safeStorage.setItem("abcde_vchamber_inbox", JSON.stringify(VisionInbox));
+src/components/MorningAIHub.tsx:847:    const saved = safeStorage.getItem("kaizen_morning_resets_history");
+src/components/MorningAIHub.tsx:923:            const aiRecsStr = safeStorage.getItem(
+src/components/MorningAIHub.tsx:948:            safeStorage.setItem(
+src/components/MorningAIHub.tsx:960:        const savedResetToday = safeStorage.getItem(
+src/components/MorningAIHub.tsx:968:            safeStorage.setItem(
+src/components/MorningAIHub.tsx:997:        safeStorage.getItem(`kaizen_morning_reset_done_${todayStr}`) === "true"
+src/components/MorningAIHub.tsx:1005:    const savedResetToday = safeStorage.getItem(
+src/components/MorningAIHub.tsx:1041:    safeStorage.setItem("kaizen_morning_username", userName);
+src/components/MorningAIHub.tsx:1119:          safeStorage.setItem("omni_suggested_prompts", JSON.stringify(data.suggested_omni_prompts));
+src/components/MorningAIHub.tsx:1229:      safeStorage.setItem(
+src/components/MorningAIHub.tsx:1252:    safeStorage.setItem(`kaizen_morning_reset_done_${todayStr}`, "true");
+src/components/MorningAIHub.tsx:1253:    safeStorage.setItem(
+src/components/MorningAIHub.tsx:1274:    safeStorage.setItem(
+src/components/MorningAIHub.tsx:1292:        safeStorage.getItem("kaizen_morning_resets_history") || "[]";
+src/components/MorningAIHub.tsx:1361:        safeStorage.getItem("mindset_nlp_history_v2") || "[]",
+src/components/MorningAIHub.tsx:1379:        safeStorage.getItem("mindset_rebt_history_v2") || "[]",
+src/components/MorningAIHub.tsx:1397:        safeStorage.getItem("mindset_biohack_history_v2") || "[]",
+src/components/MorningAIHub.tsx:1415:        safeStorage.getItem("mindset_ta_history_v2") || "[]",
+src/components/MorningAIHub.tsx:1506:    for (let i = 0; i < safeStorage.length; i++) {
+src/components/MorningAIHub.tsx:1507:      const key = safeStorage.key(i);
+src/components/MorningAIHub.tsx:1516:    keysToRemove.forEach((k) => safeStorage.removeItem(k));
+src/components/MorningAIHub.tsx:1522:    safeStorage.setItem(
+src/components/MorningAIHub.tsx:3005:                            safeStorage.setItem(
+src/components/MorningAIHub.tsx:3012:                              safeStorage.setItem(
+src/components/MorningAIHub.tsx:4033:                      safeStorage.setItem(
+src/components/MorningAIHub.tsx:4037:                      safeStorage.setItem(
+src/components/MorningAIHub.tsx:4219:                            safeStorage.setItem(
+src/components/MorningAIHub.tsx:4223:                            safeStorage.setItem(
+src/components/MorningAIHub.tsx:4424:                          safeStorage.removeItem(
+src/components/MorningAIHub.tsx:4427:                          safeStorage.removeItem(
+src/components/ProgressMatrix.tsx:122:      safeStorage.getItem("abcde_atomic_identity") ||
+src/components/ProgressMatrix.tsx:130:      const saved = safeStorage.getItem("abcde_calendar_habits");
+src/components/ProgressMatrix.tsx:143:      const saved = safeStorage.getItem("abcde_atomic_stacks");
+src/components/ProgressMatrix.tsx:161:        const saved = safeStorage.getItem("abcde_atomic_intentions");
+src/components/ProgressMatrix.tsx:288:      safeStorage.setItem("abcde_calendar_habits", JSON.stringify(updated));
+src/components/ProgressMatrix.tsx:338:        const currentTasks = JSON.parse(safeStorage.getItem(key) || "[]");
+src/components/ProgressMatrix.tsx:358:        safeStorage.setItem(key, JSON.stringify(updated));
+src/components/ProgressMatrix.tsx:380:      const saved = safeStorage.getItem("abcde_calendar_logs");
+src/components/ProgressMatrix.tsx:397:    safeStorage.setItem("abcde_atomic_identity", identity);
+src/components/ProgressMatrix.tsx:401:    safeStorage.setItem("abcde_calendar_habits", JSON.stringify(habits));
+src/components/ProgressMatrix.tsx:405:    safeStorage.setItem("abcde_atomic_stacks", JSON.stringify(habitStacks));
+src/components/ProgressMatrix.tsx:409:    safeStorage.setItem("abcde_atomic_intentions", JSON.stringify(intentions));
+src/components/ProgressMatrix.tsx:413:    safeStorage.setItem("abcde_calendar_logs", JSON.stringify(logs));
+src/components/ProgressMatrix.tsx:1608:                const aiRecsStr = safeStorage.getItem(
+src/components/ProgressMatrix.tsx:1886:                safeStorage.getItem("kaizen_morning_username") || "Mirjana";
+src/components/ProgressMatrix.tsx:1888:                safeStorage.getItem("abcde_kaizen_state") || "BALANCED";
+src/components/DogCompanion.tsx:65:    return Number(safeStorage.getItem("bobi_coins") || "120");
+src/components/DogCompanion.tsx:69:    return (safeStorage.getItem("bobi_speed_id") as any) || "lively";
+src/components/DogCompanion.tsx:73:    return safeStorage.getItem("bobi_forced_pose") || "auto";
+src/components/DogCompanion.tsx:80:    return safeStorage.getItem("bobi_float_hidden") === "true";
+src/components/DogCompanion.tsx:86:    Number(safeStorage.getItem("bobi_pets") || "0"),
+src/components/DogCompanion.tsx:89:    Number(safeStorage.getItem("bobi_treats") || "8"),
+src/components/DogCompanion.tsx:92:    Number(safeStorage.getItem("bobi_satiety") || "80"),
+src/components/DogCompanion.tsx:95:    Number(safeStorage.getItem("bobi_happiness") || "75"),
+src/components/DogCompanion.tsx:98:    Number(safeStorage.getItem("bobi_level") || "1"),
+src/components/DogCompanion.tsx:101:    Number(safeStorage.getItem("bobi_xp") || "15"),
+src/components/DogCompanion.tsx:106:    () => safeStorage.getItem("bobi_is_rebel") === "true",
+src/components/DogCompanion.tsx:109:    Number(safeStorage.getItem("bobi_toxicity_level") || "15"),
+src/components/DogCompanion.tsx:112:    return safeStorage.getItem("bobi_active_skin") || "zen";
+src/components/DogCompanion.tsx:115:    Number(safeStorage.getItem("bobi_health_level") || "90"),
+src/components/DogCompanion.tsx:118:    Number(safeStorage.getItem("bobi_last_a_completed") || Date.now()),
+src/components/DogCompanion.tsx:152:    // Read current safeStorage values to prevent race conditions overriding a cured pet state
+src/components/DogCompanion.tsx:154:      safeStorage.getItem("bobi_last_a_completed") || "0",
+src/components/DogCompanion.tsx:156:    const locIsRebel = safeStorage.getItem("bobi_is_rebel") === "true";
+src/components/DogCompanion.tsx:166:    safeStorage.setItem("bobi_animal_id", selectedAnimalId);
+src/components/DogCompanion.tsx:167:    safeStorage.setItem("bobi_pets", String(petsCount));
+src/components/DogCompanion.tsx:168:    safeStorage.setItem("bobi_treats", String(treatsCount));
+src/components/DogCompanion.tsx:169:    safeStorage.setItem("bobi_satiety", String(satiety));
+src/components/DogCompanion.tsx:170:    safeStorage.setItem("bobi_happiness", String(happiness));
+src/components/DogCompanion.tsx:171:    safeStorage.setItem("bobi_level", String(level));
+src/components/DogCompanion.tsx:172:    safeStorage.setItem("bobi_xp", String(xp));
+src/components/DogCompanion.tsx:173:    safeStorage.setItem("bobi_coins", String(coins));
+src/components/DogCompanion.tsx:175:    safeStorage.setItem("bobi_is_rebel", String(isRebel));
+src/components/DogCompanion.tsx:176:    safeStorage.setItem("bobi_toxicity_level", String(toxicityLevel));
+src/components/DogCompanion.tsx:177:    safeStorage.setItem("bobi_health_level", String(healthLevel));
+src/components/DogCompanion.tsx:178:    safeStorage.setItem("bobi_last_a_completed", String(lastACompleted));
+src/components/DogCompanion.tsx:179:    safeStorage.setItem("bobi_float_hidden", String(isFloatingHidden));
+src/components/DogCompanion.tsx:180:    safeStorage.setItem("bobi_mood", mood);
+src/components/DogCompanion.tsx:181:    safeStorage.setItem("bobi_speed_id", speedId);
+src/components/DogCompanion.tsx:182:    safeStorage.setItem("bobi_forced_pose", forcedPose);
+src/components/DogCompanion.tsx:208:      const savedCoins = Number(safeStorage.getItem("bobi_coins") || "120");
+src/components/DogCompanion.tsx:213:      const savedSpeedId = safeStorage.getItem("bobi_speed_id") as any;
+src/components/DogCompanion.tsx:218:      const savedForcedPose = safeStorage.getItem("bobi_forced_pose");
+src/components/DogCompanion.tsx:223:      const savedPets = Number(safeStorage.getItem("bobi_pets") || "0");
+src/components/DogCompanion.tsx:228:      const savedTreats = Number(safeStorage.getItem("bobi_treats") || "8");
+src/components/DogCompanion.tsx:233:      const savedSatiety = Number(safeStorage.getItem("bobi_satiety") || "80");
+src/components/DogCompanion.tsx:239:        safeStorage.getItem("bobi_happiness") || "75",
+src/components/DogCompanion.tsx:245:      const savedLevel = Number(safeStorage.getItem("bobi_level") || "1");
+src/components/DogCompanion.tsx:250:      const savedXp = Number(safeStorage.getItem("bobi_xp") || "15");
+src/components/DogCompanion.tsx:255:      const savedIsRebel = safeStorage.getItem("bobi_is_rebel") === "true";
+src/components/DogCompanion.tsx:261:        safeStorage.getItem("bobi_toxicity_level") || "15",
+src/components/DogCompanion.tsx:268:        safeStorage.getItem("bobi_health_level") || "90",
+src/components/DogCompanion.tsx:275:        safeStorage.getItem("bobi_last_a_completed") || String(Date.now()),
+src/components/DogCompanion.tsx:282:        safeStorage.getItem("bobi_float_hidden") === "true";
+src/components/DogCompanion.tsx:287:      const savedMood = (safeStorage.getItem("bobi_mood") ||
+src/components/DogCompanion.tsx:293:      const savedSkin = safeStorage.getItem("bobi_active_skin") || "zen";
+src/components/DogCompanion.tsx:513:    // Core rebellion evaluation on any list change - using safeStorage for absolute state consistency
+src/components/DogCompanion.tsx:516:      safeStorage.getItem("bobi_last_a_completed") || String(lastACompleted),
+src/components/DogCompanion.tsx:519:    const savedIsRebelLocal = safeStorage.getItem("bobi_is_rebel") === "true";
+src/components/DogCompanion.tsx:627:    const lastLogin = safeStorage.getItem("bobi_last_login_date");
+src/components/DogCompanion.tsx:629:      safeStorage.setItem("bobi_last_login_date", today);
+src/components/DogCompanion.tsx:752:    const oldCoins = Number(safeStorage.getItem("bobi_coins") || "120");
+src/components/DogCompanion.tsx:766:    safeStorage.setItem("bobi_coins", String(nextCoins));
+src/components/DogCompanion.tsx:796:    const oldCoins = Number(safeStorage.getItem("bobi_coins") || "120");
+src/components/DogCompanion.tsx:810:    safeStorage.setItem("bobi_coins", String(nextCoins));
+src/components/FocusState.tsx:50:      const oldTreats = Number(safeStorage.getItem("bobi_treats") || "8");
+src/components/FocusState.tsx:51:      const oldCoins = Number(safeStorage.getItem("bobi_coins") || "100");
+src/components/FocusState.tsx:52:      safeStorage.setItem("bobi_treats", String(oldTreats + 1));
+src/components/FocusState.tsx:53:      safeStorage.setItem("bobi_coins", String(oldCoins + 50));
+src/components/FocusState.tsx:57:        safeStorage.getItem("abcde_completed_timers_streak") || "0",
+src/components/FocusState.tsx:59:      safeStorage.setItem(
+src/components/FocusState.tsx:73:          const savedLogs = safeStorage.getItem("abcde_calendar_logs");
+src/components/FocusState.tsx:78:            safeStorage.setItem("abcde_calendar_logs", JSON.stringify(logs));
+src/components/VisionStrategy.tsx:155:    return safeStorage.getItem("abcde_vchamber_active_category") || "inbox";
+src/components/VisionStrategy.tsx:160:      const stored = safeStorage.getItem("abcde_vchamber_inbox");
+src/components/VisionStrategy.tsx:177:      const stored = safeStorage.getItem("abcde_vchamber_dreams");
+src/components/VisionStrategy.tsx:182:          safeStorage.removeItem("abcde_vchamber_dreams");
+src/components/VisionStrategy.tsx:195:        const stored = safeStorage.getItem("abcde_vchamber_dreams");
+src/components/VisionStrategy.tsx:202:        const storedInbox = safeStorage.getItem("abcde_vchamber_inbox");
+src/components/VisionStrategy.tsx:206:        const storedCat = safeStorage.getItem("abcde_vchamber_active_category");
+src/components/VisionStrategy.tsx:279:      const stored = safeStorage.getItem("abcde_vchamber_roadmaps");
+src/components/VisionStrategy.tsx:290:      const stored = safeStorage.getItem("abcde_vchamber_completed_milestones");
+src/components/VisionStrategy.tsx:299:      const stored = safeStorage.getItem("abcde_vchamber_saved_visions");
+src/components/VisionStrategy.tsx:354:    safeStorage.setItem(
+src/components/VisionStrategy.tsx:374:    safeStorage.setItem(
+src/components/VisionStrategy.tsx:453:    safeStorage.setItem("abcde_vchamber_dreams", JSON.stringify(dreams));
+src/components/VisionStrategy.tsx:457:    safeStorage.setItem(
+src/components/VisionStrategy.tsx:464:    safeStorage.setItem(
+src/components/VisionStrategy.tsx:739:      const hSaved = safeStorage.getItem("abcde_calendar_habits");
+src/components/VisionStrategy.tsx:756:      safeStorage.setItem(
+src/components/VisionStrategy.tsx:784:      const hSaved = safeStorage.getItem("abcde_calendar_habits");
+src/components/VisionStrategy.tsx:798:      safeStorage.setItem(
+src/components/VisionStrategy.tsx:867:        const hSaved = safeStorage.getItem("abcde_calendar_habits");
+src/components/VisionStrategy.tsx:883:        safeStorage.setItem(
+src/components/VisionStrategy.tsx:1097:                      safeStorage.setItem(
+src/components/VisionStrategy.tsx:1114:                      safeStorage.setItem(
+src/components/VisionStrategy.tsx:1171:                                      safeStorage.setItem(
+src/components/VisionStrategy.tsx:1183:                                      safeStorage.setItem(
+src/components/VisionStrategy.tsx:1188:                                      safeStorage.setItem(
+src/components/VisionStrategy.tsx:1219:                                  safeStorage.setItem(
+src/components/VisionStrategy.tsx:1239:                                    safeStorage.setItem(
+src/components/VisionStrategy.tsx:1264:                              safeStorage.setItem(
+src/components/WheelOfLife.tsx:98:      const saved = safeStorage.getItem("abcde_wheel_categories");
+src/components/WheelOfLife.tsx:108:      const saved = safeStorage.getItem("abcde_wheel_scores");
+src/components/WheelOfLife.tsx:127:    safeStorage.setItem("abcde_wheel_categories", JSON.stringify(categories));
+src/components/WheelOfLife.tsx:128:    safeStorage.setItem("abcde_wheel_scores", JSON.stringify(scores));
+src/components/NotificationManager.tsx:22:        !safeStorage.getItem("notification_prompt_dismissed")
+src/components/NotificationManager.tsx:39:      const lastMorningDate = safeStorage.getItem("last_morning_notification");
+src/components/NotificationManager.tsx:40:      const lastEveningDate = safeStorage.getItem("last_evening_notification");
+src/components/NotificationManager.tsx:59:        safeStorage.setItem("last_morning_notification", todayDate);
+src/components/NotificationManager.tsx:78:        safeStorage.setItem("last_evening_notification", todayDate);
+src/components/NotificationManager.tsx:115:    safeStorage.setItem("notification_prompt_dismissed", "true");
+src/components/TodayOperatingPlan.tsx:123:      const saved = safeStorage.getItem("abcde_processed_tasks_preview");
+src/components/TodayOperatingPlan.tsx:135:      const saved = safeStorage.getItem("abcde_duplicate_groups");
+src/components/TodayOperatingPlan.tsx:146:    return safeStorage.getItem("abcde_operating_message") || "";
+src/components/TodayOperatingPlan.tsx:149:    return safeStorage.getItem("abcde_coach_rec") || "";
+src/components/TodayOperatingPlan.tsx:158:    safeStorage.setItem(
+src/components/TodayOperatingPlan.tsx:165:    safeStorage.setItem(
+src/components/TodayOperatingPlan.tsx:172:    safeStorage.setItem("abcde_operating_message", operatingMessage);
+src/components/TodayOperatingPlan.tsx:176:    safeStorage.setItem("abcde_coach_rec", coachRecommendation);
+src/components/TodayOperatingPlan.tsx:184:        safeStorage.getItem(`kaizen_morning_reset_done_${todayStr}`) === "true"
+src/components/TodayOperatingPlan.tsx:194:        safeStorage.getItem(`kaizen_morning_reset_done_${todayStr}`) === "true";
+src/components/TodayOperatingPlan.tsx:200:          const rawData = safeStorage.getItem(
+src/components/TodayOperatingPlan.tsx:635:                          const stored = safeStorage.getItem(
+src/components/TodayOperatingPlan.tsx:648:                            safeStorage.setItem(
+src/components/TaskForm.tsx:65:        safeStorage.getItem("abcde_universal_inbox") || "[]",
+src/components/TaskForm.tsx:70:        safeStorage.getItem("abcde_calendar_habits") || "[]",
+src/components/CollabPanel.tsx:51:      const saved = safeStorage.getItem("abcde_saved_boards");
+src/components/CollabPanel.tsx:67:    return safeStorage.getItem("abcde_app_pin") || "";
+src/components/CollabPanel.tsx:214:    safeStorage.setItem("abcde_saved_boards", JSON.stringify(updatedList));
+src/components/CollabPanel.tsx:230:    safeStorage.setItem("abcde_saved_boards", JSON.stringify(updated));
+src/components/CollabPanel.tsx:262:    safeStorage.setItem("abcde_app_pin", cleanPin);
+src/components/CollabPanel.tsx:271:    safeStorage.removeItem("abcde_app_pin");
+src/components/PetSanctuary.tsx:68:  // State bindings linked with safeStorage
+src/components/PetSanctuary.tsx:85:      setCoins(Number(safeStorage.getItem("bobi_coins") || "120"));
+src/components/PetSanctuary.tsx:86:      setLevel(Number(safeStorage.getItem("bobi_level") || "1"));
+src/components/PetSanctuary.tsx:87:      setXp(Number(safeStorage.getItem("bobi_xp") || "0"));
+src/components/PetSanctuary.tsx:89:      setSatiety(Number(safeStorage.getItem("bobi_satiety") || "80"));
+src/components/PetSanctuary.tsx:90:      setHappiness(Number(safeStorage.getItem("bobi_happiness") || "75"));
+src/components/PetSanctuary.tsx:91:      setEnergy(Number(safeStorage.getItem("bobi_energy") || "90"));
+src/components/PetSanctuary.tsx:92:      setHygiene(Number(safeStorage.getItem("bobi_hygiene") || "85"));
+src/components/PetSanctuary.tsx:101:      safeStorage.setItem(key, String(value));
+src/lib/safeStorageSetup.ts:43:const safeStorageInstance = new SafeStorage();
+src/lib/safeStorageSetup.ts:44:(window as any).safeStorage = safeStorageInstance;
+src/App.tsx:218:      safeStorage.getItem("abcde_dopamine_focusLevel") || "5",
+src/App.tsx:221:      safeStorage.getItem("abcde_dopamine_stimulation") || "5",
+src/App.tsx:224:      safeStorage.getItem("abcde_dopamine_restfulness") || "5",
+src/App.tsx:270:      if (!safeStorage.getItem(`adrenaline_morning_${today}`)) {
+src/App.tsx:271:        safeStorage.setItem(`adrenaline_morning_${today}`, "true");
+src/App.tsx:278:      if (!safeStorage.getItem(`adrenaline_evening_${today}`)) {
+src/App.tsx:279:        safeStorage.setItem(`adrenaline_evening_${today}`, "true");
+src/App.tsx:287:        const oldCoins = Number(safeStorage.getItem("bobi_coins") || "120");
+src/App.tsx:288:        const oldXp = Number(safeStorage.getItem("bobi_xp") || "0");
+src/App.tsx:289:        const oldLevel = Number(safeStorage.getItem("bobi_level") || "1");
+src/App.tsx:302:        safeStorage.setItem("bobi_coins", String(nextCoins));
+src/App.tsx:303:        safeStorage.setItem("bobi_xp", String(nextXp));
+src/App.tsx:304:        safeStorage.setItem("bobi_level", String(nextLevel));
+src/App.tsx:305:        safeStorage.setItem("bobi_happiness", "100");
+src/App.tsx:306:        safeStorage.setItem("bobi_health_level", "100");
+src/App.tsx:307:        safeStorage.setItem("bobi_toxicity_level", "0");
+src/App.tsx:308:        safeStorage.setItem("bobi_mood", "excited");
+src/App.tsx:337:    const saved = safeStorage.getItem("abcde_lang");
+src/App.tsx:344:        const saved = safeStorage.getItem("abcde_universal_inbox");
+src/App.tsx:355:    return (safeStorage.getItem("abcde_kaizen_state") as any) || "BALANCED";
+src/App.tsx:359:    safeStorage.setItem(
+src/App.tsx:366:    safeStorage.setItem("abcde_kaizen_state", kaizenState);
+src/App.tsx:375:      const saved = safeStorage.getItem(key);
+src/App.tsx:390:      (safeStorage.getItem("komorebi_font_size") as
+src/App.tsx:400:    safeStorage.setItem("komorebi_font_size", appFontSize);
+src/App.tsx:477:      // Wipe all related keys from safeStorage
+src/App.tsx:479:      for (let i = 0; i < safeStorage.length; i++) {
+src/App.tsx:480:        const k = safeStorage.key(i);
+src/App.tsx:492:      keysToRemove.forEach((k) => safeStorage.removeItem(k));
+src/App.tsx:542:      const saved = safeStorage.getItem("abcde_saved_boards");
+src/App.tsx:551:    return safeStorage.getItem("abcde_app_pin") || "";
+src/App.tsx:571:    if (safeStorage.getItem("abcde_day_locked") === "true") return "";
+src/App.tsx:572:    return safeStorage.getItem("abcde_evening_win") || "";
+src/App.tsx:575:    if (safeStorage.getItem("abcde_day_locked") === "true") return "";
+src/App.tsx:576:    return safeStorage.getItem("abcde_evening_loss") || "";
+src/App.tsx:579:    () => safeStorage.getItem("abcde_evening_advice") || "",
+src/App.tsx:584:    () => safeStorage.getItem("abcde_day_locked") === "true",
+src/App.tsx:594:      const saved = safeStorage.getItem("abcde_bedtime_prep");
+src/App.tsx:610:      safeStorage.setItem("abcde_bedtime_prep", JSON.stringify(current));
+src/App.tsx:617:      (safeStorage.getItem("abcde_theme_mode") as "auto" | "light" | "dark") ||
+src/App.tsx:623:    const saved = safeStorage.getItem("abcde_follow_system_theme");
+src/App.tsx:647:    const saved = safeStorage.getItem("abcde_auto_process_voice");
+src/App.tsx:652:    () => safeStorage.getItem("abcde_sunrise_time") || "06:00",
+src/App.tsx:655:    () => safeStorage.getItem("abcde_sunset_time") || "20:30",
+src/App.tsx:719:      safeStorage.setItem("abcde_evening_advice", adviceText);
+src/App.tsx:720:      safeStorage.setItem("abcde_evening_win", eveningWin);
+src/App.tsx:721:      safeStorage.setItem("abcde_evening_loss", eveningLoss);
+src/App.tsx:728:      safeStorage.setItem("abcde_day_locked", "true");
+src/App.tsx:731:      safeStorage.setItem("bobi_is_sleeping", "true");
+src/App.tsx:744:    () => safeStorage.getItem("bobi_is_sleeping") === "true",
+src/App.tsx:748:    safeStorage.removeItem("abcde_day_locked");
+src/App.tsx:749:    safeStorage.removeItem("abcde_evening_advice");
+src/App.tsx:750:    safeStorage.removeItem("abcde_evening_win");
+src/App.tsx:751:    safeStorage.removeItem("abcde_evening_loss");
+src/App.tsx:752:    safeStorage.removeItem("bobi_is_sleeping");
+src/App.tsx:764:    if (!isNightTime && safeStorage.getItem("abcde_day_locked") === "true") {
+src/App.tsx:805:      setIsSleepingState(safeStorage.getItem("bobi_is_sleeping") === "true");
+src/App.tsx:874:      setAppPin(safeStorage.getItem("abcde_app_pin") || "");
+src/App.tsx:879:        const saved = safeStorage.getItem("abcde_saved_boards");
+src/App.tsx:903:    safeStorage.setItem(key, JSON.stringify(tasks));
+src/App.tsx:921:        const lastReset = safeStorage.getItem("abcde_last_repeat_reset_date");
+src/App.tsx:959:          safeStorage.setItem("abcde_last_repeat_reset_date", todayStr);
+src/App.tsx:961:        const lastSync = safeStorage.getItem("abcde_last_habit_sync_date");
+src/App.tsx:962:        const habitsSaved = safeStorage.getItem("abcde_calendar_habits");
+src/App.tsx:1002:            safeStorage.setItem("abcde_last_habit_sync_date", todayStr);
+src/App.tsx:1030:    // Load board tasks from safeStorage immediately to prevent layout shifts before Firestore replies
+src/App.tsx:1032:      const saved = safeStorage.getItem(`abcde_tasks_${boardId}`);
+src/App.tsx:1047:    // Reload local tasks from safeStorage
+src/App.tsx:1049:      const saved = safeStorage.getItem("abcde_tasks");
+src/App.tsx:1058:    safeStorage.setItem("abcde_lang", newLang);
+src/App.tsx:1183:          const localTasksRaw = safeStorage.getItem("abcde_tasks");
+src/App.tsx:1454:          safeStorage.getItem("abcde_calendar_habits") || "[]",
+src/App.tsx:1463:          safeStorage.setItem(
+src/App.tsx:1475:          safeStorage.getItem("abcde_universal_inbox") || "[]",
+src/App.tsx:1482:          safeStorage.setItem(
+src/App.tsx:1609:      safeStorage.setItem("abcde_universal_inbox", JSON.stringify(updated));
+src/App.tsx:1639:      safeStorage.setItem("abcde_universal_inbox", JSON.stringify(updated));
+src/App.tsx:1671:      safeStorage.setItem("abcde_universal_inbox", JSON.stringify(updated));
+src/App.tsx:1678:    safeStorage.setItem("abcde_universal_inbox", JSON.stringify([]));
+src/App.tsx:1746:        safeStorage.setItem("abcde_tasks", JSON.stringify(updated));
+src/App.tsx:1761:      const oldCoins = Number(safeStorage.getItem("bobi_coins") || "100");
+src/App.tsx:1806:      safeStorage.setItem("bobi_coins", String(oldCoins + coinReward));
+src/App.tsx:1809:        const h = Number(safeStorage.getItem("bobi_health_level") || "90");
+src/App.tsx:1810:        safeStorage.setItem(
+src/App.tsx:1816:        const t = Number(safeStorage.getItem("bobi_toxicity_level") || "15");
+src/App.tsx:1817:        safeStorage.setItem(
+src/App.tsx:1824:        const currentQty = Number(safeStorage.getItem(droppedItemKey) || "0");
+src/App.tsx:1825:        safeStorage.setItem(droppedItemKey, String(currentQty + 1));
+src/App.tsx:1833:      safeStorage.setItem("bobi_last_loot_toast", toastMsg);
+src/App.tsx:2160:          safeStorage.getItem("abcde_tasks_archive") || "[]";
+src/App.tsx:2164:        safeStorage.setItem(
+src/App.tsx:2179:        safeStorage.setItem(key, JSON.stringify(remaining));
+src/App.tsx:3658:                          const stored = safeStorage.getItem(
+src/App.tsx:3663:                          safeStorage.setItem(
+src/App.tsx:3667:                          safeStorage.setItem(
+src/App.tsx:3815:                        safeStorage.setItem("abcde_theme_mode", mode);
+src/App.tsx:3820:                        safeStorage.setItem("abcde_sunrise_time", time);
+src/App.tsx:3825:                        safeStorage.setItem("abcde_sunset_time", time);
+src/App.tsx:3830:                        safeStorage.setItem(
+src/App.tsx:3838:                        safeStorage.setItem(
+src/main.tsx:3:import "./lib/safeStorageSetup";
+src/types.ts:49:  var safeStorage: Storage;

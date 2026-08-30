@@ -1,0 +1,149 @@
+243:        evolutionMessage = isEn ? "Lumi evolved from an Egg into a Baby! 🍼" : language === "tr" ? "Lumi Yumurtadan Bebeğe evrildi! 🍼" : "Lumi je evoluirao iz Jajeta u Bebu! 🍼";
+246:        evolutionMessage = isEn ? "Lumi evolved into a Teen with fairy wings! 🧚" : language === "tr" ? "Lumi peri kanatlı bir Gence evrildi! 🧚" : "Lumi je evoluirao u Tinejdžera sa vilinskim krilima! 🧚";
+249:        evolutionMessage = isEn ? "Lumi grew into a majestic Adult Stellar Beast! 🦁" : language === "tr" ? "Lumi görkemli bir Yetişkin Yıldız Canavarına dönüştü! 🦁" : "Lumi je izrastao u veličanstveno Odraslo Zvezdano Biće! 🦁";
+252:        evolutionMessage = isEn ? "Lumi reached the pinnacle: Cosmic Mythical Phoenix! 🦅" : language === "tr" ? "Lumi zirveye ulaştı: Kozmik Efsanevi Anka! 🦅" : "Lumi je dostigao vrhunac: Kosmički Mitski Feniks! 🦅";
+257:        showBubble(isEn ? `🌟 EVOLUTION! ${evolutionMessage}` : `🌟 EVOLUCIJA! ${evolutionMessage}`);
+261:          isEn ? `🎉 LEVEL UP! Lumi is now Lv. ${nextLevel}! ✨` : language === "tr" ? `🎉 SEVİYE YÜKSELT! Lumi artık Lv. ${nextLevel}! ✨` : `🎉 NOVI NIVO! Lumi je sada nivo ${nextLevel}! ✨`,
+282:        isEn ? "Lumi is already full!" : language === "tr" ? "Lumi zaten tok!" : "Lumi je već sita!",
+289:        isEn ? "Not enough coins! Spend focus on tasks." : language === "tr" ? "Yeterli para yok! Görevlere odaklanın." : "Nemaš dovoljno novčića! Uradi zadatke.",
+312:      isEn ? `Yummy! Satiety +${Math.floor(25 * efficacy)}%, +${Math.floor(15 * efficacy)} XP 🌟` : language === "tr" ? `Lezzetli! Doyma +%${Math.floor(25 * efficacy)}, +${Math.floor(15 * efficacy)} XP 🌟` : `Mmm, ukusno! Sitost +${Math.floor(25 * efficacy)}%, +${Math.floor(15 * efficacy)} XP 🌟`,
+357:        isEn ? `No ${foodName} in stock! Complete tasks to earn food!` : `Nemaš više ${foodName}! Rešavaj zadatke da dobiješ hranu!`
+421:      isEn ? "Purr... happiness +15%, Bond +3! Lumi loves you! 💘" : language === "tr" ? "Mırıltı... mutluluk +%15! Lumi seni seviyor! 💘" : "Maza... Sreća +15%, Bliskost +3! Lumi te obožava! 💘",
+430:        isEn ? "Lumi is already clean!" : language === "tr" ? "Lumi zaten temiz!" : "Lumi je već čista!",
+437:        isEn ? "Need 10 coins for organic soap!" : language === "tr" ? "Organik sabun için 10 jetona ihtiyacınız var!" : "Treba ti 10 novčića za sapun!",
+461:      isEn ? "Splish splash! Cleanliness +30%, Bond +2! 🫧" : language === "tr" ? "Splash sıçrama! Temizlik +%30! 🫧" : "Trandža, kupačica! Čistoća +30%, Bliskost +2! 🫧",
+471:      showBubble(isEn ? "Lumi is perfectly healthy!" : "Lumi je potpuno zdrava!");
+475:      showBubble(isEn ? "Need 50 coins for medicine!" : "Treba ti 50 novčića za lek!");
+482:    showBubble(isEn ? "Feeling much better now! ✨" : "Osećam se mnogo bolje sada! ✨");
+489:        isEn ? "Lumi is fully awake and energetic!" : language === "tr" ? "Lumi tamamen uyanık ve enerjik!" : "Lumi je već skroz odmorna i spremna za igru!",
+496:      isEn ? "Zzz... Lumi is sleeping. Energy restoring... 😴" : language === "tr" ? "Zzz... Lumi uyuyor. Enerji yenileniyor... 😴" : "Pst... Lumi spava slatkim snom. Energija se obnavlja... 😴",
+510:        showBubble(isEn ? "Lumi woke up fully rested! ☀️" : "Lumi se probudila potpuno odmorna! ☀️");
+525:        isEn ? "Too tired to play! Put Lumi to bed." : language === "tr" ? "Oynamak için çok yorgunum! Lumi'yi yatağına yatır." : "Previše umorna za igru! Uspavaj Lumi.",
+531:        isEn ? "Needs 12 coins for toys!" : language === "tr" ? "Oyuncaklar için 12 jeton gerekiyor!" : "Potrebno je 12 novčića za igračku.",
+553:      isEn ? "Wheee! Had so much fun! +35 XP, Bond +5, Energy -20% 🎮" : language === "tr" ? "Vay be! Çok eğlendim! +35 XP, Enerji -%20 🎮" : "Jupiii! Super zabavno! +35 XP, Bliskost +5, Energija -20% 🎮",
+625:      isEn ? `Task completed! +${bonus} Coins 🪙, +4 Bond!` : language === "tr" ? `Görev tamamlandı! +${bonus} Para 🪙` : `Zadatak rešen! +${bonus} Novčića 🪙, +4 Bliskosti!`,
+632:      showBubble(isEn ? "Need more coins!" : language === "tr" ? "Daha fazla paraya ihtiyacınız var!" : "Nemaš dovoljno novčića!");
+644:      isEn ? `Wow, amazing! +${rewardXp} XP 🌟` : language === "tr" ? `Vay, muhteşem! +${rewardXp} XP 🌟` : `Vau, sjajno! +${rewardXp} XP 🌟`,
+659:          ? (isEn ? "Looking sharp! Hat equipped! 🎩" : "Vau! Šešir je stavljen! 🎩")
+660:          : (isEn ? "Hat unequipped." : "Šešir skinut.")
+666:      showBubble(isEn ? "Need more coins!" : "Nemaš dovoljno novčića!");
+682:    showBubble(isEn ? "Spectacular style! Hat purchased and equipped! 🌟" : "Kakav stil! Šešir je kupljen i opremljen! 🌟");
+687:      showBubble(isEn ? "Need more coins!" : language === "tr" ? "Daha fazla paraya ihtiyacınız var!" : "Nemaš dovoljno novčića!");
+691:      showBubble(isEn ? "Already purchased!" : language === "tr" ? "Zaten satın alındı!" : "Već si kupio!");
+699:    showBubble(isEn ? "Decor purchased!" : language === "tr" ? "Dekor satın alındı!" : "Dekor kupljen!");
+707:      showBubble(isEn ? "Habitat theme applied!" : "Tema staništa primenjena!");
+712:      showBubble(isEn ? "Need more coins!" : "Nemaš dovoljno novčića!");
+727:    showBubble(isEn ? "Theme purchased and applied! 🌟" : "Tema je kupljena i primenjena! 🌟");
+755:      showBubble(isEn ? "Need 80 coins to reforge rarity!" : "Potrebno ti je 80 novčića za promenu rariteta!");
+786:      showBubble(isEn ? "Lumi needs at least 80 Bond Level to ascend! 💞" : "Lumi mora imati bar 80 nivo bliskosti za uzdizanje! 💞");
+796:    showBubble(isEn ? "🌟 SPECTACULAR ECLIPSE! Lumi temporarily ascended to Celestial Form! 🌌" : "🌟 KOSMIČKO POMRAČENJE! Lumi je privremeno uzdignut u Nebeski oblik! 🌌");
+804:      showBubble(isEn ? "Lumi returned from her ascended state." : "Lumi se vratila u normalno stanje.");
+830:    showBubble(isEn ? "🎁 Claimed Cosmic Chest! +100 Coins, +100 XP!" : "🎁 Otvoren Kosmički Kovčeg! +100 Novčića, +100 XP!");
+836:      q: isEn ? "What recovers cognitive focus most effectively during work?" : "Šta najefikasnije obnavlja kognitivni fokus tokom rada?",
+841:      tip: isEn ? "Nature walks or conscious breathing are proven to reset your brain!" : "Šetnja u prirodi ili svesno disanje dokazano restartuju tvoj mozak!"
+844:      q: isEn ? "Which task category has absolute priority under the Eisenhower Matrix?" : "Koja kategorija zadataka ima apsolutni prioritet prema Eisenhowerovoj matrici?",
+849:      tip: isEn ? "Always start your day by tackling the most important tasks to reduce anxiety!" : "Uvek započni dan rešavanjem najvažnijih zadataka da smanjiš anksioznost!"
+852:      q: isEn ? "What is the technique called that works in intervals of 25 min focus and 5 min break?" : "Kako se zove tehnika rada u intervalima od 25 minuta fokusa i 5 minuta pauze?",
+857:      tip: isEn ? "Pomodoro protects your energy level and prevents cognitive burnout!" : "Pomodoro štiti tvoj nivo energije i sprečava kognitivni burnout!"
+860:      q: isEn ? "What is best to do when you feel strong procrastination?" : "Šta je najbolje uraditi kada osetiš jaku prokrastinaciju?",
+865:      tip: isEn ? "Just start the task for 2 minutes. Action triggers motivation, not vice-versa!" : "Samo započni zadatak na 2 minuta. Akcija pokreće motivaciju, a ne obrnuto!"
+882:      setQuizFeedback(isEn ? `Correct! 🎉 +30 Coins, +50 XP! ${question.tip}` : `Tačno! 🎉 +30 novčića, +50 XP! ${question.tip}`);
+892:      setQuizFeedback(isEn ? `Almost! The correct answer was: "${question.a[question.correct]}". Lumi gives you a +10 coin participation reward! ${question.tip}` : `Blizu! Tačan odgovor je bio: "${question.a[question.correct]}". Lumi ti daje utešnih +10 novčića! ${question.tip}`);
+904:    setGameFeedback(isEn ? "Watch closely! Focus on the pattern!" : "Gledaj pažljivo! Fokusiraj se na šablon!");
+924:        setGameFeedback(isEn ? "Your turn! Repeat the sequence!" : "Tvoj red! Ponovi šablon!");
+948:      setGameFeedback(isEn ? `Oops! Incorrect sequence. Final score: ${gameScore}!` : `Ups! Pogrešan šablon. Krajnji rezultat: ${gameScore}!`);
+970:      showBubble(isEn ? `Game finished! +${partialCoins} 🪙, +${gameScore * 8} XP!` : `Kraj igre! Dobijaš +${partialCoins} 🪙, +${gameScore * 8} XP!`);
+979:      setGameFeedback(isEn ? "Perfect match! Getting faster..." : "Savršeno! Šablon se produžava...");
+1003:    if (tox > 70) return isEn ? "I feel really unwell... 🤒" : "Ne osećam se dobro... 🤒";
+1004:    if (sat < 20 && eng < 20) return isEn ? "So hungry and tired... 😴🍏" : "Jako sam gladan i umoran... 😴🍏";
+1007:    if (sat < 20) return isEn ? "I'm so hungry! 🍏" : "Jako sam gladan! 🍏";
+1008:    if (eng < 20) return isEn ? "I need a nap... 😴" : "Potreban mi je odmor... 😴";
+1011:    if (mood === "sleeping") return isEn ? "Zzz..." : "Zzz...";
+1012:    if (mood === "sick") return isEn ? "Need medicine... 🤢" : "Treba mi lek... 🤢";
+1013:    if (mood === "sad") return isEn ? "I'm feeling a bit lonely..." : "Osećam se malo usamljeno...";
+1014:    if (mood === "happy") return isEn ? "Lumi is feeling playful today! ✨" : "Lumi je danas baš srećan! ✨";
+1035:    return isEn ? en[day] : sr[day];
+1069:                 <span title={isEn ? "Happiness" : "Sreća"}>❤️ {Math.ceil(happiness / 20)}</span>
+1070:                 <span title={isEn ? "Energy" : "Energija"}>⚡ {Math.ceil(energy / 20)}</span>
+1077:              📊 {isEn ? "Details" : "Detalji"}
+1118:             <div onClick={() => { handleFeed(); showBubble(isEn ? "Yum! ❤️" : "Mljac! ❤️"); }} className="bg-white/95 dark:bg-[#1C1C1E]/95 backdrop-blur-xl w-[72px] h-[84px] rounded-[2rem] shadow-xl border border-black/5 dark:border-white/10 font-black text-[9px] flex flex-col items-center justify-center gap-1 pointer-events-auto text-gray-800 dark:text-gray-100 uppercase tracking-wide hover:shadow-2xl hover:scale-105 active:scale-95 transition-all relative cursor-pointer">
+1125:               <span>{isEn ? "Feed" : "Hrana"}</span>
+1133:               <span>{isEn ? "Play" : "Igra"}</span>
+1141:               <span>{isEn ? "Sleep" : "San"}</span>
+1149:               <span>{isEn ? "Bath" : "Kupka"}</span>
+1169:                         {isEn ? "Lumi's Sanctuary" : "Lumijevo Utočište"}
+1172:                         {isEn ? "Advanced Metrics & Inventory" : "Napredna Statistika i Inventar"}
+1194:                      💖 {isEn ? "Vitals & Stats" : "Životni Pokazatelji"}
+1197:                      {isEn ? "Lumi's Biological Hub" : "Lumijevo Kognitivno Stanje"}
+1204:                      { label: isEn ? "Level" : "Nivo", val: level, icon: Trophy, color: "#9575CD" },
+1205:                      { label: isEn ? "Coins" : "Novčići", val: coins, icon: Coins, color: "#FF9500" },
+1206:                      { label: isEn ? "Happiness" : "Sreća", val: `${happiness}%`, icon: Heart, color: "#FF2D55" },
+1223:                        {isEn ? "Lumi's Rarity Tier" : "Lumi raritet"}
+1237:                        <span className="flex items-center gap-1">💞 {isEn ? "Friendship Bond" : "Bliskost i Poverenje"}</span>
+1254:                          🌌 {isEn ? "Ascended Form Active" : "Uzdignuti oblik aktivan"}
+1257:                          {isEn ? "Maximum potential unlocked!" : "Maksimalni kognitivni potencijal!"}
+1270:                          ✨ {isEn ? "Trigger Ascension" : "Uzdigni Lumira"} ✨
+1274:                            ? (isEn ? "Ready! Unleash temporary celestial form." : "Spreman! Aktiviraj privremeni nebeski oblik.")
+1275:                            : (isEn ? "Requires 80% Friendship Bond to unlock." : "Zahteva 80% bliskosti za aktivaciju.")}
+1286:                      { label: isEn ? "Hunger" : "Sitost", val: satiety, color: "#9575CD" },
+1287:                      { label: isEn ? "Happiness" : "Sreća", val: happiness, color: "#CE93D8" },
+1288:                      { label: isEn ? "Energy" : "Energija", val: energy, color: "#FF9500" },
+1289:                      { label: isEn ? "Hygiene" : "Higijena", val: hygiene, color: "#007AFF" },
+1306:                      <span>{isEn ? "Toxicity" : "Toksičnost"}</span>
+1320:                    🗄️ {isEn ? "Lumi's Cabinet" : "Lumijev Ormarić"}
+1323:                    {isEn ? "Click to feed" : "Klikni da nahraniš"}
+1328:                    { id: "avocado", icon: "🥑", label: isEn ? "Avocado" : "Avokado", qty: foodAvocado, benefit: "+30 🍖" },
+1329:                    { id: "salmon", icon: "🍣", label: isEn ? "Salmon" : "Losos", qty: foodSalmon, benefit: "+40 🍖" },
+1330:                    { id: "berries", icon: "🍓", label: isEn ? "Berries" : "Bobice", qty: foodBerries, benefit: "+20 🍖" },
+1331:                    { id: "stardust", icon: "🌟", label: isEn ? "Stardust" : "Zvezdana", qty: foodStardust, benefit: "+25 🍖" },
+1360:                      {isEn ? "Tasks" : "Zadaci"}
+1366:                      {isEn ? "Quests" : "Misije"}
+1376:                            {isEn ? "All tasks resolved! Masterful focus!" : language === "tr" ? "Tüm görevler çözüldü! Ustaca odaklanma!" : "Svi zadaci rešeni! Genijalan rad!"}
+1409:                              <p className="font-bold text-[10px] text-gray-800 dark:text-white">👋 {isEn ? "Pet Lumi 3 times" : "Pomazi Lumija 3 puta"}</p>
+1410:                              <p className="text-[8px] text-[#8E8E93]">{isEn ? "Show some love!" : "Pruži malo pažnje!"}</p>
+1417:                              <p className="font-bold text-[10px] text-gray-800 dark:text-white">🍖 {isEn ? "Feed Lumi 2 times" : "Nahrani Lumija 2 puta"}</p>
+1418:                              <p className="text-[8px] text-[#8E8E93]">{isEn ? "Pantry or snack works" : "Može iz ostave ili kupljeno"}</p>
+1425:                              <p className="font-bold text-[10px] text-gray-800 dark:text-white">🛁 {isEn ? "Bathe Lumi once" : "Okupaj Lumija jednom"}</p>
+1426:                              <p className="text-[8px] text-[#8E8E93]">{isEn ? "Cleanliness is key!" : "Higijena je pola zdravlja!"}</p>
+1446:                              ? (isEn ? "Chest claimed today" : "Kovčeg otvoren danas") 
+1448:                                ? (isEn ? "CLAIM COSMIC CHEST! (+100 🪙)" : "OTVORI KOVČEG! (+100 🪙)") 
+1449:                                : (isEn ? "Complete all quests first" : "Ispuni sve misije prvo")}
+1465:                      {isEn ? "Rewards" : "Nagrade"}
+1471:                      {isEn ? "Brain Gym" : "Trening"}
+1484:                              <span>{isEn ? `Record: ${gameHighScore} steps` : `Rekord: ${gameHighScore} koraka`}</span>
+1495:                              🎮 {isEn ? "Start Training Session" : "Započni Trening"}
+1548:                            {isEn ? "Market" : "Zalogaji"}
+1554:                            {isEn ? "Hats" : "Kape"}
+1560:                            {isEn ? "Decor" : "Dekor"}
+1566:                            {isEn ? "Themes" : "Teme"}
+1581:                                      {isEn ? item.nameEn : item.nameSr}
+1584:                                      +{item.rxp}XP • +{item.rh}% {isEn ? "Joy" : "Sreća"}
+1604:                                      {isEn ? "Reforge Rarity Core" : "Kristal Sudbine (Re-roll)"}
+1607:                                      {isEn ? `Roll Epic/Legendary/Celestial!` : `Dobij Epic/Legendary/Celestial!`}
+1629:                                      {isEn ? item.nameEn : item.nameSr}
+1637:                                  {purchasedDecor.includes(item.id) ? (isEn ? "Owned" : "Kupljeno") : `${item.cost} 🪙`}
+1654:                                        {isEn ? theme.nameEn : theme.nameSr}
+1657:                                        {isActive ? (isEn ? "Active Theme" : "Aktivna Tema") : isOwned ? (isEn ? "Purchased" : "Kupljeno") : (isEn ? "Buy Theme" : "Kupi Temu")}
+1665:                                    {isActive ? (isEn ? "Active" : "Aktivno") : isOwned ? (isEn ? "Equip" : "Postavi") : `${theme.cost} 🪙`}
+1689:                                        {isEn ? hat.nameEn : hat.nameSr}
+1692:                                        {isOwned ? (isEn ? "Purchased" : "Kupljeno") : (isEn ? "Premium hat" : "Unikatan izgled")}
+1708:                                      ? (isEn ? "Unequip" : "Skini") 
+1710:                                        ? (isEn ? "Equip" : "Stavi") 
+1755:                    {isEn ? "A Legendary companion. A friend for life." : "Epski saputnik. Prijatelj za ceo život."}
+1762:                  {isEn ? "Close" : "Zatvori"}
+1795:                        {isEn ? "Unlocked Ability: " : "Otključana sposobnost: "}
+1806:                      {isEn ? "📏 Size Comparison" : "📏 Poređenje veličine"}
+1838:                      {isEn ? "🐾 Choose Growth Phase" : "🐾 Izaberi fazu rasta"}
+1873:                        {isEn ? "Level " : "Nivo "} {LUMIRA_STAGES[selectedGuideStage].minLvl}
+1888:                        ✨ {isEn ? "Character Highlights" : "Istaknuti detalji"}
+1892:                          { label: isEn ? "Big eyes full of emotion" : "Krupne oči prepune emocija" },
+1893:                          { label: isEn ? "Bent ear adds unique charm" : "Savijeno uvo donosi šarm" },
+1894:                          { label: isEn ? "One tiny fang (signature!)" : "Jedan mali zubić (potpis!)" },
+1895:                          { label: isEn ? "Chubby tail for extra cuteness" : "Buckasti rep za maksimalnu slatkoću" },
+1896:                          { label: isEn ? "Soft fluffy feathers" : "Meka paperjasta krila" },
+1897:                          { label: isEn ? "Big paws for hugs!" : "Velike šapice za zagrljaje!" }
+1910:                        ⚙️ {isEn ? "Extra Features Included" : "Dodatne opcije staništa"}
+1914:                          { title: isEn ? "Day & Night Appearance" : "Dan i noć izgled", desc: isEn ? "Changes colors with time of day" : "Menja boje sa delom dana" },
+1915:                          { title: isEn ? "Growth Bond Tracker" : "Snažna povezanost", desc: isEn ? "Stronger bond unlocks cooler graphics" : "Veća bliskost donosi detaljniji izgled" },
+1916:                          { title: isEn ? "Elemental Powers" : "Elementalne moći", desc: isEn ? "Unlocks matching custom auras" : "Otključava unikatne magične aure" }
+1931:                      {isEn ? "Perfect for:" : "Savršeno za:"}

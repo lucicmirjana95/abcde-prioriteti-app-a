@@ -1,0 +1,354 @@
+--- ./src/App.tsx line 345
+        return saved ? JSON.parse(saved) : [];
+      } catch (e) {
+        return [];
+      }
+    },
+--- ./src/App.tsx line 377
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) ? parsed.filter((t) => t && t.title) : [];
+      }
+    } catch (e) {}
+    return [];
+--- ./src/App.tsx line 543
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+--- ./src/App.tsx line 595
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      noScreens: false,
+      coolRoom: false,
+--- ./src/App.tsx line 880
+        setSavedBoards(saved ? JSON.parse(saved) : []);
+      } catch (e) {
+        setSavedBoards([]);
+      }
+    };
+--- ./src/App.tsx line 965
+        const habitsList = JSON.parse(habitsSaved);
+        if (!Array.isArray(habitsList) || habitsList.length === 0) return;
+
+        const activeHabits = habitsList.filter((h) => h && h.name);
+        if (activeHabits.length === 0) return;
+--- ./src/App.tsx line 1033
+      setTasks(saved ? JSON.parse(saved) : []);
+    } catch (e) {
+      setTasks([]);
+    }
+  };
+--- ./src/App.tsx line 1050
+      setTasks(saved ? JSON.parse(saved) : []);
+    } catch (e) {
+      setTasks([]);
+    }
+  };
+--- ./src/App.tsx line 1186
+            localTasks = localTasksRaw ? JSON.parse(localTasksRaw) : [];
+            if (!Array.isArray(localTasks)) localTasks = [];
+          } catch (e) {
+            localTasks = [];
+          }
+--- ./src/App.tsx line 1453
+        const existingHabits = JSON.parse(
+          safeStorage.getItem("abcde_calendar_habits") || "[]",
+        );
+        if (!existingHabits.some((h: any) => h.title === newTask.title)) {
+          existingHabits.push({
+--- ./src/App.tsx line 1474
+        const inboxItems = JSON.parse(
+          safeStorage.getItem("abcde_universal_inbox") || "[]",
+        );
+        const idx = inboxItems.findIndex(
+          (i: any) => i.id === taskData.sourceId,
+--- ./src/App.tsx line 2161
+        const archivedLocal = JSON.parse(archivedLocalRaw);
+        const newLocalArchive = [...archivedLocal, ...oldCompleted];
+
+        safeStorage.setItem(
+          "abcde_tasks_archive",
+--- ./src/App.tsx line 3661
+                          const current = stored ? JSON.parse(stored) : [];
+                          current.push(obstacle);
+                          safeStorage.setItem(
+                            "abcde_pending_mindset_thoughts",
+                            JSON.stringify(current),
+--- ./src/components/CollabPanel.tsx line 52
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+--- ./src/components/DopamineTracker.tsx line 481
+        setSavedDecisions(JSON.parse(raw));
+      } catch (e) {
+        console.error("Failed to load decisions", e);
+      }
+    }
+--- ./src/components/FocusState.tsx line 74
+          const logs = savedLogs ? JSON.parse(savedLogs) : {};
+          if (!logs[dateStr]) logs[dateStr] = [];
+          if (!logs[dateStr].includes("priority_a")) {
+            logs[dateStr].push("priority_a");
+            safeStorage.setItem("abcde_calendar_logs", JSON.stringify(logs));
+--- ./src/components/HomePortal.tsx line 158
+        const parsed = JSON.parse(savedLogs);
+        let calculatedStreak = 0;
+        const today = new Date();
+        let currentCheck = new Date();
+
+--- ./src/components/MindsetCoach.tsx line 409
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+--- ./src/components/MindsetCoach.tsx line 420
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+--- ./src/components/MindsetCoach.tsx line 443
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setSuggestedOmniPrompts(parsed);
+        }
+      }
+--- ./src/components/MindsetCoach.tsx line 456
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+--- ./src/components/MindsetCoach.tsx line 467
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+--- ./src/components/MindsetCoach.tsx line 712
+      if (stored) pending = JSON.parse(stored);
+    } catch (e) {}
+
+    // Legacy single thought support
+    const legacy = safeStorage.getItem("abcde_pending_mindset_thought");
+--- ./src/components/MorningAIHub.tsx line 584
+      if (saved) VisionInbox = JSON.parse(saved);
+    } catch (e) {}
+
+    if (!VisionInbox.includes(goalText)) {
+      VisionInbox.unshift(goalText);
+--- ./src/components/MorningAIHub.tsx line 620
+      if (stored) pending = JSON.parse(stored);
+    } catch (e) {}
+    pending.push(worryText);
+    safeStorage.setItem(
+      "abcde_pending_mindset_thoughts",
+--- ./src/components/MorningAIHub.tsx line 742
+      if (saved) VisionInbox = JSON.parse(saved);
+    } catch (e) {}
+
+    if (!VisionInbox.includes(ideaText)) {
+      VisionInbox.unshift(ideaText);
+--- ./src/components/MorningAIHub.tsx line 850
+        return JSON.parse(saved);
+      } catch (e) {
+        return DEFAULT_HISTORY_TEMPLATE;
+      }
+    }
+--- ./src/components/MorningAIHub.tsx line 926
+            const aiRecs = aiRecsStr ? JSON.parse(aiRecsStr) : [];
+            const newRec = {
+              id: "ai_rec_" + Date.now().toString(36),
+              nameEn:
+                language === "en"
+--- ./src/components/MorningAIHub.tsx line 965
+            const dataObj = JSON.parse(savedResetToday);
+            dataObj.savedBiohackTip = data.tip;
+            dataObj.savedBiohackHabit = data.suggestedMicrohabit || null;
+            safeStorage.setItem(
+              `kaizen_morning_reset_data_${todayStr}`,
+--- ./src/components/MorningAIHub.tsx line 1010
+        const data = JSON.parse(savedResetToday);
+        setParsedData(data);
+        setSelectedTheme(data.selectedTheme || "Work");
+        setSelectedEmotion(data.selectedEmotion || data.emotions?.[0] || "");
+        setConfirmedDrivers(data.confirmedDrivers || data.drivers || []);
+--- ./src/components/MorningAIHub.tsx line 1293
+      const parsedLogs = JSON.parse(savedLogs);
+      const isEn = language === "en";
+
+      const promptLogs = parsedLogs
+        .map(
+--- ./src/components/MorningAIHub.tsx line 1360
+      const nlp = JSON.parse(
+        safeStorage.getItem("mindset_nlp_history_v2") || "[]",
+      );
+      nlp.forEach((item: any, i: number) => {
+        combined.push({
+--- ./src/components/MorningAIHub.tsx line 1378
+      const rebt = JSON.parse(
+        safeStorage.getItem("mindset_rebt_history_v2") || "[]",
+      );
+      rebt.forEach((item: any, i: number) => {
+        combined.push({
+--- ./src/components/MorningAIHub.tsx line 1396
+      const biohack = JSON.parse(
+        safeStorage.getItem("mindset_biohack_history_v2") || "[]",
+      );
+      biohack.forEach((item: any, i: number) => {
+        combined.push({
+--- ./src/components/MorningAIHub.tsx line 1414
+      const ta = JSON.parse(
+        safeStorage.getItem("mindset_ta_history_v2") || "[]",
+      );
+      ta.forEach((item: any, i: number) => {
+        combined.push({
+--- ./src/components/ProgressMatrix.tsx line 131
+      return saved ? JSON.parse(saved) : defaultHabits;
+    } catch (e) {
+      return defaultHabits;
+    }
+  });
+--- ./src/components/ProgressMatrix.tsx line 144
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [
+      {
+        id: "stack-default-1",
+--- ./src/components/ProgressMatrix.tsx line 162
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+      return [
+        {
+          id: "intent-default-1",
+--- ./src/components/ProgressMatrix.tsx line 338
+        const currentTasks = JSON.parse(safeStorage.getItem(key) || "[]");
+
+        const newTasks = selected.map((sh) => ({
+          id:
+            "task-habit-custom-" +
+--- ./src/components/ProgressMatrix.tsx line 381
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+--- ./src/components/ProgressMatrix.tsx line 1611
+                if (aiRecsStr) activeAiRecs = JSON.parse(aiRecsStr) || [];
+              } catch (e) {}
+
+              const baseList = [
+                {
+--- ./src/components/TaskForm.tsx line 64
+      const inbox = JSON.parse(
+        safeStorage.getItem("abcde_universal_inbox") || "[]",
+      );
+      setInboxItems(inbox.filter((i: any) => !i.processed));
+
+--- ./src/components/TaskForm.tsx line 69
+      const habits = JSON.parse(
+        safeStorage.getItem("abcde_calendar_habits") || "[]",
+      );
+      setHabitItems(habits);
+    } catch (e) {}
+--- ./src/components/TodayOperatingPlan.tsx line 125
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {
+      console.error("Error parsing abcde_processed_tasks_preview:", e);
+--- ./src/components/TodayOperatingPlan.tsx line 137
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {
+      console.error("Error parsing abcde_duplicate_groups:", e);
+--- ./src/components/TodayOperatingPlan.tsx line 204
+            const parsed = JSON.parse(rawData);
+            if (parsed && parsed.state && parsed.state !== kaizenState) {
+              onSetKaizenState(parsed.state);
+            }
+          }
+--- ./src/components/TodayOperatingPlan.tsx line 640
+                            vaultItems = stored ? JSON.parse(stored) : [];
+                            if (!Array.isArray(vaultItems)) vaultItems = [];
+                          } catch (e) {
+                            vaultItems = [];
+                          }
+--- ./src/components/VisionStrategy.tsx line 161
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return [];
+  });
+
+--- ./src/components/VisionStrategy.tsx line 179
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          // Corrupted state from previous bug, drop it or map it to custom
+          safeStorage.removeItem("abcde_vchamber_dreams");
+          return defaultDreams;
+--- ./src/components/VisionStrategy.tsx line 197
+          const parsed = JSON.parse(stored);
+          if (!Array.isArray(parsed)) {
+            setDreams((prev) => ({ ...prev, ...parsed }));
+          }
+        }
+--- ./src/components/VisionStrategy.tsx line 204
+          setInboxItems(JSON.parse(storedInbox));
+        }
+        const storedCat = safeStorage.getItem("abcde_vchamber_active_category");
+        if (storedCat) {
+          setActiveCategory(storedCat);
+--- ./src/components/VisionStrategy.tsx line 280
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return {};
+  });
+
+--- ./src/components/VisionStrategy.tsx line 291
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return {};
+  });
+
+--- ./src/components/VisionStrategy.tsx line 300
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return [];
+  });
+
+--- ./src/components/VisionStrategy.tsx line 740
+      const currentHabits = hSaved ? JSON.parse(hSaved) : [];
+
+      const newHabitId =
+        "habit-" + Date.now() + "-" + Math.random().toString(36).slice(2, 5);
+      const cleanTitle = name.replace(/[🎯🚀⚡🌱💼💰🥗]/g, "").trim();
+--- ./src/components/VisionStrategy.tsx line 785
+      const currentHabits = hSaved ? JSON.parse(hSaved) : [];
+
+      const newHabitId = "habit-" + Date.now();
+      const cleanTitle = title.replace(/[🎯🚀⚡🌱💼💰🥗]/g, "").trim();
+
+--- ./src/components/VisionStrategy.tsx line 868
+        const currentHabits = hSaved ? JSON.parse(hSaved) : [];
+        let updatedHabits = [...currentHabits];
+
+        itemsToAdd.forEach((task, index) => {
+          const newHabitId = "habit-decomp-" + Date.now() + "-" + index;
+--- ./src/components/WheelOfLife.tsx line 99
+      return saved ? JSON.parse(saved) : defaultCategories;
+    } catch (e) {
+      return defaultCategories;
+    }
+  });
+--- ./src/components/WheelOfLife.tsx line 109
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      career: 6,
+      finance: 5,
