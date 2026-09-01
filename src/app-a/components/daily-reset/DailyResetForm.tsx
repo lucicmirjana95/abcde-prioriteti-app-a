@@ -8,9 +8,11 @@ interface Props {
   t: any;
   initialData: DailyResetData;
   onSubmit: (data: DailyResetData) => void;
+  aiEnabled?: boolean;
+  aiDisabledMessage?: string;
 }
 
-export default function DailyResetForm({ t, initialData, onSubmit }: Props) {
+export default function DailyResetForm({ t, initialData, onSubmit, aiEnabled = true, aiDisabledMessage }: Props) {
   const [energy, setEnergy] = useState<EnergyLevel | undefined>(initialData.energy);
   const [pleasantness, setPleasantness] = useState<PleasantnessLevel | undefined>(initialData.pleasantness);
   const [time, setTime] = useState<AvailableTimeValue | undefined>(initialData.availableTime);
@@ -43,7 +45,7 @@ export default function DailyResetForm({ t, initialData, onSubmit }: Props) {
       }
     }
 
-    if (hasError) return;
+    if (hasError || !aiEnabled) return;
 
     onSubmit({
       energy,
@@ -156,10 +158,12 @@ export default function DailyResetForm({ t, initialData, onSubmit }: Props) {
       >
         <button
           type="submit"
+          disabled={!aiEnabled}
           className="app-a-primary-button app-a-focus-ring w-full px-8 transition-colors sm:w-auto"
         >
           {t.submitPlan}
         </button>
+        {!aiEnabled && aiDisabledMessage ? <p className="mt-3 text-[13px] text-[#6E6E73] sm:mr-auto sm:mt-0 dark:text-[#AEAEB2]">{aiDisabledMessage}</p> : null}
       </div>
 
     </form>

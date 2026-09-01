@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import AppAShell from "./components/AppAShell";
 import TodayScreen from "./screens/TodayScreen";
 import InboxScreen from "./screens/InboxScreen";
 import VisionScreen from "./screens/VisionScreen";
 import ProgressScreen from "./screens/ProgressScreen";
+import SettingsScreen from "./screens/SettingsScreen";
 import { AppADestination, AppALanguage } from "./types";
 import {
   createDailyResetDemoClient,
@@ -11,20 +12,12 @@ import {
   getDailyResetDemoConfig,
 } from "./demo/dailyResetDemo";
 import "./app-a.css";
-
-function getInitialLanguage(): AppALanguage {
-  try {
-    const stored = localStorage.getItem("abcde_language");
-    if (stored === "en" || stored === "sr" || stored === "tr") return stored;
-  } catch {
-    // Storage can be unavailable in privacy-restricted browser contexts.
-  }
-  return "en";
-}
+import { useAppAPreferences } from "./settings/useAppAPreferences";
 
 export default function AppA() {
   const [destination, setDestination] = useState<AppADestination>("today");
-  const [language, setLanguage] = useState<AppALanguage>(getInitialLanguage);
+  const { preferences, setPreferences } = useAppAPreferences();
+  const language: AppALanguage = preferences.language;
   const demoConfig = useMemo(
     () => getDailyResetDemoConfig(window.location.search),
     []
@@ -33,20 +26,6 @@ export default function AppA() {
     () => demoConfig ? createDailyResetDemoClient(demoConfig.scenario) : undefined,
     [demoConfig]
   );
-
-  // A simple hack to get language from original app if available, or default to en.
-  // The original app saves to 'abcde_language'. We don't want to change the global system, 
-  // but we can read it to respect the document language.
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("abcde_language");
-      if (stored === "en" || stored === "sr" || stored === "tr") {
-        setLanguage(stored);
-      }
-    } catch (e) {
-      // ignore
-    }
-  }, []);
 
   let screen;
   switch (destination) {
@@ -57,6 +36,7 @@ export default function AppA() {
           client={demoClient}
           demoConfig={demoConfig}
           initialData={demoConfig ? createDailyResetDemoInitialData(language) : undefined}
+          preferences={preferences}
         />
       );
       break;
@@ -69,10 +49,13 @@ export default function AppA() {
     case "progress":
       screen = <ProgressScreen language={language} />;
       break;
+    case "settings":
+      screen = <SettingsScreen language={language} preferences={preferences} onChange={setPreferences} />;
+      break;
   }
 
   return (
-    <AppAShell currentDestination={destination} onNavigate={setDestination} language={language}>
+    <AppAShell currentDestination={destination} onNavigate={setDestination} language={language} theme={preferences.theme}>
       {screen}
     </AppAShell>
   );

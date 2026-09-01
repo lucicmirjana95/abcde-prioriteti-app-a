@@ -1,5 +1,14 @@
-export type AppADestination = 'today' | 'inbox' | 'vision' | 'progress';
+export type AppADestination = 'today' | 'inbox' | 'vision' | 'progress' | 'settings';
 export type AppALanguage = 'en' | 'sr' | 'tr';
+export type AppATheme = 'system' | 'light' | 'dark';
+
+export interface AppAPreferences {
+  language: AppALanguage;
+  theme: AppATheme;
+  timeZone: string;
+  defaultFocusMinutes: 15 | 25 | 45 | 60;
+  aiSuggestionsEnabled: boolean;
+}
 
 export type EnergyLevel = 1 | 2 | 3 | 4 | 5;
 export type PleasantnessLevel = 1 | 2 | 3 | 4 | 5;

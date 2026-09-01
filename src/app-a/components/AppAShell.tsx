@@ -1,26 +1,37 @@
-import { ReactNode } from "react";
-import { AppADestination, AppALanguage, APP_A_TRANSLATIONS } from "../types";
-import { Sun, Inbox, Eye, TrendingUp, Sparkles } from "lucide-react";
+import { ReactNode, useEffect, useState } from "react";
+import { AppADestination, AppALanguage, APP_A_TRANSLATIONS, type AppATheme } from "../types";
+import { Sun, Inbox, Eye, TrendingUp, Sparkles, Settings } from "lucide-react";
 
 interface Props {
   currentDestination: AppADestination;
   onNavigate: (dest: AppADestination) => void;
   language: AppALanguage;
   children: ReactNode;
+  theme: AppATheme;
 }
 
-export default function AppAShell({ currentDestination, onNavigate, language, children }: Props) {
+export default function AppAShell({ currentDestination, onNavigate, language, theme, children }: Props) {
   const t = APP_A_TRANSLATIONS[language];
+  const [systemDark, setSystemDark] = useState(() => typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const update = () => setSystemDark(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  const isDark = theme === "dark" || (theme === "system" && systemDark);
 
   const navItems = [
     { id: "today" as const, label: t.today, icon: Sun },
     { id: "inbox" as const, label: t.inbox, icon: Inbox },
     { id: "vision" as const, label: t.vision, icon: Eye },
     { id: "progress" as const, label: t.progress, icon: TrendingUp },
+    { id: "settings" as const, label: language === "sr" ? "Podešavanja" : language === "tr" ? "Ayarlar" : "Settings", icon: Settings },
   ];
 
   return (
-    <div className="app-a-root flex min-h-[100dvh] flex-col md:flex-row">
+    <div className={`app-a-root flex min-h-[100dvh] flex-col md:flex-row ${isDark ? "dark" : "light"}`} style={{ colorScheme: isDark ? "dark" : "light" }}>
       {/* Mobile Top Bar */}
       <header
         className="sticky top-0 z-40 flex h-[calc(52px+env(safe-area-inset-top,0px))] items-end border-b px-5 pb-3 backdrop-blur-xl md:hidden"
@@ -30,9 +41,10 @@ export default function AppAShell({ currentDestination, onNavigate, language, ch
           color: "var(--app-a-text)",
         }}
       >
-        <h1 className="text-[17px] font-semibold tracking-[-0.01em]">
+        <h1 className="flex-1 text-[17px] font-semibold tracking-[-0.01em]">
           {navItems.find((n) => n.id === currentDestination)?.label}
         </h1>
+        <button type="button" onClick={() => onNavigate("settings")} aria-label={language === "sr" ? "Podešavanja" : language === "tr" ? "Ayarlar" : "Settings"} className="app-a-focus-ring rounded-lg p-1"><Settings className="h-5 w-5" /></button>
       </header>
 
       {/* Desktop/Tablet Sidebar */}
@@ -109,7 +121,7 @@ export default function AppAShell({ currentDestination, onNavigate, language, ch
         }}
       >
         <div className="flex h-[54px] items-center justify-around px-2">
-          {navItems.map((item) => {
+          {navItems.filter((item) => item.id !== "settings").map((item) => {
             const Icon = item.icon;
             const isCurrent = currentDestination === item.id;
             return (

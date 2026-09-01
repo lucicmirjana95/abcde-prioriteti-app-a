@@ -34,6 +34,25 @@ export function getLocalDateKey(date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
+export function getLocalDateKeyInTimeZone(timezone: string, date = new Date()): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(date);
+    const value = (type: "year" | "month" | "day") => parts.find((part) => part.type === type)?.value;
+    const year = value("year");
+    const month = value("month");
+    const day = value("day");
+    if (year && month && day) return `${year}-${month}-${day}`;
+  } catch {
+    // Invalid zones normally cannot reach this path because preferences are validated.
+  }
+  return getLocalDateKey(date);
+}
+
 export function getLocalTimezone(): string {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";

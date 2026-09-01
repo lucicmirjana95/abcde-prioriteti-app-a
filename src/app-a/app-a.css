@@ -39,8 +39,7 @@
   min-height: 100dvh;
 }
 
-@media (prefers-color-scheme: dark) {
-  .app-a-root {
+.app-a-root.dark {
     /* Dark Theme Tokens */
     --app-a-bg: #121214;
     --app-a-sidebar: rgba(22, 22, 26, 0.88);
@@ -70,7 +69,6 @@
     --app-a-focus-ring: rgba(41, 151, 255, 0.45);
     --app-a-shadow: 0 2px 6px rgba(0, 0, 0, 0.40);
     --app-a-shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.50);
-  }
 }
 
 /* Surface containers */
@@ -226,4 +224,3 @@
     transition-duration: 0.01ms !important;
   }
 }
-

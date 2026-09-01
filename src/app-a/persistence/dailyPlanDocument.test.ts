@@ -4,6 +4,7 @@ import {
   createDailyPlanDocument,
   dailyResetDataFromDocument,
   getLocalDateKey,
+  getLocalDateKeyInTimeZone,
   isAppADailyPlanDocument,
 } from "./dailyPlanDocument";
 
@@ -98,5 +99,7 @@ assert.equal(
 
 const localDate = getLocalDateKey(new Date(2026, 7, 9, 23, 30));
 assert.equal(localDate, "2026-08-09");
+assert.equal(getLocalDateKeyInTimeZone("Europe/Belgrade", new Date("2026-08-09T22:30:00.000Z")), "2026-08-10");
+assert.equal(getLocalDateKeyInTimeZone("America/New_York", new Date("2026-08-10T02:30:00.000Z")), "2026-08-09");
 
 console.log("All App A daily plan document tests passed.");

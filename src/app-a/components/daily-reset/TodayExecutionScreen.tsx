@@ -14,6 +14,7 @@ interface Props {
   error?: string | null;
   onToggle: (itemId: string) => void;
   onEditPlan: () => void;
+  defaultFocusMinutes: 15 | 25 | 45 | 60;
 }
 
 export default function TodayExecutionScreen({
@@ -24,6 +25,7 @@ export default function TodayExecutionScreen({
   error,
   onToggle,
   onEditPlan,
+  defaultFocusMinutes,
 }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
   const [focusItem, setFocusItem] = useState<DailyPlanItem | null>(null);
@@ -171,7 +173,7 @@ export default function TodayExecutionScreen({
           {t.outsideTodaySummary.replace("{count}", String(outsideCount))}
         </p>
       )}
-      {focusItem ? <FocusTimer item={focusItem} language={language} onClose={() => setFocusItem(null)} /> : null}
+      {focusItem ? <FocusTimer item={focusItem} language={language} defaultMinutes={defaultFocusMinutes} onClose={() => setFocusItem(null)} /> : null}
     </div>
   );
 }

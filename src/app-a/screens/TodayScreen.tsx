@@ -1,4 +1,4 @@
-import { APP_A_TRANSLATIONS, AppALanguage } from '../types';
+import { APP_A_TRANSLATIONS, AppALanguage, type AppAPreferences } from '../types';
 import DailyResetForm from '../components/daily-reset/DailyResetForm';
 import ClarificationForm from '../components/daily-reset/ClarificationForm';
 import DailyResetLoadingState from '../components/daily-reset/DailyResetLoadingState';
@@ -15,7 +15,7 @@ import { useAppAAuth } from '../auth/useAppAAuth';
 import {
   createDailyPlanDocument,
   dailyResetDataFromDocument,
-  getLocalDateKey,
+  getLocalDateKeyInTimeZone,
 } from '../persistence/dailyPlanDocument';
 import {
   loadConfirmedDailyPlan,
@@ -34,9 +34,10 @@ interface Props {
   client?: DailyResetApiClient;
   demoConfig?: DailyResetDemoConfig | null;
   initialData?: Partial<DailyResetData>;
+  preferences: AppAPreferences;
 }
 
-export default function TodayScreen({ language, client, demoConfig, initialData }: Props) {
+export default function TodayScreen({ language, client, demoConfig, initialData, preferences }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
   const {
     state,
@@ -57,13 +58,13 @@ export default function TodayScreen({ language, client, demoConfig, initialData 
   const [completedItemIds, setCompletedItemIds] = useState<string[]>([]);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [executionError, setExecutionError] = useState<string | null>(null);
-  const [activePlanDate, setActivePlanDate] = useState(getLocalDateKey);
+  const [activePlanDate, setActivePlanDate] = useState(() => getLocalDateKeyInTimeZone(preferences.timeZone));
   const loadedForUserAndDate = useRef<string | null>(null);
   const isConfirmingRef = useRef(false);
 
   useEffect(() => {
     if (demoConfig || !authReady || !user || isConfirmingRef.current) return;
-    const localDate = getLocalDateKey();
+    const localDate = getLocalDateKeyInTimeZone(preferences.timeZone);
     const loadKey = `${user.uid}:${localDate}`;
     if (loadedForUserAndDate.current === loadKey) return;
     loadedForUserAndDate.current = loadKey;
@@ -95,7 +96,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData 
     return () => {
       cancelled = true;
     };
-  }, [authReady, demoConfig, loadConfirmedPlan, t.planLoadError, user]);
+  }, [authReady, demoConfig, loadConfirmedPlan, preferences.timeZone, t.planLoadError, user]);
 
   const handleConfirm = async (draft: DailyPlanDraft) => {
     setSaveStatus('saving');
@@ -110,7 +111,8 @@ export default function TodayScreen({ language, client, demoConfig, initialData 
         return;
       }
       const activeUser = user || await signInWithGoogle();
-      const document = createDailyPlanDocument(state.inputData, draft, language);
+      const localDate = getLocalDateKeyInTimeZone(preferences.timeZone);
+      const document = createDailyPlanDocument(state.inputData, draft, language, localDate, preferences.timeZone);
       await saveConfirmedDailyPlan(activeUser.uid, document);
       loadedForUserAndDate.current = `${activeUser.uid}:${document.localDate}`;
       setActivePlanDate(document.localDate);
@@ -141,7 +143,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData 
         authPresent: !!user,
         uidMatchesPath: true,
         dateKeyType: "string",
-        dateKeyLength: getLocalDateKey().length,
+        dateKeyLength: getLocalDateKeyInTimeZone(preferences.timeZone).length,
       });
     } finally {
       isConfirmingRef.current = false;
@@ -221,6 +223,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData 
           setViewMode('review');
           setExecutionError(null);
         }}
+        defaultFocusMinutes={preferences.defaultFocusMinutes}
       />
     ) : (
       <DailyPlanReview
@@ -253,6 +256,8 @@ export default function TodayScreen({ language, client, demoConfig, initialData 
           onSubmit={(validatedData) => {
             submitInitial(validatedData);
           }}
+          aiEnabled={preferences.aiSuggestionsEnabled}
+          aiDisabledMessage={language === 'sr' ? 'AI predlozi su isključeni u Podešavanjima.' : language === 'tr' ? 'AI önerileri Ayarlar bölümünde kapalı.' : 'AI suggestions are turned off in Settings.'}
         />
       </div>
     );
