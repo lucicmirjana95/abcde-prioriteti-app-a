@@ -57,6 +57,23 @@ service cloud.firestore {
         allow get, create, update, delete: if request.auth != null && request.auth.uid == userId && isValidId(dateKey);
         allow list: if request.auth != null && request.auth.uid == userId;
       }
+
+      // Shared daily routines used by Apps A, B, and C.
+      match /routines/{routineId} {
+        allow get, create, update, delete: if request.auth != null && request.auth.uid == userId && isValidId(routineId);
+        allow list: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // One idempotent record per routine and local calendar date.
+      match /routineCompletions/{completionId} {
+        allow get, create, update, delete: if request.auth != null && request.auth.uid == userId && isValidId(completionId);
+        allow list: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /visionStrategies/{strategyId} {
+        allow get, create, update, delete: if request.auth != null && request.auth.uid == userId && isValidId(strategyId);
+        allow list: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
     // App A data is isolated from legacy task documents and is private to its owner.

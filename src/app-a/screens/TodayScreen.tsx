@@ -26,6 +26,8 @@ import {
 } from '../persistence/dailyPlanRepository';
 import type { DailyPlanDraft } from '../domain/daily-reset/contracts';
 import { normalizeCompletedItemIds, toggleCompletedItemId } from './todayExecution';
+import DailyRoutinesSection from '../components/routines/DailyRoutinesSection';
+import ResetSessions from '../components/reset/ResetSessions';
 
 interface Props {
   language: AppALanguage;
@@ -262,6 +264,12 @@ export default function TodayScreen({ language, client, demoConfig, initialData 
         <DailyResetDemoBanner language={language} scenario={demoConfig.scenario} />
       )}
       {content}
+      {!isLoadingSavedPlan && state.phase !== 'submitting' && state.phase !== 'resolving' && (
+        <>
+          <DailyRoutinesSection userId={user?.uid} language={language} />
+          <ResetSessions language={language} />
+        </>
+      )}
     </>
   );
 }

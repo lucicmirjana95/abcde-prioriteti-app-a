@@ -3,6 +3,7 @@ import PlanHistoryState from "../components/PlanHistoryState";
 import type { AppALanguage } from "../types";
 import { formatHistoryDate, getProgressSummary } from "./planHistory";
 import { useAppAPlanHistory } from "./useAppAPlanHistory";
+import RoutineWeekOverview from "../components/routines/RoutineWeekOverview";
 
 const COPY = {
   en: { eyebrow: "A factual view", title: "Progress", intro: "Completed tasks and consistency are shown separately—there is no overall score.", empty: "Confirm a daily plan and complete a task to start seeing progress.", completed: "Tasks completed", active: "Active days", planned: "planned days", recent: "Recent days", tasks: "tasks" },
@@ -26,5 +27,6 @@ export default function ProgressScreen({ language }: { language: AppALanguage })
       </section>
       <section className="mt-7" aria-labelledby="recent-progress"><h2 id="recent-progress" className="mb-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6E6E73] dark:text-[#AEAEB2]">{t.recent}</h2><div className="app-a-surface divide-y divide-black/5 overflow-hidden dark:divide-white/10">{summary.days.slice(0, 14).map((day) => <div key={day.localDate} className="flex min-h-14 items-center justify-between gap-4 px-4 py-3 sm:px-5"><time className="text-[15px] font-medium text-black dark:text-white" dateTime={day.localDate}>{formatHistoryDate(day.localDate, language)}</time><span className="text-[14px] tabular-nums text-[#6E6E73] dark:text-[#AEAEB2]">{day.completed}/{day.total} {t.tasks}</span></div>)}</div></section>
     </>}
+    <RoutineWeekOverview userId={history.user.uid} language={language} />
   </div>;
 }

@@ -1,8 +1,10 @@
-import { Check, Clock3, Pencil, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { Check, Clock3, Pencil, Sparkles, Timer } from "lucide-react";
 import type { DailyPlanDraft, DailyPlanItem } from "../../domain/daily-reset/contracts";
 import { APP_A_TRANSLATIONS, type AppALanguage } from "../../types";
 import SafeInterventionCard from "./SafeInterventionCard";
 import { normalizeCompletedItemIds } from "../../screens/todayExecution";
+import FocusTimer from "../focus/FocusTimer";
 
 interface Props {
   draft: DailyPlanDraft;
@@ -24,6 +26,7 @@ export default function TodayExecutionScreen({
   onEditPlan,
 }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
+  const [focusItem, setFocusItem] = useState<DailyPlanItem | null>(null);
   const requiredItems = [...draft.firstFocus, ...draft.laterToday];
   const optionalItems = draft.ifCapacityRemains;
   const todayItems = [...requiredItems, ...optionalItems];
@@ -37,12 +40,8 @@ export default function TodayExecutionScreen({
   const renderItem = (item: DailyPlanItem, emphasized = false) => {
     const isComplete = completed.includes(item.id);
     return (
-      <button
+      <div
         key={item.id}
-        type="button"
-        aria-pressed={isComplete}
-        disabled={Boolean(updatingItemId)}
-        onClick={() => onToggle(item.id)}
         className={`app-a-focus-ring flex min-h-[64px] w-full items-start gap-3 rounded-[14px] border p-3.5 text-left transition-colors sm:p-4 ${
           isComplete
             ? "border-black/[0.06] bg-black/[0.025] text-black/45 dark:border-white/[0.06] dark:bg-white/[0.035] dark:text-white/45"
@@ -51,8 +50,12 @@ export default function TodayExecutionScreen({
               : "border-black/[0.08] bg-white text-black dark:border-white/10 dark:bg-[#242426] dark:text-white"
         }`}
       >
-        <span
-          aria-hidden="true"
+        <button
+          type="button"
+          aria-label={item.title}
+          aria-pressed={isComplete}
+          disabled={Boolean(updatingItemId)}
+          onClick={() => onToggle(item.id)}
           className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
             isComplete
               ? "border-[#34C759] bg-[#34C759] text-white"
@@ -60,7 +63,7 @@ export default function TodayExecutionScreen({
           }`}
         >
           {isComplete && <Check className="h-4 w-4" strokeWidth={3} />}
-        </span>
+        </button>
         <span className="min-w-0 flex-1">
           <span className={`block text-[16px] font-semibold leading-snug ${isComplete ? "line-through" : ""}`}>
             {item.title}
@@ -80,7 +83,8 @@ export default function TodayExecutionScreen({
             )}
           </span>
         </span>
-      </button>
+        {!isComplete && <button type="button" onClick={() => setFocusItem(item)} className="app-a-focus-ring shrink-0 rounded-xl border border-black/10 p-2.5 text-[#0071E3] dark:border-white/15 dark:text-[#0A84FF]" aria-label={`Focus: ${item.title}`}><Timer className="h-4 w-4" /></button>}
+      </div>
     );
   };
 
@@ -167,6 +171,7 @@ export default function TodayExecutionScreen({
           {t.outsideTodaySummary.replace("{count}", String(outsideCount))}
         </p>
       )}
+      {focusItem ? <FocusTimer item={focusItem} language={language} onClose={() => setFocusItem(null)} /> : null}
     </div>
   );
 }
