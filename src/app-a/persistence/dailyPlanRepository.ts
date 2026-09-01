@@ -6,8 +6,8 @@ import {
   limit,
   orderBy,
   query,
-  runTransaction,
   serverTimestamp,
+  setDoc,
   updateDoc,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
@@ -15,6 +15,111 @@ import {
   AppADailyPlanDocument,
   isAppADailyPlanDocument,
 } from "./dailyPlanDocument";
+
+export type PersistenceDiagnosticCategory =
+  | "permission_denied"
+  | "unauthenticated"
+  | "unavailable"
+  | "quota"
+  | "invalid_data"
+  | "network"
+  | "unknown";
+
+export interface PersistenceSaveDiagnostic {
+  stage: "set_doc";
+  firebaseCode: string;
+  category: PersistenceDiagnosticCategory;
+}
+
+export class AppAPersistenceError extends Error {
+  readonly diagnostic: PersistenceSaveDiagnostic;
+  override readonly cause?: unknown;
+
+  constructor(diagnostic: PersistenceSaveDiagnostic, cause?: unknown) {
+    super("app_a_persistence_save_failed");
+    this.name = "AppAPersistenceError";
+    this.diagnostic = diagnostic;
+    if (cause !== undefined) {
+      this.cause = cause;
+    }
+  }
+}
+
+export function mapFirebaseErrorCodeToCategory(
+  code: string,
+): PersistenceDiagnosticCategory {
+  const normalized = code.toLowerCase().trim();
+  if (
+    normalized.includes("permission-denied") ||
+    normalized.includes("permission_denied")
+  ) {
+    return "permission_denied";
+  }
+  if (
+    normalized.includes("unauthenticated") ||
+    normalized.includes("auth-required") ||
+    normalized.includes("authentication_required")
+  ) {
+    return "unauthenticated";
+  }
+  if (
+    normalized.includes("unavailable") ||
+    normalized.includes("resource-exhausted") ||
+    normalized.includes("quota")
+  ) {
+    return normalized.includes("unavailable") ? "unavailable" : "quota";
+  }
+  if (
+    normalized.includes("invalid-argument") ||
+    normalized.includes("failed-precondition") ||
+    normalized.includes("out-of-range")
+  ) {
+    return "invalid_data";
+  }
+  if (
+    normalized.includes("network") ||
+    normalized.includes("deadline-exceeded") ||
+    normalized.includes("timed-out")
+  ) {
+    return "network";
+  }
+  return "unknown";
+}
+
+export function extractDiagnosticFromSaveError(
+  error: unknown,
+): PersistenceSaveDiagnostic {
+  if (error instanceof AppAPersistenceError) {
+    return error.diagnostic;
+  }
+
+  let rawCode = "unknown";
+  if (typeof error === "object" && error !== null) {
+    const candidate = error as { code?: unknown; message?: unknown };
+    if (typeof candidate.code === "string" && candidate.code.length > 0) {
+      rawCode = candidate.code;
+    } else if (
+      typeof candidate.message === "string" &&
+      candidate.message.startsWith("auth")
+    ) {
+      rawCode = candidate.message;
+    }
+  } else if (typeof error === "string") {
+    rawCode = error;
+  }
+
+  const category = mapFirebaseErrorCodeToCategory(rawCode);
+  const sanitizedFirebaseCode =
+    rawCode && rawCode.trim().length > 0
+      ? rawCode.replace(/[^a-zA-Z0-9_\-\/]/g, "").slice(0, 64) || "unknown"
+      : "unknown";
+
+  return {
+    stage: "set_doc",
+    firebaseCode: sanitizedFirebaseCode,
+    category,
+  };
+}
 
 function dailyPlanRef(userId: string, localDate: string) {
   return doc(db, "appAUsers", userId, "dailyResets", localDate);
@@ -24,21 +129,29 @@ export async function saveConfirmedDailyPlan(
   userId: string,
   document: AppADailyPlanDocument,
 ): Promise<void> {
-  if (!userId) throw new Error("authentication_required");
+  if (!userId) {
+    const diag: PersistenceSaveDiagnostic = {
+      stage: "set_doc",
+      firebaseCode: "authentication_required",
+      category: "unauthenticated",
+    };
+    throw new AppAPersistenceError(diag);
+  }
 
   const reference = dailyPlanRef(userId, document.localDate);
-  await runTransaction(db, async (transaction) => {
-    const existing = await transaction.get(reference);
-    transaction.set(
+  try {
+    await setDoc(
       reference,
       {
         ...document,
-        ...(existing.exists() ? {} : { createdAt: serverTimestamp() }),
         updatedAt: serverTimestamp(),
       },
       { merge: true },
     );
-  });
+  } catch (rawError: unknown) {
+    const diagnostic = extractDiagnosticFromSaveError(rawError);
+    throw new AppAPersistenceError(diagnostic, rawError);
+  }
 }
 
 export async function loadConfirmedDailyPlan(

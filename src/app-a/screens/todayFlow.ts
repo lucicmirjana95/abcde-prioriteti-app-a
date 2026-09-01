@@ -9,7 +9,7 @@ import {
 } from "../domain/daily-reset/contracts";
 import { DailyResetApiClient, createDailyResetApiClient } from "../api";
 import { DailyResetData } from "../types";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 
 export type TodayFlowPhase =
   | "editing"
@@ -65,10 +65,22 @@ export function convertDataToInput(
   };
 }
 
+export function getLocalizedTimeoutMessage(lang: SupportedLanguage): string {
+  if (lang === "sr") {
+    return "Planiranje je ovog puta trajalo predugo. Vaš unos je sačuvan — možete pokušati ponovo.";
+  }
+  if (lang === "tr") {
+    return "Planlama bu sefer çok uzun sürdü. Girişiniz korundu — tekrar deneyebilirsiniz.";
+  }
+  return "Planning took too long this time. Your input is preserved — you can try again.";
+}
+
 export class TodayFlowController {
   private client: DailyResetApiClient;
   private state: TodayFlowState;
   private listeners: Array<(state: TodayFlowState) => void> = [];
+  private activeAbortController: AbortController | null = null;
+  private activeRequestId: number = 0;
 
   constructor(
     language: SupportedLanguage = "en",
@@ -124,6 +136,30 @@ export class TodayFlowController {
     });
   }
 
+  cancel() {
+    if (this.activeAbortController) {
+      try {
+        this.activeAbortController.abort();
+      } catch {}
+      this.activeAbortController = null;
+    }
+    this.activeRequestId++;
+
+    if (this.state.phase === "submitting") {
+      this.updateState({
+        phase: "editing",
+        error: null,
+        failedPhase: null,
+      });
+    } else if (this.state.phase === "resolving") {
+      this.updateState({
+        phase: "clarification_needed",
+        error: null,
+        failedPhase: null,
+      });
+    }
+  }
+
   async submitInitial(data?: DailyResetData): Promise<void> {
     if (data) {
       this.updateInputData(data);
@@ -153,14 +189,40 @@ export class TodayFlowController {
 
     const input = convertDataToInput(currentData, this.state.language);
 
+    const abortController = new AbortController();
+    this.activeAbortController = abortController;
+    const currentRequestId = ++this.activeRequestId;
+
     this.updateState({
       phase: "submitting",
       error: null,
       failedPhase: null,
     });
 
-    const response = await this.client.analyze(input);
-    this.handleApiResponse(response, "initial");
+    try {
+      const response = await this.client.analyze(input, abortController.signal);
+      if (this.activeRequestId !== currentRequestId) {
+        return;
+      }
+      this.handleApiResponse(response, "initial");
+    } catch (err: any) {
+      if (this.activeRequestId !== currentRequestId) {
+        return;
+      }
+      this.updateState({
+        phase: "error",
+        error: {
+          message: getLocalizedTimeoutMessage(this.state.language),
+          code: "timeout",
+          retryable: true,
+        },
+        failedPhase: "initial",
+      });
+    } finally {
+      if (this.activeAbortController === abortController) {
+        this.activeAbortController = null;
+      }
+    }
   }
 
   async submitResolve(answers?: Record<string, string>): Promise<void> {
@@ -205,14 +267,40 @@ export class TodayFlowController {
       clarificationAnswers,
     };
 
+    const abortController = new AbortController();
+    this.activeAbortController = abortController;
+    const currentRequestId = ++this.activeRequestId;
+
     this.updateState({
       phase: "resolving",
       error: null,
       failedPhase: null,
     });
 
-    const response = await this.client.resolve(submission, questions);
-    this.handleApiResponse(response, "resolve");
+    try {
+      const response = await this.client.resolve(submission, questions, abortController.signal);
+      if (this.activeRequestId !== currentRequestId) {
+        return;
+      }
+      this.handleApiResponse(response, "resolve");
+    } catch (err: any) {
+      if (this.activeRequestId !== currentRequestId) {
+        return;
+      }
+      this.updateState({
+        phase: "error",
+        error: {
+          message: getLocalizedTimeoutMessage(this.state.language),
+          code: "timeout",
+          retryable: true,
+        },
+        failedPhase: "resolve",
+      });
+    } finally {
+      if (this.activeAbortController === abortController) {
+        this.activeAbortController = null;
+      }
+    }
   }
 
   async retry(): Promise<void> {
@@ -259,10 +347,14 @@ export class TodayFlowController {
     phase: "initial" | "resolve"
   ) {
     if (response.phase === "error") {
+      const isTimeout = response.code === "timeout";
+      const errorMessage = isTimeout
+        ? getLocalizedTimeoutMessage(this.state.language)
+        : response.error;
       this.updateState({
         phase: "error",
         error: {
-          message: response.error,
+          message: errorMessage,
           code: response.code,
           retryable: response.retryable,
           fieldErrors: response.fieldErrors as Record<string, string> | undefined,
@@ -314,17 +406,43 @@ export function useTodayFlow(
     return unsubscribe;
   }, [controller]);
 
+  const submitInitial = useCallback(
+    (data?: DailyResetData) => controller.submitInitial(data),
+    [controller]
+  );
+  const submitResolve = useCallback(
+    (answers?: Record<string, string>) => controller.submitResolve(answers),
+    [controller]
+  );
+  const setAnswer = useCallback(
+    (qId: string, ans: string) => controller.setAnswer(qId, ans),
+    [controller]
+  );
+  const retry = useCallback(() => controller.retry(), [controller]);
+  const cancel = useCallback(() => controller.cancel(), [controller]);
+  const backToEdit = useCallback(() => controller.backToEdit(), [controller]);
+  const reset = useCallback(() => controller.reset(), [controller]);
+  const updateInputData = useCallback(
+    (data: Partial<DailyResetData>) => controller.updateInputData(data),
+    [controller]
+  );
+  const loadConfirmedPlan = useCallback(
+    (draft: DailyPlanDraft, data?: DailyResetData) =>
+      controller.loadConfirmedPlan(draft, data),
+    [controller]
+  );
+
   return {
     state,
     controller,
-    submitInitial: (data?: DailyResetData) => controller.submitInitial(data),
-    submitResolve: (answers?: Record<string, string>) => controller.submitResolve(answers),
-    setAnswer: (qId: string, ans: string) => controller.setAnswer(qId, ans),
-    retry: () => controller.retry(),
-    backToEdit: () => controller.backToEdit(),
-    reset: () => controller.reset(),
-    updateInputData: (data: Partial<DailyResetData>) => controller.updateInputData(data),
-    loadConfirmedPlan: (draft: DailyPlanDraft, data?: DailyResetData) =>
-      controller.loadConfirmedPlan(draft, data),
+    submitInitial,
+    submitResolve,
+    setAnswer,
+    retry,
+    cancel,
+    backToEdit,
+    reset,
+    updateInputData,
+    loadConfirmedPlan,
   };
 }

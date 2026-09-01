@@ -382,7 +382,29 @@ async function runTests() {
   assert.strictEqual(res.statusCode, 502);
   assert.strictEqual(res.body.error, "Invalid AI response structure. Please try again.");
 
-  console.log("✅ All 33 route tests passed successfully!");
+  // 34. Timeout error message is localized for English, Serbian, and Turkish
+  resetMocks();
+  generatorError = new Error("Timeout");
+  
+  req = createMockReq({ phase: "initial", input: { brainDump: "valid brain dump for test", language: "en" } });
+  res = createMockRes();
+  await route(req, res);
+  assert.strictEqual(res.statusCode, 504);
+  assert.strictEqual(res.body.error, "Planning took too long this time. Your input is preserved — you can try again.");
+
+  req = createMockReq({ phase: "initial", input: { brainDump: "valid brain dump for test", language: "sr" } });
+  res = createMockRes();
+  await route(req, res);
+  assert.strictEqual(res.statusCode, 504);
+  assert.strictEqual(res.body.error, "Planiranje je ovog puta trajalo predugo. Vaš unos je sačuvan — možete pokušati ponovo.");
+
+  req = createMockReq({ phase: "initial", input: { brainDump: "valid brain dump for test", language: "tr" } });
+  res = createMockRes();
+  await route(req, res);
+  assert.strictEqual(res.statusCode, 504);
+  assert.strictEqual(res.body.error, "Planlama bu sefer çok uzun sürdü. Girişiniz korundu — tekrar deneyebilirsiniz.");
+
+  console.log("✅ All 34 route tests passed successfully!");
   process.exit(0);
 }
 

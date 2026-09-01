@@ -71,12 +71,24 @@ export default function ClarificationForm({
   return (
     <form onSubmit={handleSubmit} className="mx-auto flex max-w-[680px] flex-col gap-6 py-2">
       <div className="flex flex-col gap-3 pb-2">
-        <h1 className="text-[30px] font-bold leading-tight tracking-[-0.035em] text-black sm:text-[36px] dark:text-white">{t.title}</h1>
-        <p className="max-w-[560px] text-[16px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">{t.subtitle}</p>
+        <h1 className="text-[30px] font-bold leading-tight tracking-[-0.035em] sm:text-[36px]" style={{ color: "var(--app-a-text)" }}>
+          {t.title}
+        </h1>
+        <p className="max-w-[560px] text-[16px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>
+          {t.subtitle}
+        </p>
       </div>
 
       {validationError && (
-        <div role="alert" className="p-3.5 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-[14px] rounded-xl font-medium">
+        <div
+          role="alert"
+          className="p-3.5 border text-[14px] rounded-xl font-medium"
+          style={{
+            backgroundColor: "var(--app-a-danger-soft)",
+            borderColor: "var(--app-a-danger)",
+            color: "var(--app-a-danger-text)",
+          }}
+        >
           {validationError}
         </div>
       )}
@@ -84,12 +96,16 @@ export default function ClarificationForm({
       <div className="flex flex-col gap-6">
         {questions.map((q, idx) => (
           <div key={q.id || idx} className="app-a-surface flex flex-col gap-3 p-5 sm:p-6">
-            <label htmlFor={`question-${q.id}`} className="text-[16px] font-semibold text-black dark:text-white">
+            <label
+              htmlFor={`question-${q.id}`}
+              className="text-[16px] font-semibold"
+              style={{ color: "var(--app-a-text)" }}
+            >
               {idx + 1}. {q.question}
             </label>
 
             {q.context && (
-              <p className="text-[14px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
+              <p className="text-[14px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>
                 {t.contextLabel} {q.context}
               </p>
             )}
@@ -104,7 +120,7 @@ export default function ClarificationForm({
                 setValidationError(null);
               }}
               placeholder={t.placeholder}
-              className="app-a-field mt-1 min-h-[104px] w-full resize-y p-3.5 text-[16px] placeholder-black/35 transition-shadow dark:placeholder-white/35"
+              className="app-a-field mt-1 min-h-[104px] w-full resize-y p-3.5 text-[16px] transition-shadow"
             />
           </div>
         ))}
@@ -113,14 +129,14 @@ export default function ClarificationForm({
       <div className="flex flex-col sm:flex-row gap-3 pt-4">
         <button
           type="submit"
-          className="app-a-primary-button app-a-focus-ring flex-1 px-6 transition-colors hover:bg-[#0077ED]"
+          className="app-a-primary-button app-a-focus-ring flex-1 px-6 transition-colors"
         >
           {t.submit}
         </button>
         <button
           type="button"
           onClick={onBackToEdit}
-          className="app-a-secondary-button app-a-focus-ring px-6 transition-colors hover:bg-black/10 dark:hover:bg-white/15"
+          className="app-a-secondary-button app-a-focus-ring px-6 transition-colors"
         >
           {t.backToEdit}
         </button>

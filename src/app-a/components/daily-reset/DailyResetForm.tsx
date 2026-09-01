@@ -75,7 +75,7 @@ export default function DailyResetForm({ t, initialData, onSubmit }: Props) {
       
       {/* SECTION 1: State */}
       <section className="flex flex-col gap-6 p-5 sm:p-6">
-        <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-black dark:text-white">
+        <h2 className="text-[20px] font-semibold tracking-[-0.02em]" style={{ color: "var(--app-a-text)" }}>
           {t.sectionState}
         </h2>
         <FiveLevelScale 
@@ -95,7 +95,7 @@ export default function DailyResetForm({ t, initialData, onSubmit }: Props) {
           clearLabel={t.clearSelection}
         />
         <div className="flex flex-col gap-2 mt-2">
-          <label htmlFor="state-note" className="text-[16px] font-medium text-black dark:text-white">
+          <label htmlFor="state-note" className="text-[16px] font-medium" style={{ color: "var(--app-a-text)" }}>
             {t.stateNoteLabel}
           </label>
           <input
@@ -104,14 +104,17 @@ export default function DailyResetForm({ t, initialData, onSubmit }: Props) {
             value={stateNote}
             onChange={(e) => setStateNote(e.target.value)}
             placeholder={t.stateNotePlaceholder}
-          className="app-a-field min-h-[48px] w-full px-4 text-[16px] placeholder-black/35 transition-shadow dark:placeholder-white/35"
+            className="app-a-field min-h-[48px] w-full px-4 text-[16px] transition-shadow"
           />
         </div>
       </section>
 
       {/* SECTION 2: Time */}
-      <section className="flex flex-col gap-5 border-t border-black/10 p-5 sm:p-6 dark:border-white/10">
-        <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-black dark:text-white">
+      <section
+        className="flex flex-col gap-5 border-t p-5 sm:p-6"
+        style={{ borderColor: "var(--app-a-border)" }}
+      >
+        <h2 className="text-[20px] font-semibold tracking-[-0.02em]" style={{ color: "var(--app-a-text)" }}>
           {t.sectionTime}
         </h2>
         <AvailableTimeSelector 
@@ -126,8 +129,11 @@ export default function DailyResetForm({ t, initialData, onSubmit }: Props) {
       </section>
 
       {/* SECTION 3: Mind */}
-      <section className="flex flex-col gap-5 border-t border-black/10 p-5 sm:p-6 dark:border-white/10">
-        <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-black dark:text-white">
+      <section
+        className="flex flex-col gap-5 border-t p-5 sm:p-6"
+        style={{ borderColor: "var(--app-a-border)" }}
+      >
+        <h2 className="text-[20px] font-semibold tracking-[-0.02em]" style={{ color: "var(--app-a-text)" }}>
           {t.sectionMind}
         </h2>
         <BrainDumpInput
@@ -141,10 +147,16 @@ export default function DailyResetForm({ t, initialData, onSubmit }: Props) {
         />
       </section>
 
-      <div className="border-t border-black/10 bg-black/[0.018] p-5 sm:flex sm:justify-end sm:p-6 dark:border-white/10 dark:bg-white/[0.025]">
+      <div
+        className="border-t p-5 sm:flex sm:justify-end sm:p-6"
+        style={{
+          borderColor: "var(--app-a-border)",
+          backgroundColor: "var(--app-a-disabled-bg)",
+        }}
+      >
         <button
           type="submit"
-          className="app-a-primary-button app-a-focus-ring w-full px-8 transition-colors hover:bg-[#0077ED] sm:w-auto"
+          className="app-a-primary-button app-a-focus-ring w-full px-8 transition-colors sm:w-auto"
         >
           {t.submitPlan}
         </button>

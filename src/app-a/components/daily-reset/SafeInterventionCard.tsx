@@ -13,24 +13,43 @@ export default function SafeInterventionCard({ intervention, language }: Props) 
   return (
     <div
       data-testid="safe-intervention-card"
-      className="p-4 my-6 bg-[#007AFF]/5 dark:bg-[#007AFF]/10 rounded-2xl border border-[#007AFF]/20 text-left"
+      className="my-6 rounded-2xl border p-4 text-left"
+      style={{
+        backgroundColor: "var(--app-a-accent-soft)",
+        borderColor: "var(--app-a-accent)",
+      }}
     >
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[13px] font-semibold tracking-wide uppercase text-[#007AFF]">
+        <span
+          className="text-[13px] font-bold tracking-wide uppercase"
+          style={{ color: "var(--app-a-accent)" }}
+        >
           {t.optionalInterventionTitle}
         </span>
-        <span className="text-[13px] text-[#3C3C43]/70 dark:text-[#EBEBF5]/60 font-medium">
+        <span
+          className="text-[13px] font-medium"
+          style={{ color: "var(--app-a-text-secondary)" }}
+        >
           {intervention.estimatedMinutes} min
         </span>
       </div>
-      <h4 className="text-[16px] font-semibold text-black dark:text-white mb-1">
+      <h4
+        className="mb-1 text-[16px] font-semibold"
+        style={{ color: "var(--app-a-text)" }}
+      >
         {intervention.title}
       </h4>
-      <p className="text-[14px] text-[#3C3C43] dark:text-[#EBEBF5]/90 mb-2 leading-relaxed">
+      <p
+        className="mb-2 text-[14px] leading-relaxed"
+        style={{ color: "var(--app-a-text)" }}
+      >
         {intervention.description}
       </p>
       {intervention.reason && (
-        <p className="text-[13px] italic text-[#3C3C43]/80 dark:text-[#EBEBF5]/70">
+        <p
+          className="text-[13px] italic"
+          style={{ color: "var(--app-a-text-secondary)" }}
+        >
           "{intervention.reason}"
         </p>
       )}

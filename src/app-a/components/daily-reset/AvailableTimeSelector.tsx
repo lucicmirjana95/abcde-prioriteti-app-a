@@ -44,7 +44,8 @@ export default function AvailableTimeSelector({ value, onChange, t, error }: Pro
             <button
               type="button"
               onClick={() => onChange(undefined)}
-              className="app-a-focus-ring min-h-[44px] rounded-lg px-2 text-[14px] font-medium text-[#0071E3] dark:text-[#0A84FF]"
+              className="app-a-focus-ring min-h-[44px] rounded-lg px-2 text-[14px] font-medium transition-colors"
+              style={{ color: "var(--app-a-accent)" }}
             >
               {t.clearSelection}
             </button>
@@ -56,11 +57,13 @@ export default function AvailableTimeSelector({ value, onChange, t, error }: Pro
           return (
             <label
               key={opt.type}
-              className={`flex min-h-[48px] cursor-pointer items-center justify-center rounded-xl border px-3 text-center transition-colors focus-within:ring-2 focus-within:ring-[#0A84FF] ${
-                isSelected 
-                  ? "border-[#0A84FF] bg-[#0A84FF]/10 text-[#0071E3] font-semibold dark:text-[#0A84FF]" 
-                  : "border-black/10 bg-white text-black/70 hover:bg-black/[0.025] dark:border-white/10 dark:bg-[#1C1C1E] dark:text-white/70 dark:hover:bg-white/5"
-              }`}
+              className="flex min-h-[48px] cursor-pointer items-center justify-center rounded-xl border px-3 text-center transition-all focus-within:ring-2"
+              style={{
+                borderColor: isSelected ? "var(--app-a-accent)" : "var(--app-a-border)",
+                backgroundColor: isSelected ? "var(--app-a-accent-soft)" : "var(--app-a-surface)",
+                color: isSelected ? "var(--app-a-accent)" : "var(--app-a-text)",
+                fontWeight: isSelected ? 600 : 500,
+              }}
             >
               <input
                 type="radio"
@@ -72,14 +75,20 @@ export default function AvailableTimeSelector({ value, onChange, t, error }: Pro
               />
               <span className="text-[16px]">{opt.label}</span>
             </label>
-          )
+          );
         })}
       </div>
 
       {value?.type === 'custom' && (
-        <div className="flex items-center gap-4 mt-2 animate-in fade-in slide-in-from-top-1">
+        <div className="flex items-center gap-4 mt-2">
           <div className="flex flex-col gap-1">
-            <label htmlFor="custom-hours" className="text-[12px] font-medium text-black/60 dark:text-white/60">{t.timeCustomHours}</label>
+            <label
+              htmlFor="custom-hours"
+              className="text-[13px] font-medium"
+              style={{ color: "var(--app-a-text-secondary)" }}
+            >
+              {t.timeCustomHours}
+            </label>
             <input 
               id="custom-hours"
               type="number"
@@ -91,7 +100,13 @@ export default function AvailableTimeSelector({ value, onChange, t, error }: Pro
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="custom-mins" className="text-[12px] font-medium text-black/60 dark:text-white/60">{t.timeCustomMins}</label>
+            <label
+              htmlFor="custom-mins"
+              className="text-[13px] font-medium"
+              style={{ color: "var(--app-a-text-secondary)" }}
+            >
+              {t.timeCustomMins}
+            </label>
             <input 
               id="custom-mins"
               type="number"
@@ -107,7 +122,11 @@ export default function AvailableTimeSelector({ value, onChange, t, error }: Pro
       )}
 
       {error && (
-        <p className="text-[14px] text-[#FF3B30] dark:text-[#FF453A] mt-1" role="alert">
+        <p
+          className="text-[14px] font-medium mt-1"
+          style={{ color: "var(--app-a-danger)" }}
+          role="alert"
+        >
           {error}
         </p>
       )}

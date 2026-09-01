@@ -80,60 +80,80 @@ export default function DailyPlanItemRow({
 
   if (isEditing) {
     return (
-      <div className="p-4 bg-white dark:bg-[#1C1C1E] border border-[#007AFF] rounded-2xl my-2 text-left shadow-sm">
+      <div
+        className="my-2 rounded-2xl border p-4 text-left shadow-sm"
+        style={{
+          backgroundColor: "var(--app-a-surface)",
+          borderColor: "var(--app-a-accent)",
+        }}
+      >
         <form onSubmit={handleSave} className="space-y-3">
           <div>
-            <label className="block text-[13px] font-medium text-[#3C3C43] dark:text-[#EBEBF5]/80 mb-1">
-              {t.itemTitleLabel} <span className="text-red-500">*</span>
+            <label
+              className="mb-1 block text-[13px] font-medium"
+              style={{ color: "var(--app-a-text)" }}
+            >
+              {t.itemTitleLabel} <span style={{ color: "var(--app-a-danger)" }}>*</span>
             </label>
             <input
               type="text"
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
-              className="w-full text-[16px] p-2.5 rounded-xl border border-[#C7C7CC] dark:border-[#38383A] bg-white dark:bg-[#2C2C2E] text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]"
+              className="app-a-field w-full p-2.5 text-[16px]"
             />
           </div>
 
           <div>
-            <label className="block text-[13px] font-medium text-[#3C3C43] dark:text-[#EBEBF5]/80 mb-1">
+            <label
+              className="mb-1 block text-[13px] font-medium"
+              style={{ color: "var(--app-a-text)" }}
+            >
               {t.itemDescLabel}
             </label>
             <textarea
               value={editDesc}
               onChange={(e) => setEditDesc(e.target.value)}
               rows={2}
-              className="w-full text-[16px] p-2.5 rounded-xl border border-[#C7C7CC] dark:border-[#38383A] bg-white dark:bg-[#2C2C2E] text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]"
+              className="app-a-field w-full p-2.5 text-[16px]"
             />
           </div>
 
           <div>
-            <label className="block text-[13px] font-medium text-[#3C3C43] dark:text-[#EBEBF5]/80 mb-1">
-              {t.itemDurationLabel} <span className="text-red-500">*</span>
+            <label
+              className="mb-1 block text-[13px] font-medium"
+              style={{ color: "var(--app-a-text)" }}
+            >
+              {t.itemDurationLabel} <span style={{ color: "var(--app-a-danger)" }}>*</span>
             </label>
             <input
               type="number"
               min="1"
               value={editMinutes}
               onChange={(e) => setEditMinutes(e.target.value)}
-              className="w-28 text-[16px] p-2.5 rounded-xl border border-[#C7C7CC] dark:border-[#38383A] bg-white dark:bg-[#2C2C2E] text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]"
+              className="app-a-field w-28 p-2.5 text-[16px]"
             />
           </div>
 
           {editError && (
-            <p className="text-[14px] font-medium text-red-500">{editError}</p>
+            <p
+              className="text-[14px] font-medium"
+              style={{ color: "var(--app-a-danger)" }}
+            >
+              {editError}
+            </p>
           )}
 
           <div className="flex items-center space-x-3 pt-2">
             <button
               type="submit"
-              className="min-h-[44px] px-5 py-2 bg-[#007AFF] text-white font-medium rounded-xl hover:bg-[#007AFF]/90 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]"
+              className="app-a-primary-button app-a-focus-ring min-h-[44px] px-5 py-2 text-[14px]"
             >
               {t.saveBtn}
             </button>
             <button
               type="button"
               onClick={handleCancel}
-              className="min-h-[44px] px-5 py-2 bg-[#8E8E93]/20 text-[#3C3C43] dark:text-[#EBEBF5] font-medium rounded-xl hover:bg-[#8E8E93]/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8E8E93]"
+              className="app-a-secondary-button app-a-focus-ring min-h-[44px] px-5 py-2 text-[14px]"
             >
               {t.cancelBtn}
             </button>
@@ -149,30 +169,50 @@ export default function DailyPlanItemRow({
   return (
     <div
       data-testid={`plan-item-row-${item.id}`}
-      className="my-1.5 rounded-[14px] border border-black/[0.08] bg-white p-4 text-left dark:border-white/10 dark:bg-[#242426]"
+      className="my-1.5 rounded-[14px] border p-4 text-left"
+      style={{
+        backgroundColor: "var(--app-a-surface)",
+        borderColor: "var(--app-a-border)",
+        color: "var(--app-a-text)",
+      }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <h4 className="text-[16px] font-semibold leading-snug tracking-[-0.01em] text-black dark:text-white">
+            <h4
+              className="text-[16px] font-semibold leading-snug tracking-[-0.01em]"
+              style={{ color: "var(--app-a-text)" }}
+            >
               {item.title}
             </h4>
 
             {item.needsCheck && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[12px] font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">
+              <span
+                className="inline-flex items-center px-2 py-0.5 rounded-md text-[12px] font-semibold"
+                style={{
+                  backgroundColor: "var(--app-a-warning-soft)",
+                  color: "var(--app-a-warning-text)",
+                }}
+              >
                 {t.checkLabel}
               </span>
             )}
           </div>
 
           {item.description && (
-            <p className="text-[14px] text-[#3C3C43] dark:text-[#EBEBF5]/80 mb-2 leading-relaxed">
+            <p
+              className="mb-2 text-[14px] leading-relaxed"
+              style={{ color: "var(--app-a-text-secondary)" }}
+            >
               {item.description}
             </p>
           )}
 
-          <div className="flex items-center gap-3 text-[13px] text-[#8E8E93] dark:text-[#8E8E93] flex-wrap mt-2">
-            <span className="font-medium text-black dark:text-white">
+          <div
+            className="flex items-center gap-3 text-[13px] flex-wrap mt-2"
+            style={{ color: "var(--app-a-text-secondary)" }}
+          >
+            <span className="font-semibold" style={{ color: "var(--app-a-text)" }}>
               {item.estimatedMinutes} min
             </span>
 
@@ -183,7 +223,10 @@ export default function DailyPlanItemRow({
             {(item.deadlineText || item.deadlineIso) && (
               <>
                 <span>•</span>
-                <span className="text-amber-600 dark:text-amber-400 font-medium">
+                <span
+                  className="font-medium"
+                  style={{ color: "var(--app-a-warning-text)" }}
+                >
                   {item.deadlineText || item.deadlineIso}
                 </span>
               </>
@@ -192,7 +235,10 @@ export default function DailyPlanItemRow({
             {goalOrProjectTitle && (
               <>
                 <span>•</span>
-                <span className="text-[#007AFF] font-medium">
+                <span
+                  className="font-medium"
+                  style={{ color: "var(--app-a-accent)" }}
+                >
                   {goalOrProjectTitle}
                 </span>
               </>
@@ -204,12 +250,20 @@ export default function DailyPlanItemRow({
               <button
                 type="button"
                 onClick={() => setShowWhy(!showWhy)}
-                className="text-[13px] font-medium text-[#007AFF] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF] min-h-[32px] inline-flex items-center"
+                className="inline-flex min-h-[32px] items-center text-[13px] font-medium transition-colors"
+                style={{ color: "var(--app-a-accent)" }}
               >
                 {t.whyLabel} {showWhy ? "▲" : "▼"}
               </button>
               {showWhy && (
-                <p className="text-[13px] text-[#3C3C43] dark:text-[#EBEBF5]/90 mt-1 bg-[#F2F2F7] dark:bg-[#2C2C2E] p-2.5 rounded-xl border border-[#E5E5EA] dark:border-[#38383A]">
+                <p
+                  className="mt-1 rounded-xl border p-2.5 text-[13px] leading-relaxed"
+                  style={{
+                    backgroundColor: "var(--app-a-surface-secondary)",
+                    borderColor: "var(--app-a-border)",
+                    color: "var(--app-a-text)",
+                  }}
+                >
                   {item.reasoning}
                 </p>
               )}
@@ -224,13 +278,24 @@ export default function DailyPlanItemRow({
             aria-label={t.actionsMenuLabel}
             aria-expanded={showMenu}
             onClick={() => setShowMenu(!showMenu)}
-            className="app-a-focus-ring min-h-[44px] min-w-[44px] rounded-xl bg-black/[0.045] px-3 py-2 text-[14px] font-medium text-black transition-colors hover:bg-black/[0.08] dark:bg-white/[0.08] dark:text-white dark:hover:bg-white/[0.13]"
+            className="app-a-focus-ring min-h-[44px] min-w-[44px] rounded-xl px-3 py-2 text-[14px] font-medium transition-colors"
+            style={{
+              backgroundColor: "var(--app-a-disabled-bg)",
+              color: "var(--app-a-text)",
+            }}
           >
             •••
           </button>
 
           {showMenu && (
-            <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-[#38383A] rounded-2xl shadow-lg z-20 py-2">
+            <div
+              className="absolute right-0 z-20 mt-2 w-56 rounded-2xl border py-2 shadow-lg"
+              style={{
+                backgroundColor: "var(--app-a-surface-elevated)",
+                borderColor: "var(--app-a-border-strong)",
+                boxShadow: "var(--app-a-shadow-lg)",
+              }}
+            >
               {item.block !== "first_focus" && (
                 <button
                   type="button"
@@ -238,7 +303,10 @@ export default function DailyPlanItemRow({
                     setShowMenu(false);
                     onMoveToBlock(item.id, "first_focus");
                   }}
-                  className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] text-black dark:text-white hover:bg-[#F2F2F7] dark:hover:bg-[#3A3A3C] transition-colors"
+                  className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
+                  style={{ color: "var(--app-a-text)" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                 >
                   {t.moveToFirstFocus}
                 </button>
@@ -251,7 +319,10 @@ export default function DailyPlanItemRow({
                     setShowMenu(false);
                     onMoveToBlock(item.id, "later_today");
                   }}
-                  className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] text-black dark:text-white hover:bg-[#F2F2F7] dark:hover:bg-[#3A3A3C] transition-colors"
+                  className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
+                  style={{ color: "var(--app-a-text)" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                 >
                   {t.moveToLaterToday}
                 </button>
@@ -264,7 +335,10 @@ export default function DailyPlanItemRow({
                     setShowMenu(false);
                     onMoveToBlock(item.id, "if_capacity_remains");
                   }}
-                  className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] text-black dark:text-white hover:bg-[#F2F2F7] dark:hover:bg-[#3A3A3C] transition-colors"
+                  className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
+                  style={{ color: "var(--app-a-text)" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                 >
                   {t.moveToIfCapacityRemains}
                 </button>
@@ -276,7 +350,10 @@ export default function DailyPlanItemRow({
                   setShowMenu(false);
                   onMoveOutside(item.id, "this_week");
                 }}
-                className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] text-black dark:text-white hover:bg-[#F2F2F7] dark:hover:bg-[#3A3A3C] transition-colors"
+                className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
+                style={{ color: "var(--app-a-text)" }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
               >
                 {t.moveToThisWeek}
               </button>
@@ -287,7 +364,10 @@ export default function DailyPlanItemRow({
                   setShowMenu(false);
                   onMoveOutside(item.id, "later");
                 }}
-                className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] text-black dark:text-white hover:bg-[#F2F2F7] dark:hover:bg-[#3A3A3C] transition-colors"
+                className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
+                style={{ color: "var(--app-a-text)" }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
               >
                 {t.moveToLater}
               </button>
@@ -298,7 +378,10 @@ export default function DailyPlanItemRow({
                   setShowMenu(false);
                   onMoveOutside(item.id, "long_term_idea");
                 }}
-                className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] text-black dark:text-white hover:bg-[#F2F2F7] dark:hover:bg-[#3A3A3C] transition-colors"
+                className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
+                style={{ color: "var(--app-a-text)" }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
               >
                 {t.saveAsLongTermIdea}
               </button>
@@ -309,12 +392,18 @@ export default function DailyPlanItemRow({
                   setShowMenu(false);
                   onMoveOutside(item.id, "no_action");
                 }}
-                className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] text-black dark:text-white hover:bg-[#F2F2F7] dark:hover:bg-[#3A3A3C] transition-colors"
+                className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
+                style={{ color: "var(--app-a-text)" }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
               >
                 {t.markAsNotAnAction}
               </button>
 
-              <hr className="my-1 border-[#E5E5EA] dark:border-[#38383A]" />
+              <hr
+                className="my-1 border-t"
+                style={{ borderColor: "var(--app-a-border)" }}
+              />
 
               <button
                 type="button"
@@ -322,7 +411,10 @@ export default function DailyPlanItemRow({
                   setShowMenu(false);
                   setIsEditing(true);
                 }}
-                className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] font-medium text-[#007AFF] hover:bg-[#F2F2F7] dark:hover:bg-[#3A3A3C] transition-colors"
+                className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] font-semibold transition-colors"
+                style={{ color: "var(--app-a-accent)" }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
               >
                 {t.editItem}
               </button>

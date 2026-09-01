@@ -38,27 +38,40 @@ export default function PlanHistoryState({ language, state, onSignIn }: Props) {
   const t = COPY[language] || COPY.en;
   if (state === "loading") {
     return (
-      <div role="status" className="app-a-surface mx-5 flex min-h-[180px] items-center justify-center p-6 text-[15px] text-[#6E6E73] sm:mx-6 md:mx-auto md:max-w-[760px] dark:text-[#AEAEB2]">
+      <div
+        role="status"
+        className="app-a-surface mx-5 flex min-h-[180px] items-center justify-center p-6 text-[15px] sm:mx-6 md:mx-auto md:max-w-[760px]"
+        style={{ color: "var(--app-a-text-secondary)" }}
+      >
         {t.loading}
       </div>
     );
   }
   if (state === "error") {
     return (
-      <div role="alert" className="app-a-surface mx-5 flex min-h-[180px] flex-col items-center justify-center gap-3 p-6 text-center sm:mx-6 md:mx-auto md:max-w-[760px]">
-        <AlertCircle className="h-6 w-6 text-red-500" aria-hidden="true" />
-        <p className="max-w-sm text-[15px] text-[#6E6E73] dark:text-[#AEAEB2]">{t.error}</p>
+      <div
+        role="alert"
+        className="app-a-surface mx-5 flex min-h-[180px] flex-col items-center justify-center gap-3 p-6 text-center sm:mx-6 md:mx-auto md:max-w-[760px]"
+      >
+        <AlertCircle className="h-6 w-6" style={{ color: "var(--app-a-danger)" }} aria-hidden="true" />
+        <p className="max-w-sm text-[15px]" style={{ color: "var(--app-a-text-secondary)" }}>{t.error}</p>
         {onSignIn ? <button type="button" onClick={onSignIn} className="app-a-secondary-button app-a-focus-ring mt-2 px-5">{t.retry}</button> : null}
       </div>
     );
   }
   return (
     <div className="app-a-surface mx-5 flex min-h-[240px] flex-col items-center justify-center gap-3 p-6 text-center sm:mx-6 sm:p-8 md:mx-auto md:max-w-[760px]">
-      <span className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-[#0A84FF]/10 text-[#0071E3] dark:text-[#0A84FF]">
+      <span
+        className="flex h-11 w-11 items-center justify-center rounded-[14px]"
+        style={{
+          backgroundColor: "var(--app-a-accent-soft)",
+          color: "var(--app-a-accent)",
+        }}
+      >
         <LogIn className="h-5 w-5" aria-hidden="true" />
       </span>
-      <h2 className="text-[19px] font-semibold text-black dark:text-white">{t.signInTitle}</h2>
-      <p className="max-w-sm text-[15px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">{t.signInText}</p>
+      <h2 className="text-[19px] font-semibold" style={{ color: "var(--app-a-text)" }}>{t.signInTitle}</h2>
+      <p className="max-w-sm text-[15px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>{t.signInText}</p>
       <button type="button" onClick={onSignIn} className="app-a-primary-button app-a-focus-ring mt-2 px-6">
         {t.signIn}
       </button>

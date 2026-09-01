@@ -29,27 +29,33 @@ service cloud.firestore {
       allow list, delete: if false;
 
       match /tasks/{taskId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId && isValidId(taskId);
+        allow get, create, update, delete: if request.auth != null && request.auth.uid == userId && isValidId(taskId);
+        allow list: if request.auth != null && request.auth.uid == userId;
       }
 
       match /inbox/{inboxId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId && isValidId(inboxId);
+        allow get, create, update, delete: if request.auth != null && request.auth.uid == userId && isValidId(inboxId);
+        allow list: if request.auth != null && request.auth.uid == userId;
       }
 
       match /habits/{habitId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId && isValidId(habitId);
+        allow get, create, update, delete: if request.auth != null && request.auth.uid == userId && isValidId(habitId);
+        allow list: if request.auth != null && request.auth.uid == userId;
       }
 
       match /stacks/{stackId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId && isValidId(stackId);
+        allow get, create, update, delete: if request.auth != null && request.auth.uid == userId && isValidId(stackId);
+        allow list: if request.auth != null && request.auth.uid == userId;
       }
 
       match /intentions/{intentId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId && isValidId(intentId);
+        allow get, create, update, delete: if request.auth != null && request.auth.uid == userId && isValidId(intentId);
+        allow list: if request.auth != null && request.auth.uid == userId;
       }
 
       match /logs/{dateKey} {
-        allow read, write: if request.auth != null && request.auth.uid == userId && isValidId(dateKey);
+        allow get, create, update, delete: if request.auth != null && request.auth.uid == userId && isValidId(dateKey);
+        allow list: if request.auth != null && request.auth.uid == userId;
       }
     }
 
@@ -59,7 +65,8 @@ service cloud.firestore {
       allow list, delete: if false;
 
       match /dailyResets/{dateKey} {
-        allow read, write: if request.auth != null && request.auth.uid == userId && isValidId(dateKey);
+        allow get, create, update, delete: if request.auth != null && request.auth.uid == userId && isValidId(dateKey);
+        allow list: if request.auth != null && request.auth.uid == userId;
       }
     }
   }

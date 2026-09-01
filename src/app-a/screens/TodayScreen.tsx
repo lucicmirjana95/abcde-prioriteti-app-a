@@ -21,6 +21,8 @@ import {
   loadConfirmedDailyPlan,
   saveDailyPlanCompletion,
   saveConfirmedDailyPlan,
+  extractDiagnosticFromSaveError,
+  PersistenceSaveDiagnostic,
 } from '../persistence/dailyPlanRepository';
 import type { DailyPlanDraft } from '../domain/daily-reset/contracts';
 import { normalizeCompletedItemIds, toggleCompletedItemId } from './todayExecution';
@@ -40,12 +42,14 @@ export default function TodayScreen({ language, client, demoConfig, initialData 
     submitResolve,
     setAnswer,
     retry,
+    cancel,
     backToEdit,
     loadConfirmedPlan,
   } = useTodayFlow(language, client, initialData);
   const { user, authReady, signInWithGoogle } = useAppAAuth();
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveDiagnostic, setSaveDiagnostic] = useState<string | null>(null);
   const [isLoadingSavedPlan, setIsLoadingSavedPlan] = useState(false);
   const [viewMode, setViewMode] = useState<'review' | 'execution'>('review');
   const [completedItemIds, setCompletedItemIds] = useState<string[]>([]);
@@ -94,6 +98,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData 
   const handleConfirm = async (draft: DailyPlanDraft) => {
     setSaveStatus('saving');
     setSaveError(null);
+    setSaveDiagnostic(null);
     isConfirmingRef.current = true;
     try {
       if (demoConfig) {
@@ -110,9 +115,32 @@ export default function TodayScreen({ language, client, demoConfig, initialData 
       setCompletedItemIds([]);
       setViewMode('execution');
       setSaveStatus('saved');
-    } catch {
+    } catch (error: unknown) {
       setSaveStatus('error');
       setSaveError(t.planSaveError);
+      const diagnostic: PersistenceSaveDiagnostic = extractDiagnosticFromSaveError(error);
+      const isDev =
+        (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') ||
+        (typeof window !== 'undefined' &&
+          (window.location.hostname.includes('ais-') ||
+            window.location.hostname.includes('localhost') ||
+            window.location.hostname.includes('127.0.0.1')));
+      if (isDev) {
+        setSaveDiagnostic(`${diagnostic.stage} / ${diagnostic.category} / ${diagnostic.firebaseCode}`);
+      }
+
+      console.error({
+        feature: "app_a_daily_plan_save",
+        stage: diagnostic.stage,
+        category: diagnostic.category,
+        firebaseCode: diagnostic.firebaseCode,
+        projectId: "daily-reset-app-a",
+        databaseId: "(default)",
+        authPresent: !!user,
+        uidMatchesPath: true,
+        dateKeyType: "string",
+        dateKeyLength: getLocalDateKey().length,
+      });
     } finally {
       isConfirmingRef.current = false;
     }
@@ -149,7 +177,13 @@ export default function TodayScreen({ language, client, demoConfig, initialData 
   if (isLoadingSavedPlan) {
     content = <DailyResetLoadingState phase="loading_saved" language={language} />;
   } else if (state.phase === 'submitting' || state.phase === 'resolving') {
-    content = <DailyResetLoadingState phase={state.phase} language={language} />;
+    content = (
+      <DailyResetLoadingState
+        phase={state.phase}
+        language={language}
+        onCancel={() => cancel()}
+      />
+    );
   } else if (state.phase === 'error' && state.error) {
     content = (
       <DailyResetErrorPanel
@@ -194,10 +228,12 @@ export default function TodayScreen({ language, client, demoConfig, initialData 
         onConfirm={handleConfirm}
         saveStatus={saveStatus}
         saveError={saveError}
+        saveDiagnostic={saveDiagnostic}
         onDirty={() => {
           setViewMode('review');
           setSaveStatus('idle');
           setSaveError(null);
+          setSaveDiagnostic(null);
         }}
       />
     );

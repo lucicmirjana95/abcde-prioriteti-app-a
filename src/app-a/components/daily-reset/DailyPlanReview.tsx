@@ -23,6 +23,7 @@ interface Props {
   onConfirm: (draft: DailyPlanDraft) => Promise<void>;
   saveStatus?: "idle" | "saving" | "saved" | "error";
   saveError?: string | null;
+  saveDiagnostic?: string | null;
   onDirty?: () => void;
 }
 
@@ -33,6 +34,7 @@ export default function DailyPlanReview({
   onConfirm,
   saveStatus = "idle",
   saveError,
+  saveDiagnostic,
   onDirty,
 }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
@@ -169,24 +171,32 @@ export default function DailyPlanReview({
   return (
     <div className="mx-auto w-full max-w-[760px] px-5 pb-16 sm:px-6">
       <header className="mb-7">
-        <p className="mb-2 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#0071E3] dark:text-[#0A84FF]">{t.today}</p>
-        <h1 className="text-[30px] font-bold leading-tight tracking-[-0.035em] text-black sm:text-[36px] dark:text-white">
+        <p className="app-a-eyebrow">{t.today}</p>
+        <h1 className="app-a-page-title">
           {t.reviewTitle}
         </h1>
-        <p className="mt-3 max-w-[620px] text-[16px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
+        <p className="app-a-page-intro">
           {t.reviewIntro}
         </p>
       </header>
       {/* Undo Header Banner */}
       {reviewState.undoDraft && (
-        <div className="mb-5 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/40">
-          <span className="text-[13px] text-amber-800 dark:text-amber-200 font-medium">
+        <div
+          className="mb-5 flex items-center justify-between rounded-xl border p-3"
+          style={{
+            backgroundColor: "var(--app-a-warning-soft)",
+            borderColor: "var(--app-a-warning)",
+            color: "var(--app-a-warning-text)",
+          }}
+        >
+          <span className="text-[13px] font-medium">
             Draft modified
           </span>
           <button
             type="button"
             onClick={handleUndo}
-            className="min-h-[44px] px-4 py-2 bg-amber-600 text-white rounded-lg text-[13px] font-semibold hover:bg-amber-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+            className="app-a-focus-ring min-h-[44px] rounded-lg px-4 py-2 text-[13px] font-semibold text-white transition-colors"
+            style={{ backgroundColor: "var(--app-a-warning)" }}
           >
             {t.undoBtn}
           </button>
@@ -195,26 +205,51 @@ export default function DailyPlanReview({
 
       {/* Global Error Notice */}
       {reviewState.error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-300 text-[14px] font-medium text-left">
+        <div
+          role="alert"
+          className="mb-4 rounded-xl border p-3 text-[14px] font-medium text-left"
+          style={{
+            backgroundColor: "var(--app-a-danger-soft)",
+            borderColor: "var(--app-a-danger)",
+            color: "var(--app-a-danger-text)",
+          }}
+        >
           {reviewState.error}
         </div>
       )}
 
       {/* 1. Plan Rationale */}
       {draft.planRationale && (
-        <div className="mb-4 rounded-2xl bg-black/[0.035] p-4 text-left dark:bg-white/[0.06]">
-          <h3 className="text-[14px] font-bold text-[#8E8E93] dark:text-[#8E8E93] uppercase tracking-wide mb-1">
+        <div
+          className="mb-4 rounded-2xl p-4 text-left border"
+          style={{
+            backgroundColor: "var(--app-a-disabled-bg)",
+            borderColor: "var(--app-a-border)",
+          }}
+        >
+          <h3
+            className="mb-1 text-[13px] font-bold uppercase tracking-wide"
+            style={{ color: "var(--app-a-text-secondary)" }}
+          >
             {t.planRationaleTitle}
           </h3>
-          <p className="text-[15px] text-[#3C3C43] dark:text-[#EBEBF5]/90 leading-relaxed">
+          <p className="text-[15px] leading-relaxed" style={{ color: "var(--app-a-text)" }}>
             {draft.planRationale}
           </p>
         </div>
       )}
 
       {/* 2. Planned Time Summary */}
-      <div className="mb-7 flex min-h-[52px] items-center rounded-2xl border border-black/10 bg-white px-4 text-left dark:border-white/10 dark:bg-[#1C1C1E]">
-        <span className="text-[15px] font-semibold text-black dark:text-white">
+      <div
+        className="mb-7 flex min-h-[52px] items-center rounded-2xl border px-4 text-left"
+        style={{
+          backgroundColor: "var(--app-a-surface)",
+          borderColor: "var(--app-a-border)",
+          color: "var(--app-a-text)",
+          boxShadow: "var(--app-a-shadow)",
+        }}
+      >
+        <span className="text-[15px] font-semibold">
           {summaryText}
         </span>
       </div>
@@ -263,24 +298,54 @@ export default function DailyPlanReview({
       />
 
       {saveStatus === "saved" && (
-        <div className="mt-6 p-4 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 rounded-2xl text-emerald-800 dark:text-emerald-200 text-[15px] font-medium text-center">
+        <div
+          className="mt-6 rounded-2xl border p-4 text-center text-[15px] font-medium"
+          style={{
+            backgroundColor: "var(--app-a-success-soft)",
+            borderColor: "var(--app-a-success)",
+            color: "var(--app-a-success-text)",
+          }}
+        >
           {t.planSavedConfirmation}
         </div>
       )}
 
       {saveStatus === "error" && saveError && (
-        <div role="alert" className="mt-6 p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-2xl text-red-700 dark:text-red-300 text-[15px] font-medium text-center">
-          {saveError}
+        <div
+          role="alert"
+          className="mt-6 rounded-2xl border p-4 text-center text-[15px] font-medium"
+          style={{
+            backgroundColor: "var(--app-a-danger-soft)",
+            borderColor: "var(--app-a-danger)",
+            color: "var(--app-a-danger-text)",
+          }}
+        >
+          <div>{saveError}</div>
+          {saveDiagnostic && (
+            <div
+              data-testid="save-diagnostic-reference"
+              className="mt-2 text-[12px] font-mono opacity-80"
+            >
+              Save diagnostic: {saveDiagnostic}
+            </div>
+          )}
         </div>
       )}
 
       {/* Screen Actions */}
-      <div className="sticky bottom-[calc(68px+env(safe-area-inset-bottom,0px))] z-20 -mx-2 mt-8 flex flex-col gap-3 rounded-2xl border border-black/10 bg-white/90 p-3 shadow-[0_10px_35px_rgba(0,0,0,0.12)] backdrop-blur-xl sm:static sm:mx-0 sm:flex-row sm:justify-end sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none dark:border-white/10 dark:bg-[#1C1C1E]/90 sm:dark:bg-transparent md:bottom-4">
+      <div
+        className="sticky bottom-[calc(68px+env(safe-area-inset-bottom,0px))] z-20 -mx-2 mt-8 flex flex-col gap-3 rounded-2xl border p-3 backdrop-blur-xl sm:static sm:mx-0 sm:flex-row sm:justify-end sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none md:bottom-4"
+        style={{
+          backgroundColor: "var(--app-a-surface)",
+          borderColor: "var(--app-a-border)",
+          boxShadow: "var(--app-a-shadow-lg)",
+        }}
+      >
         <button
           type="button"
           onClick={() => void onConfirm(draft)}
           disabled={saveStatus === "saving"}
-          className="app-a-primary-button app-a-focus-ring w-full px-8 transition-colors hover:bg-[#0077ED] sm:order-2 sm:w-auto"
+          className="app-a-primary-button app-a-focus-ring w-full px-8 transition-colors sm:order-2 sm:w-auto"
         >
           {saveStatus === "saving" ? t.savingPlan : t.reviewCompleteBtn}
         </button>
@@ -288,7 +353,7 @@ export default function DailyPlanReview({
         <button
           type="button"
           onClick={onBackToEdit}
-          className="app-a-secondary-button app-a-focus-ring w-full px-8 transition-colors hover:bg-black/10 sm:order-1 sm:w-auto dark:hover:bg-white/15"
+          className="app-a-secondary-button app-a-focus-ring w-full px-8 transition-colors sm:order-1 sm:w-auto"
         >
           {t.backToEdit}
         </button>

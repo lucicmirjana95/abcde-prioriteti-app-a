@@ -22,14 +22,18 @@ export default function BrainDumpInput({ value, onChange, t, error }: Props) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <label htmlFor="brain-dump" className="text-[16px] font-medium text-black dark:text-white">
+        <label htmlFor="brain-dump" className="text-[16px] font-medium" style={{ color: "var(--app-a-text)" }}>
           {t.brainDumpLabel}
         </label>
         <button
           type="button"
           disabled
           aria-label={t.voiceLabel}
-          className="flex min-h-[44px] cursor-not-allowed items-center gap-2 rounded-xl bg-black/5 px-3 py-1.5 text-black/35 dark:bg-white/5 dark:text-white/35"
+          className="flex min-h-[44px] cursor-not-allowed items-center gap-2 rounded-xl px-3 py-1.5"
+          style={{
+            backgroundColor: "var(--app-a-disabled-bg)",
+            color: "var(--app-a-disabled-text)",
+          }}
         >
           <Mic className="w-5 h-5 shrink-0" />
           <span className="text-[14px] font-medium">{t.voicePlaceholder}</span>
@@ -45,17 +49,29 @@ export default function BrainDumpInput({ value, onChange, t, error }: Props) {
           placeholder={t.brainDumpPlaceholder}
           aria-invalid={!!error}
           aria-errormessage={error ? "brain-dump-error" : undefined}
-          className={`app-a-field min-h-[210px] w-full resize-y p-4 pb-10 text-[17px] leading-relaxed placeholder-black/30 transition-shadow dark:placeholder-white/30 md:min-h-[240px] ${
-            error ? "border-[#FF3B30] dark:border-[#FF453A]" : "border-black/10 dark:border-white/10"
-          }`}
+          className="app-a-field min-h-[210px] w-full resize-y p-4 pb-10 text-[17px] leading-relaxed transition-shadow md:min-h-[240px]"
+          style={{
+            borderColor: error ? "var(--app-a-danger)" : "var(--app-a-border)",
+          }}
         />
-        <div className="absolute bottom-3 right-3 text-[12px] text-black/40 dark:text-white/40 bg-white/80 dark:bg-[#1C1C1E]/80 px-2 py-0.5 rounded pointer-events-none">
+        <div
+          className="absolute bottom-3 right-3 text-[12px] px-2 py-0.5 rounded pointer-events-none"
+          style={{
+            backgroundColor: "var(--app-a-surface-secondary)",
+            color: "var(--app-a-text-tertiary)",
+          }}
+        >
           {value.length} / {MAX_CHARS}
         </div>
       </div>
 
       {error && (
-        <p id="brain-dump-error" className="text-[14px] text-[#FF3B30] dark:text-[#FF453A]" role="alert">
+        <p
+          id="brain-dump-error"
+          className="text-[14px] font-medium"
+          style={{ color: "var(--app-a-danger)" }}
+          role="alert"
+        >
           {error}
         </p>
       )}

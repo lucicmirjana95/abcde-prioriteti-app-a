@@ -157,7 +157,10 @@ async function runTests() {
         clearedTimerIds.push(id);
       },
       createAbortController: () => {
-        const signal = { aborted: false };
+        if (typeof AbortController !== "undefined") {
+          return new AbortController();
+        }
+        const signal = { aborted: false, addEventListener: () => {} };
         return {
           signal,
           abort: () => {
@@ -641,7 +644,64 @@ async function runTests() {
     assert.strictEqual(consoleCalled, false);
   }
 
-  originalLog("✅ All 35 frontend API client tests passed successfully!");
+  // 36. External AbortSignal aborts in-flight fetch
+  {
+    let abortHappened = false;
+    const config = createMockConfig(async (_url: string, init: any) => {
+      init.signal?.addEventListener("abort", () => {
+        abortHappened = true;
+      });
+      const err = new Error("AbortError");
+      err.name = "AbortError";
+      throw err;
+    });
+    const client = createDailyResetApiClient(config);
+    const abortCtrl = new AbortController();
+    const promise = client.analyze(validInitialInput, abortCtrl.signal);
+    abortCtrl.abort();
+    const res = await promise;
+    assert.strictEqual(res.success, false);
+    assert.strictEqual(res.code, "timeout");
+  }
+
+  // 37. Timeout error message is localized for English, Serbian, and Turkish
+  {
+    const config = createMockConfig(async () => {
+      const err = new Error("AbortError");
+      err.name = "AbortError";
+      throw err;
+    });
+    const client = createDailyResetApiClient(config);
+
+    const resEn = await client.analyze({ ...validInitialInput, language: "en" });
+    assert.strictEqual(resEn.success, false);
+    if (!resEn.success) {
+      assert.strictEqual(
+        resEn.error,
+        "Planning took too long this time. Your input is preserved — you can try again."
+      );
+    }
+
+    const resSr = await client.analyze({ ...validInitialInput, language: "sr" });
+    assert.strictEqual(resSr.success, false);
+    if (!resSr.success) {
+      assert.strictEqual(
+        resSr.error,
+        "Planiranje je ovog puta trajalo predugo. Vaš unos je sačuvan — možete pokušati ponovo."
+      );
+    }
+
+    const resTr = await client.analyze({ ...validInitialInput, language: "tr" });
+    assert.strictEqual(resTr.success, false);
+    if (!resTr.success) {
+      assert.strictEqual(
+        resTr.error,
+        "Planlama bu sefer çok uzun sürdü. Girişiniz korundu — tekrar deneyebilirsiniz."
+      );
+    }
+  }
+
+  originalLog("✅ All 37 frontend API client tests passed successfully!");
 }
 
 runTests().catch((e) => {

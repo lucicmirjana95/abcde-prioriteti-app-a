@@ -42,10 +42,11 @@ export interface DailyResetApiClientConfig {
 }
 
 export interface DailyResetApiClient {
-  analyze(input: DailyResetInput): Promise<DailyResetApiResponse>;
+  analyze(input: DailyResetInput, signal?: AbortSignal): Promise<DailyResetApiResponse>;
   resolve(
     submission: DailyResetClarificationSubmission,
-    questions: ClarificationQuestion[]
+    questions: ClarificationQuestion[],
+    signal?: AbortSignal
   ): Promise<DailyResetApiResponse>;
 }
 
@@ -73,9 +74,9 @@ function getLocalizedMessage(
   }
 
   if (type === "timeout") {
-    if (lang === "sr") return "Zahtev je istekao. Molimo pokušajte ponovo.";
-    if (lang === "tr") return "İstek zaman aşımına uğradı. Lütfen tekrar deneyin.";
-    return "The request timed out. Please try again.";
+    if (lang === "sr") return "Planiranje je ovog puta trajalo predugo. Vaš unos je sačuvan — možete pokušati ponovo.";
+    if (lang === "tr") return "Planlama bu sefer çok uzun sürdü. Girişiniz korundu — tekrar deneyebilirsiniz.";
+    return "Planning took too long this time. Your input is preserved — you can try again.";
   }
 
   if (type === "service_unavailable") {
@@ -152,7 +153,7 @@ class DailyResetApiClientImpl implements DailyResetApiClient {
     this.config = config;
   }
 
-  async analyze(input: DailyResetInput): Promise<DailyResetApiResponse> {
+  async analyze(input: DailyResetInput, signal?: AbortSignal): Promise<DailyResetApiResponse> {
     const normalizedInput = normalizeDailyResetInput(input);
     const val = validateDailyResetInput(normalizedInput);
     if (!val.valid) {
@@ -170,12 +171,13 @@ class DailyResetApiClientImpl implements DailyResetApiClient {
       input: normalizedInput,
     };
 
-    return this.sendRequest(payload, normalizedInput.language);
+    return this.sendRequest(payload, normalizedInput.language, undefined, signal);
   }
 
   async resolve(
     submission: DailyResetClarificationSubmission,
-    questions: ClarificationQuestion[]
+    questions: ClarificationQuestion[],
+    signal?: AbortSignal
   ): Promise<DailyResetApiResponse> {
     const lang = submission?.language;
     if (!validateQuestions(questions)) {
@@ -210,17 +212,18 @@ class DailyResetApiClientImpl implements DailyResetApiClient {
       questions,
     };
 
-    return this.sendRequest(payload, normalizedInput.language, questions);
+    return this.sendRequest(payload, normalizedInput.language, questions, signal);
   }
 
   private async sendRequest(
     payload: DailyResetRequest,
     lang: string,
-    knownQuestions?: ClarificationQuestion[]
+    knownQuestions?: ClarificationQuestion[],
+    externalSignal?: AbortSignal
   ): Promise<DailyResetApiResponse> {
     const fetchImpl = this.config.fetchImpl || globalThis.fetch;
     const endpoint = this.config.endpoint || "/api/app-a/daily-reset";
-    const timeoutMs = this.config.timeoutMs ?? 65000;
+    const timeoutMs = this.config.timeoutMs ?? 42000;
     const scheduleTimer = this.config.scheduleTimer || ((cb, delay) => setTimeout(cb, delay));
     const clearTimer = this.config.clearTimer || ((id) => clearTimeout(id));
     const createAbortController =
@@ -228,6 +231,19 @@ class DailyResetApiClientImpl implements DailyResetApiClient {
 
     const controller = createAbortController();
     let timedOut = false;
+
+    if (externalSignal) {
+      if (externalSignal.aborted) {
+        return createErrorResponse("timeout", "timeout", lang, true);
+      }
+      try {
+        externalSignal.addEventListener("abort", () => {
+          try {
+            controller.abort();
+          } catch {}
+        }, { once: true });
+      } catch {}
+    }
 
     const timerId = scheduleTimer(() => {
       timedOut = true;
@@ -248,7 +264,13 @@ class DailyResetApiClientImpl implements DailyResetApiClient {
           signal: controller.signal,
         });
       } catch (err: any) {
-        if (timedOut || err?.name === "AbortError" || err?.message === "AbortError") {
+        if (
+          timedOut ||
+          err?.name === "AbortError" ||
+          err?.message === "AbortError" ||
+          Boolean(controller.signal && (controller.signal as any).aborted) ||
+          Boolean(externalSignal && externalSignal.aborted)
+        ) {
           return createErrorResponse("timeout", "timeout", lang, true);
         }
         return createErrorResponse("service_unavailable", "service_unavailable", lang, true);

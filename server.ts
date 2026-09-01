@@ -73,106 +73,218 @@ interface GenerateContentParams {
   systemInstruction?: string;
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function isOverloadedAIError(err: any): boolean {
+  if (!err) return false;
+  const msg = (err.message || String(err)).toLowerCase();
+  const status = String(err.status || err.code || err?.error?.code || err?.error?.status || "");
+  return (
+    status === "503" ||
+    status === "UNAVAILABLE" ||
+    msg.includes("503") ||
+    msg.includes("high demand") ||
+    msg.includes("spikes in demand") ||
+    msg.includes("unavailable") ||
+    msg.includes("overloaded")
+  );
+}
+
+function isQuotaExhaustedError(err: any): boolean {
+  if (!err) return false;
+  const msg = (err.message || String(err)).toLowerCase();
+  const status = String(err.status || err.code || err?.error?.code || err?.error?.status || "");
+  return (
+    status === "429" ||
+    status === "RESOURCE_EXHAUSTED" ||
+    msg.includes("resource_exhausted") ||
+    msg.includes("quota exceeded") ||
+    msg.includes("exceeded your current quota") ||
+    msg.includes("free_tier_requests") ||
+    msg.includes("rate-limits")
+  );
+}
+
+function isTransientNetworkError(err: any): boolean {
+  if (!err) return false;
+  const msg = (err.message || String(err)).toLowerCase();
+  return (
+    msg.includes("fetch failed") ||
+    msg.includes("econnreset") ||
+    msg.includes("etimedout") ||
+    msg.includes("socket hang up") ||
+    msg.includes("network error")
+  );
+}
+
+// Model circuit breaker to track temporarily degraded models (503 / 429)
+const modelHealthStatus = new Map<string, number>();
+
+function isModelTemporarilyDegraded(model: string): boolean {
+  const degradedUntil = modelHealthStatus.get(model);
+  if (!degradedUntil) return false;
+  if (Date.now() > degradedUntil) {
+    modelHealthStatus.delete(model);
+    return false;
+  }
+  return true;
+}
+
+function markModelDegraded(model: string, cooldownMs: number = 60000) {
+  modelHealthStatus.set(model, Date.now() + cooldownMs);
+}
+
 async function generateContentWithRetry(
   params: GenerateContentParams,
-  preferredModel: string = "gemini-3.7-flash",
-  maxAttempts: number = 3,
+  preferredModel: string = "gemini-3.1-flash-lite",
+  maxAttemptsPerModel: number = 2,
 ) {
-  let sanitizedModel = "gemini-3.7-flash";
-
-  let requested = preferredModel;
+  let requested = preferredModel || "gemini-3.1-flash-lite";
   if (requested === "gemini-3.1-pro-preview" || requested === "gemini-3.1-pro") {
     requested = "gemini-3.1-pro-preview";
   }
 
-  if (
-    requested &&
-    (requested.startsWith("gemini-3.") ||
-      requested.includes("lite") ||
-      requested.includes("exp") ||
-      requested.includes("preview") ||
-      requested.startsWith("gemini-flash") ||
-      requested === "gemini-flash-latest")
-  ) {
-    sanitizedModel = requested;
-  }
+  // Resilient candidate chain across available Gemini models
+  const normalizedPrimary =
+    requested === "gemini-flash-latest" || requested === "gemini-3.7-flash"
+      ? "gemini-3.7-flash"
+      : requested === "gemini-3.1-flash-lite" || requested === "gemini-lite"
+      ? "gemini-3.1-flash-lite"
+      : requested;
 
-  const modelCandidates = Array.from(
-    new Set([
-      sanitizedModel,
-      "gemini-3.7-flash",
-      "gemini-3.1-flash-lite",
-      "gemini-flash-latest",
-    ]),
-  );
+  // Build candidate list, prioritizing non-degraded models first
+  const allCandidates = [
+    normalizedPrimary,
+    "gemini-3.1-flash-lite",
+    "gemini-3.7-flash",
+  ];
+
+  // Unique list
+  const uniqueCandidates = Array.from(new Set(allCandidates));
+
+  // Sort candidates so non-degraded models are attempted first
+  const modelCandidates = uniqueCandidates.sort((a, b) => {
+    const aDegraded = isModelTemporarilyDegraded(a) ? 1 : 0;
+    const bDegraded = isModelTemporarilyDegraded(b) ? 1 : 0;
+    return aDegraded - bDegraded;
+  });
 
   let lastError: any = null;
 
   for (const model of modelCandidates) {
-    try {
-      console.log(`[AI] Pokušaj poziva modela: ${model}...`);
+    for (let attempt = 1; attempt <= maxAttemptsPerModel; attempt++) {
+      try {
+        console.log(`[AI] Poziv modela: ${model} (pokušaj ${attempt}/${maxAttemptsPerModel})...`);
 
-      const ai = getGenAIClient();
+        const ai = getGenAIClient();
 
-      // Anti-hallucination system instruction safety layer
-      const antiHallucinationRule =
-        `\n\n=== STRIKTNA NAUČNA ČISTOTA I ZABRANA HALUCINACIJA (ANTI-HALLUCINATION PROTOCOL) ===\n` +
-        `1. NE SMEŠ izmišljati (halucinirati) nepostojeće naučne studije, autore, knjige ili klinička istraživanja.\n` +
-        `2. NE SMEŠ izmišljati lažne biološke i fiziološke parametre niti davati lažna medicinska obećanja/dijagnoze.\n` +
-        `3. Sve smernice moraju biti bezbedne, proverene sa naučne i bihejvioralne strane, i jasno naznačene kao podrška, a ne zamena za profesionalni medicinski savet.\n` +
-        `4. STRICT SCIENTIFIC RESTRAINT: Never make up non-existent authors, books, papers, or clinical research. All physiological guidelines must be medically safe, realistic, and clearly formatted as coaching support rather than medical therapy.\n` +
-        `================================================================================`;
+        // Anti-hallucination system instruction safety layer
+        const antiHallucinationRule =
+          `\n\n=== STRIKTNA NAUČNA ČISTOTA I ZABRANA HALUCINACIJA (ANTI-HALLUCINATION PROTOCOL) ===\n` +
+          `1. NE SMEŠ izmišljati (halucinirati) nepostojeće naučne studije, autore, knjige ili klinička istraživanja.\n` +
+          `2. NE SMEŠ izmišljati lažne biološke i fiziološke parametre niti davati lažna medicinska obećanja/dijagnoze.\n` +
+          `3. Sve smernice moraju biti bezbedne, proverene sa naučne i bihejvioralne strane, i jasno naznačene kao podrška, a ne zamena za profesionalni medicinski savet.\n` +
+          `4. STRICT SCIENTIFIC RESTRAINT: Never make up non-existent authors, books, papers, or clinical research. All physiological guidelines must be medically safe, realistic, and clearly formatted as coaching support rather than medical therapy.\n` +
+          `================================================================================`;
 
-      const originalInstruction = params.systemInstruction || "";
-      const updatedInstruction = originalInstruction
-        ? `${originalInstruction}${antiHallucinationRule}`
-        : antiHallucinationRule.trim();
+        const originalInstruction = params.systemInstruction || "";
+        const updatedInstruction = originalInstruction
+          ? `${originalInstruction}${antiHallucinationRule}`
+          : antiHallucinationRule.trim();
 
-      // Prevent erratic/hallucinatory creative jumps by enforcing a strict temperature cap (max 0.9)
-      const incomingTemperature = params.config?.temperature;
-      const cappedTemperature =
-        incomingTemperature !== undefined
-          ? Math.min(incomingTemperature, 0.9)
-          : 0.35; // Default to 0.35 for stable, precise outputs
+        // Prevent erratic/hallucinatory creative jumps by enforcing a strict temperature cap (max 0.9)
+        const incomingTemperature = params.config?.temperature;
+        const cappedTemperature =
+          incomingTemperature !== undefined
+            ? Math.min(incomingTemperature, 0.9)
+            : 0.35; // Default to 0.35 for stable, precise outputs
 
-      const formattedContents = Array.isArray(params.contents)
-        ? params.contents
-        : [{ role: "user", parts: [{ text: params.contents }] }];
+        const formattedContents = Array.isArray(params.contents)
+          ? params.contents
+          : [{ role: "user", parts: [{ text: params.contents }] }];
 
-      // Using @google/genai v2.x API structure (ai.models.generateContent)
-      // Note: systemInstruction and other configs MUST go inside the 'config' object.
-      // We use the full array structure for 'contents' to ensure maximum compatibility.
-      const response = await (ai as any).models.generateContent({
-        model: model,
-        contents: formattedContents,
-        config: {
-          ...params.config,
-          systemInstruction: updatedInstruction,
-          temperature: cappedTemperature,
-        },
-      });
+        // Using @google/genai v2.x API structure (ai.models.generateContent)
+        const response = await (ai as any).models.generateContent({
+          model: model,
+          contents: formattedContents,
+          config: {
+            ...params.config,
+            systemInstruction: updatedInstruction,
+            temperature: cappedTemperature,
+          },
+        });
 
-      // Use property access for .text as per SDK v2 guidelines
-      const extractedText = (response as any).text || "";
+        // Use property access for .text as per SDK v2 guidelines
+        const extractedText = (response as any).text || "";
 
-      return {
-        response: response,
-        text: extractedText,
-      };
-    } catch (err: any) {
-      lastError = err;
-      console.warn(
-        `[AI] Poziv modela ${model} nije uspeo (${err.message || err}). Prelazak na sledeći kandidat u nizu...`,
-      );
+        // If we succeeded, ensure model is marked healthy
+        modelHealthStatus.delete(model);
+
+        return {
+          response: response,
+          text: extractedText,
+        };
+      } catch (err: any) {
+        lastError = err;
+        const isOverloaded = isOverloadedAIError(err);
+        const isQuota = isQuotaExhaustedError(err);
+        const isNetwork = isTransientNetworkError(err);
+        const errDesc = err?.message || JSON.stringify(err);
+
+        console.warn(
+          `[AI] Model ${model} (pokušaj ${attempt}) naišao na grešku: ${errDesc}`,
+        );
+
+        if (isQuota) {
+          // If quota is exhausted on this model, mark degraded for 5 minutes and immediately switch
+          markModelDegraded(model, 300000);
+          console.log(`[AI] Kvota/limit na modelu ${model} je iscrpljena (429). Odmah prelazimo na sledeći model...`);
+          break;
+        }
+
+        if (isOverloaded) {
+          if (attempt < maxAttemptsPerModel) {
+            // Momentary 503 high-demand spike: retry after short jittered backoff
+            const delayMs = 1200 * attempt + Math.random() * 800;
+            console.log(`[AI] Model ${model} je pod privremenim opterećenjem (503). Pauza ${Math.round(delayMs)}ms pre ponovnog pokušaja...`);
+            await sleep(delayMs);
+            continue;
+          } else {
+            // Mark model temporarily degraded for 45 seconds and fall back to alternative model
+            markModelDegraded(model, 45000);
+            console.log(`[AI] Model ${model} je preopterećen (503) i nakon ponovnog pokušaja. Prelazak na alternativni model...`);
+            await sleep(300);
+            break;
+          }
+        }
+
+        if (isNetwork) {
+          if (attempt < maxAttemptsPerModel) {
+            const delayMs = 600 * attempt + Math.random() * 300;
+            console.log(`[AI] Privremena mrežna greška na ${model}. Pauza ${Math.round(delayMs)}ms pre ponovnog pokušaja...`);
+            await sleep(delayMs);
+            continue;
+          } else {
+            console.log(`[AI] Mrežna greška na ${model} nakon ${maxAttemptsPerModel} pokušaja. Prelazak na sledeći model...`);
+            await sleep(200);
+            break;
+          }
+        }
+
+        // Non-transient errors (e.g. invalid arguments) - switch model immediately
+        break;
+      }
     }
   }
 
-  let finalErrorMessage = lastError ? (lastError.message || lastError.toString()) : "Svi modeli su nedostupni";
+  let finalErrorMessage = lastError ? (lastError.message || lastError.toString()) : "Svi modeli su trenutno nedostupni";
   
   if (finalErrorMessage.includes("prepayment credits are depleted") || finalErrorMessage.includes("RESOURCE_EXHAUSTED") || finalErrorMessage.includes("quota")) {
     finalErrorMessage = "VAŠ AI API KLJUČ JE OSTAO BEZ SREDSTAVA: Vaši 'prepayment crediti' na Google-u su ispražnjeni. Nije u pitanju greška u kodu aplikacije, već morate da uplatite sredstva na vaš Google Cloud billing nalog da biste nastavili da ga koristite.";
+  } else if (finalErrorMessage.includes("503") || finalErrorMessage.includes("high demand") || finalErrorMessage.includes("UNAVAILABLE")) {
+    finalErrorMessage = "Google AI servisi su trenutno pod privremenim velikim opterećenjem. Molimo pokušajte ponovo za nekoliko trenutaka.";
   } else {
-    finalErrorMessage = `Greška u radu sa AI modelima: ${finalErrorMessage}. Ukoliko stalno vidite ovu grešku, moguće je da je ispunjen limit platforme. Pokušajte ponovo kasnije.`;
+    finalErrorMessage = `Greška u radu sa AI modelima: ${finalErrorMessage}.`;
   }
 
   throw new Error(finalErrorMessage);
@@ -4219,47 +4331,181 @@ function generateHeuristicTaInsight(brainDump: string, quadrant: string, languag
   }
 }
 
+// Bounded Latency & Upstream Attempt Policy Generator for App A Daily Reset
+async function generateDailyResetContentBounded(
+  prompt: string,
+  schema: any,
+  meta?: {
+    phase: "initial" | "clarification_resolve";
+    brainDumpCharCount: number;
+    clarificationAnswersCharCount: number;
+    routeStartTime?: number;
+  }
+) {
+  const phase = meta?.phase || "initial";
+  const brainDumpCharCount = meta?.brainDumpCharCount || 0;
+  const clarificationAnswersCharCount = meta?.clarificationAnswersCharCount || 0;
+  const promptCharCount = prompt.length;
+  const schemaCharCount = JSON.stringify(schema || {}).length;
+  const overallStart = Date.now();
+  const overallBudgetMs = 38000;
+  const perAttemptBudgetMs = 20000;
+
+  // Candidate order: gemini-3.1-flash-lite preferred, gemini-3.7-flash fallback
+  const baseCandidates = ["gemini-3.1-flash-lite", "gemini-3.7-flash"];
+  const candidates = baseCandidates.sort((a, b) => {
+    const aDegraded = isModelTemporarilyDegraded(a) ? 1 : 0;
+    const bDegraded = isModelTemporarilyDegraded(b) ? 1 : 0;
+    return aDegraded - bDegraded;
+  });
+
+  let lastError: any = null;
+  let attemptNumber = 0;
+
+  for (const model of candidates) {
+    attemptNumber++;
+    const attemptStart = Date.now();
+    const elapsedSoFar = attemptStart - overallStart;
+    const remainingOverallMs = overallBudgetMs - elapsedSoFar;
+
+    if (remainingOverallMs <= 500) {
+      const timeoutDiag = {
+        feature: "app_a_daily_reset",
+        requestPhase: phase,
+        attemptNumber,
+        modelAlias: model,
+        promptCharCount,
+        schemaCharCount,
+        brainDumpCharCount,
+        clarificationAnswersCharCount,
+        upstreamDurationMs: 0,
+        parseDurationMs: 0,
+        domainValidationDurationMs: 0,
+        totalRouteDurationMs: Date.now() - overallStart,
+        httpStatus: 504,
+        success: false,
+        sanitizedFailureCategory: "timeout",
+      };
+      console.log(`[App A daily-reset] Attempt Diagnostic: ${JSON.stringify(timeoutDiag)}`);
+      throw new Error("Timeout");
+    }
+
+    const currentAttemptBudgetMs = Math.min(perAttemptBudgetMs, remainingOverallMs);
+    let attemptTimer: any = null;
+
+    try {
+      const ai = getGenAIClient();
+      const contents = [{ role: "user", parts: [{ text: prompt }] }];
+
+      const sdkPromise = (ai as any).models.generateContent({
+        model,
+        contents,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: schema,
+          temperature: 0.2,
+        },
+      });
+
+      // Avoid unhandled rejection on late arrival
+      sdkPromise.catch(() => {});
+
+      const timeoutPromise = new Promise((_, reject) => {
+        attemptTimer = setTimeout(() => {
+          const timeoutErr = new Error("Per-attempt timeout");
+          (timeoutErr as any).isPerAttemptTimeout = true;
+          reject(timeoutErr);
+        }, currentAttemptBudgetMs);
+      });
+
+      const response = await Promise.race([sdkPromise, timeoutPromise]);
+      const upstreamDurationMs = Date.now() - attemptStart;
+      const extractedText = (response as any).text || "";
+
+      // Model succeeded, clear degradation
+      modelHealthStatus.delete(model);
+
+      const parsed: any = safeParseJSON(extractedText);
+
+      const successDiag = {
+        feature: "app_a_daily_reset",
+        requestPhase: phase,
+        attemptNumber,
+        modelAlias: model,
+        promptCharCount,
+        schemaCharCount,
+        brainDumpCharCount,
+        clarificationAnswersCharCount,
+        upstreamDurationMs,
+        parseDurationMs: 0,
+        domainValidationDurationMs: 0,
+        totalRouteDurationMs: Date.now() - overallStart,
+        httpStatus: 200,
+        success: true,
+      };
+      console.log(`[App A daily-reset] Attempt Diagnostic: ${JSON.stringify(successDiag)}`);
+
+      return parsed;
+    } catch (err: any) {
+      lastError = err;
+      const upstreamDurationMs = Date.now() - attemptStart;
+      const isOverloaded = isOverloadedAIError(err);
+      const isQuota = isQuotaExhaustedError(err);
+      const isNetwork = isTransientNetworkError(err);
+      const isTimeout = err?.isPerAttemptTimeout || err?.message === "Per-attempt timeout" || err?.message === "Timeout";
+
+      let failureCat = "unknown";
+      if (isQuota) {
+        failureCat = "upstream_429";
+        markModelDegraded(model, 300000);
+      } else if (isOverloaded) {
+        failureCat = "upstream_503";
+        markModelDegraded(model, 45000);
+      } else if (isTimeout) {
+        failureCat = "timeout";
+      } else if (isNetwork) {
+        failureCat = "upstream_network";
+      }
+
+      const failDiag = {
+        feature: "app_a_daily_reset",
+        requestPhase: phase,
+        attemptNumber,
+        modelAlias: model,
+        promptCharCount,
+        schemaCharCount,
+        brainDumpCharCount,
+        clarificationAnswersCharCount,
+        upstreamDurationMs,
+        parseDurationMs: 0,
+        domainValidationDurationMs: 0,
+        totalRouteDurationMs: Date.now() - overallStart,
+        httpStatus: isTimeout ? 504 : isQuota ? 429 : 503,
+        success: false,
+        sanitizedFailureCategory: failureCat,
+      };
+      console.log(`[App A daily-reset] Attempt Diagnostic: ${JSON.stringify(failDiag)}`);
+
+      // 1 attempt per candidate: immediately try next candidate
+      continue;
+    } finally {
+      if (attemptTimer) {
+        clearTimeout(attemptTimer);
+      }
+    }
+  }
+
+  if (lastError?.isPerAttemptTimeout || lastError?.message === "Timeout") {
+    throw new Error("Timeout");
+  }
+  throw lastError || new Error("All model candidates failed");
+}
+
 app.post(
   "/api/app-a/daily-reset",
   createDailyResetRoute(
     () => process.env.APP_A_DAILY_RESET_ENABLED === "true",
-    async (prompt: string, schema: any) => {
-      const result = await generateContentWithRetry(
-        {
-          contents: prompt,
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: schema,
-          },
-        },
-        "gemini-3.7-flash"
-      );
-      const hasResponseText = Boolean(result && typeof result.text === "string" && result.text.length > 0);
-      const parsed: any = safeParseJSON(result.text);
-      const isObject = Boolean(parsed && typeof parsed === "object" && !Array.isArray(parsed));
-      
-      const structuralSummary = {
-        hasResponseText,
-        isObject,
-        phase: isObject && parsed?.phase ? String(parsed.phase) : typeof parsed?.phase,
-        questionsCount: Array.isArray(parsed?.questions) ? parsed.questions.length : undefined,
-        hasDraft: Boolean(parsed?.draft && typeof parsed.draft === "object"),
-        draftCounts: parsed?.draft && typeof parsed.draft === "object" ? {
-          classifiedItems: Array.isArray(parsed.draft.classifiedItems) ? parsed.draft.classifiedItems.length : 0,
-          firstFocus: Array.isArray(parsed.draft.firstFocus) ? parsed.draft.firstFocus.length : 0,
-          laterToday: Array.isArray(parsed.draft.laterToday) ? parsed.draft.laterToday.length : 0,
-          ifCapacityRemains: Array.isArray(parsed.draft.ifCapacityRemains) ? parsed.draft.ifCapacityRemains.length : 0,
-          deferredItems: Array.isArray(parsed.draft.deferredItems) ? parsed.draft.deferredItems.length : 0,
-          longTermIdeas: Array.isArray(parsed.draft.longTermIdeas) ? parsed.draft.longTermIdeas.length : 0,
-          nonActionItems: Array.isArray(parsed.draft.nonActionItems) ? parsed.draft.nonActionItems.length : 0,
-        } : undefined,
-        hasIntervention: Boolean(parsed?.draft?.intervention && typeof parsed.draft.intervention === "object"),
-        interventionType: parsed?.draft?.intervention?.type ? String(parsed.draft.intervention.type) : undefined,
-      };
-
-      console.log(`[App A daily-reset] Model structural diagnostic: ${JSON.stringify(structuralSummary)}`);
-      return parsed;
-    },
+    generateDailyResetContentBounded,
     () => Date.now(),
     () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
     (req) => req.ip || "unknown",

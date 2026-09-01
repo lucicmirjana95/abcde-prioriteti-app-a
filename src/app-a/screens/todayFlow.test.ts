@@ -50,14 +50,15 @@ class MockApiClient implements DailyResetApiClient {
     },
   };
 
-  async analyze(input: DailyResetInput): Promise<DailyResetApiResponse> {
+  async analyze(input: DailyResetInput, signal?: AbortSignal): Promise<DailyResetApiResponse> {
     this.analyzeCalls.push(input);
     return this.analyzeResponse;
   }
 
   async resolve(
     submission: DailyResetClarificationSubmission,
-    questions: ClarificationQuestion[]
+    questions: ClarificationQuestion[],
+    signal?: AbortSignal
   ): Promise<DailyResetApiResponse> {
     this.resolveCalls.push({ submission, questions });
     return this.resolveResponse;
@@ -562,7 +563,99 @@ async function runTests() {
     assert.strictEqual(mock.analyzeCalls.length, 0);
   }
 
-  console.log("✅ All 31 today flow tests passed successfully!");
+  // 32. Cancellation during initial submission preserves input and reverts to editing
+  {
+    let abortSignalTriggered = false;
+    const mock = new MockApiClient();
+    mock.analyze = async (input, signal) => {
+      signal?.addEventListener("abort", () => {
+        abortSignalTriggered = true;
+      });
+      // Simulate delay
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      return mock.analyzeResponse;
+    };
+    const controller = new TodayFlowController("en", mock, validData);
+    const submitPromise = controller.submitInitial();
+    assert.strictEqual(controller.getState().phase, "submitting");
+    
+    // User cancels
+    controller.cancel();
+    assert.strictEqual(controller.getState().phase, "editing");
+    assert.deepStrictEqual(controller.getState().inputData, validData);
+    assert.strictEqual(abortSignalTriggered, true);
+
+    await submitPromise;
+    // Late response must be ignored
+    assert.strictEqual(controller.getState().phase, "editing");
+  }
+
+  // 33. Cancellation during resolve submission preserves answers and reverts to clarification_needed
+  {
+    let abortSignalTriggered = false;
+    const mock = new MockApiClient();
+    mock.analyzeResponse = {
+      success: true,
+      phase: "clarification_needed",
+      questions: [sampleQuestion],
+    };
+    mock.resolve = async (submission, questions, signal) => {
+      signal?.addEventListener("abort", () => {
+        abortSignalTriggered = true;
+      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      return mock.resolveResponse;
+    };
+    const controller = new TodayFlowController("en", mock, validData);
+    await controller.submitInitial();
+    controller.setAnswer("q1", "Detailed answer");
+    
+    const resolvePromise = controller.submitResolve();
+    assert.strictEqual(controller.getState().phase, "resolving");
+
+    // User cancels
+    controller.cancel();
+    assert.strictEqual(controller.getState().phase, "clarification_needed");
+    assert.strictEqual(controller.getState().answers["q1"], "Detailed answer");
+    assert.strictEqual(abortSignalTriggered, true);
+
+    await resolvePromise;
+    // Late response must be ignored
+    assert.strictEqual(controller.getState().phase, "clarification_needed");
+  }
+
+  // 34. Timeout displays localized recoverable message
+  {
+    const mock = new MockApiClient();
+    mock.analyze = async () => {
+      throw new Error("Timeout");
+    };
+    const controllerEn = new TodayFlowController("en", mock, validData);
+    await controllerEn.submitInitial();
+    assert.strictEqual(controllerEn.getState().phase, "error");
+    assert.strictEqual(controllerEn.getState().error?.code, "timeout");
+    assert.strictEqual(
+      controllerEn.getState().error?.message,
+      "Planning took too long this time. Your input is preserved — you can try again."
+    );
+    assert.strictEqual(controllerEn.getState().error?.retryable, true);
+
+    const controllerSr = new TodayFlowController("sr", mock, validData);
+    await controllerSr.submitInitial();
+    assert.strictEqual(
+      controllerSr.getState().error?.message,
+      "Planiranje je ovog puta trajalo predugo. Vaš unos je sačuvan — možete pokušati ponovo."
+    );
+
+    const controllerTr = new TodayFlowController("tr", mock, validData);
+    await controllerTr.submitInitial();
+    assert.strictEqual(
+      controllerTr.getState().error?.message,
+      "Planlama bu sefer çok uzun sürdü. Girişiniz korundu — tekrar deneyebilirsiniz."
+    );
+  }
+
+  console.log("✅ All 34 today flow tests passed successfully!");
 }
 
 runTests().catch((e) => {

@@ -33,46 +33,69 @@ export default function DailyPlanBlock({
         return {
           title: t.firstFocusTitle,
           subtitle: undefined,
-          containerClass:
-            "border border-[#0A84FF]/25 bg-[#0A84FF]/[0.055] dark:bg-[#0A84FF]/10 p-4 sm:p-5 rounded-[18px] mb-5",
-          badgeClass: "bg-[#0A84FF]/12 text-[#0071E3] dark:text-[#0A84FF]",
+          containerStyle: {
+            borderColor: "var(--app-a-accent)",
+            backgroundColor: "var(--app-a-accent-soft)",
+          },
+          badgeStyle: {
+            backgroundColor: "var(--app-a-accent-soft)",
+            color: "var(--app-a-accent)",
+          },
         };
       case "later_today":
         return {
           title: t.laterTodayTitle,
           subtitle: undefined,
-          containerClass:
-            "border border-black/10 dark:border-white/10 bg-white dark:bg-[#1C1C1E] p-4 sm:p-5 rounded-[18px] mb-5",
-          badgeClass: "bg-black/[0.06] text-[#6E6E73] dark:bg-white/10 dark:text-[#AEAEB2]",
+          containerStyle: {
+            borderColor: "var(--app-a-border)",
+            backgroundColor: "var(--app-a-surface)",
+          },
+          badgeStyle: {
+            backgroundColor: "var(--app-a-disabled-bg)",
+            color: "var(--app-a-text-secondary)",
+          },
         };
       case "if_capacity_remains":
         return {
           title: t.ifCapacityRemainsTitle,
           subtitle: t.ifCapacityRemainsDesc,
-          containerClass:
-            "border border-dashed border-black/20 dark:border-white/20 bg-transparent p-4 sm:p-5 rounded-[18px] mb-5",
-          badgeClass: "bg-black/[0.06] text-[#6E6E73] dark:bg-white/10 dark:text-[#AEAEB2]",
+          containerStyle: {
+            borderColor: "var(--app-a-border-strong)",
+            backgroundColor: "transparent",
+            borderStyle: "dashed" as const,
+          },
+          badgeStyle: {
+            backgroundColor: "var(--app-a-disabled-bg)",
+            color: "var(--app-a-text-secondary)",
+          },
         };
     }
   };
 
-  const { title, subtitle, containerClass, badgeClass } = getTitleAndStyle();
+  const { title, subtitle, containerStyle, badgeStyle } = getTitleAndStyle();
 
   return (
-    <section data-testid={`plan-block-${block}`} className={containerClass}>
+    <section
+      data-testid={`plan-block-${block}`}
+      className="mb-5 rounded-[18px] border p-4 sm:p-5"
+      style={containerStyle}
+    >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <h3 className="text-[19px] font-semibold tracking-[-0.015em] text-black dark:text-white">
+          <h3 className="text-[19px] font-semibold tracking-[-0.015em]" style={{ color: "var(--app-a-text)" }}>
             {title}
           </h3>
-          <span className={`rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${badgeClass}`}>
+          <span
+            className="rounded-full px-2.5 py-0.5 text-[12px] font-semibold"
+            style={badgeStyle}
+          >
             {items.length}
           </span>
         </div>
       </div>
 
       {subtitle && (
-        <p className="text-[13px] text-[#3C3C43]/80 dark:text-[#EBEBF5]/70 mb-3">
+        <p className="mb-3 text-[13px]" style={{ color: "var(--app-a-text-secondary)" }}>
           {subtitle}
         </p>
       )}

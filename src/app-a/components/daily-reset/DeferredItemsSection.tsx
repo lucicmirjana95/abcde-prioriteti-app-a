@@ -79,33 +79,54 @@ export default function DeferredItemsSection({
       <div
         key={item.id}
         data-testid={`classified-item-row-${item.id}`}
-        className="p-3 my-2 bg-white dark:bg-[#1C1C1E] border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-xl text-left"
+        className="my-2 rounded-xl border p-3 text-left"
+        style={{
+          backgroundColor: "var(--app-a-surface)",
+          borderColor: "var(--app-a-border)",
+        }}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className="text-[15px] font-medium text-black dark:text-white">
+              <span className="text-[15px] font-semibold" style={{ color: "var(--app-a-text)" }}>
                 {item.suggestedAction || item.originalText}
               </span>
 
               {item.needsCheck && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">
+                <span
+                  className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold"
+                  style={{
+                    backgroundColor: "var(--app-a-warning-soft)",
+                    color: "var(--app-a-warning-text)",
+                  }}
+                >
                   {t.checkLabel}
                 </span>
               )}
             </div>
 
             {item.suggestedAction && item.suggestedAction !== item.originalText && (
-              <p className="text-[13px] text-[#3C3C43]/70 dark:text-[#EBEBF5]/60 mb-1">
+              <p
+                className="mb-1 text-[13px]"
+                style={{ color: "var(--app-a-text-secondary)" }}
+              >
                 "{item.originalText}"
               </p>
             )}
 
-            <div className="flex items-center gap-2 text-[12px] text-[#8E8E93] flex-wrap mt-1">
+            <div
+              className="flex items-center gap-2 text-[12px] flex-wrap mt-1"
+              style={{ color: "var(--app-a-text-secondary)" }}
+            >
               {item.estimatedMinutes ? (
-                <span>{item.estimatedMinutes} min</span>
+                <span className="font-medium" style={{ color: "var(--app-a-text)" }}>
+                  {item.estimatedMinutes} min
+                </span>
               ) : (
-                <span className="text-amber-600 dark:text-amber-400 font-medium">
+                <span
+                  className="font-medium"
+                  style={{ color: "var(--app-a-warning-text)" }}
+                >
                   {t.missingDataExplanation}
                 </span>
               )}
@@ -113,13 +134,17 @@ export default function DeferredItemsSection({
               {(item.deadlineText || item.deadlineIso) && (
                 <>
                   <span>•</span>
-                  <span>{item.deadlineText || item.deadlineIso}</span>
+                  <span style={{ color: "var(--app-a-warning-text)" }}>
+                    {item.deadlineText || item.deadlineIso}
+                  </span>
                 </>
               )}
             </div>
 
             {errorMsg && (
-              <p className="text-[13px] font-medium text-red-500 mt-2">{errorMsg}</p>
+              <p className="mt-2 text-[13px] font-medium" style={{ color: "var(--app-a-danger)" }}>
+                {errorMsg}
+              </p>
             )}
           </div>
 
@@ -130,17 +155,31 @@ export default function DeferredItemsSection({
               aria-label={t.actionsMenuLabel}
               aria-expanded={isMenuOpen}
               onClick={() => setActiveMenuId(isMenuOpen ? null : item.id)}
-              className="min-h-[44px] min-w-[44px] px-3 py-2 bg-[#F2F2F7] dark:bg-[#2C2C2E] text-black dark:text-white rounded-xl text-[14px] font-medium hover:bg-[#E5E5EA] dark:hover:bg-[#3A3A3C] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]"
+              className="app-a-focus-ring min-h-[44px] min-w-[44px] rounded-xl px-3 py-2 text-[14px] font-medium transition-colors"
+              style={{
+                backgroundColor: "var(--app-a-disabled-bg)",
+                color: "var(--app-a-text)",
+              }}
             >
               •••
             </button>
 
             {isMenuOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-[#38383A] rounded-2xl shadow-lg z-20 py-2">
+              <div
+                className="absolute right-0 z-20 mt-2 w-56 rounded-2xl border py-2 shadow-lg"
+                style={{
+                  backgroundColor: "var(--app-a-surface-elevated)",
+                  borderColor: "var(--app-a-border-strong)",
+                  boxShadow: "var(--app-a-shadow-lg)",
+                }}
+              >
                 <button
                   type="button"
                   onClick={() => handleTryPromote(item, "first_focus")}
-                  className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] text-black dark:text-white hover:bg-[#F2F2F7] dark:hover:bg-[#3A3A3C] transition-colors"
+                  className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
+                  style={{ color: "var(--app-a-text)" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                 >
                   {t.moveToFirstFocus}
                 </button>
@@ -148,7 +187,10 @@ export default function DeferredItemsSection({
                 <button
                   type="button"
                   onClick={() => handleTryPromote(item, "later_today")}
-                  className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] text-black dark:text-white hover:bg-[#F2F2F7] dark:hover:bg-[#3A3A3C] transition-colors"
+                  className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
+                  style={{ color: "var(--app-a-text)" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                 >
                   {t.moveToLaterToday}
                 </button>
@@ -156,12 +198,18 @@ export default function DeferredItemsSection({
                 <button
                   type="button"
                   onClick={() => handleTryPromote(item, "if_capacity_remains")}
-                  className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] text-black dark:text-white hover:bg-[#F2F2F7] dark:hover:bg-[#3A3A3C] transition-colors"
+                  className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
+                  style={{ color: "var(--app-a-text)" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                 >
                   {t.moveToIfCapacityRemains}
                 </button>
 
-                <hr className="my-1 border-[#E5E5EA] dark:border-[#38383A]" />
+                <hr
+                  className="my-1 border-t"
+                  style={{ borderColor: "var(--app-a-border)" }}
+                />
 
                 {item.timeHorizon !== "this_week" && (
                   <button
@@ -170,7 +218,10 @@ export default function DeferredItemsSection({
                       setActiveMenuId(null);
                       onMoveHorizon(item.id, "this_week");
                     }}
-                    className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] text-black dark:text-white hover:bg-[#F2F2F7] dark:hover:bg-[#3A3A3C] transition-colors"
+                    className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
+                    style={{ color: "var(--app-a-text)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                   >
                     {t.moveToThisWeek}
                   </button>
@@ -183,7 +234,10 @@ export default function DeferredItemsSection({
                       setActiveMenuId(null);
                       onMoveHorizon(item.id, "later");
                     }}
-                    className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] text-black dark:text-white hover:bg-[#F2F2F7] dark:hover:bg-[#3A3A3C] transition-colors"
+                    className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
+                    style={{ color: "var(--app-a-text)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                   >
                     {t.moveToLater}
                   </button>
@@ -196,7 +250,10 @@ export default function DeferredItemsSection({
                       setActiveMenuId(null);
                       onMoveHorizon(item.id, "long_term_idea");
                     }}
-                    className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] text-black dark:text-white hover:bg-[#F2F2F7] dark:hover:bg-[#3A3A3C] transition-colors"
+                    className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
+                    style={{ color: "var(--app-a-text)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                   >
                     {t.saveAsLongTermIdea}
                   </button>
@@ -209,7 +266,10 @@ export default function DeferredItemsSection({
                       setActiveMenuId(null);
                       onMoveHorizon(item.id, "no_action");
                     }}
-                    className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] text-black dark:text-white hover:bg-[#F2F2F7] dark:hover:bg-[#3A3A3C] transition-colors"
+                    className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
+                    style={{ color: "var(--app-a-text)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                   >
                     {t.markAsNotAnAction}
                   </button>
@@ -226,7 +286,10 @@ export default function DeferredItemsSection({
     if (!items || items.length === 0) return null;
     return (
       <div className="mb-4">
-        <h4 className="text-[15px] font-semibold text-[#3C3C43] dark:text-[#EBEBF5]/90 mb-2">
+        <h4
+          className="mb-2 text-[15px] font-semibold"
+          style={{ color: "var(--app-a-text)" }}
+        >
           {title} ({items.length})
         </h4>
         <div className="space-y-1">{items.map(renderItemRow)}</div>
@@ -237,9 +300,13 @@ export default function DeferredItemsSection({
   return (
     <section
       data-testid="deferred-items-section"
-      className="mt-8 p-4 bg-[#F2F2F7] dark:bg-[#1C1C1E] rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] text-left"
+      className="mt-8 rounded-2xl border p-4 text-left"
+      style={{
+        backgroundColor: "var(--app-a-surface-secondary)",
+        borderColor: "var(--app-a-border)",
+      }}
     >
-      <h3 className="text-[18px] font-bold text-black dark:text-white mb-4">
+      <h3 className="mb-4 text-[18px] font-bold" style={{ color: "var(--app-a-text)" }}>
         {t.outsideTodayHeading} ({totalOutsideCount})
       </h3>
 

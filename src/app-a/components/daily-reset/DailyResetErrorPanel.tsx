@@ -42,15 +42,21 @@ export default function DailyResetErrorPanel({
 
   return (
     <div className="app-a-surface mx-auto flex min-h-[360px] max-w-md flex-col items-center justify-center gap-6 p-6 text-center sm:p-8">
-      <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 text-xl font-bold">
+      <div
+        className="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold"
+        style={{
+          backgroundColor: "var(--app-a-danger-soft)",
+          color: "var(--app-a-danger)",
+        }}
+      >
         !
       </div>
 
       <div className="flex flex-col gap-2">
-        <h3 className="text-[19px] font-semibold text-black dark:text-white">
+        <h3 className="text-[19px] font-semibold" style={{ color: "var(--app-a-text)" }}>
           {t.title}
         </h3>
-        <p className="text-[15px] text-[#3C3C43] dark:text-[#EBEBF5]/80">
+        <p className="text-[15px]" style={{ color: "var(--app-a-text-secondary)" }}>
           {error.message}
         </p>
       </div>
@@ -60,7 +66,7 @@ export default function DailyResetErrorPanel({
           <button
             type="button"
             onClick={onRetry}
-            className="app-a-primary-button app-a-focus-ring flex-1 px-6 text-[15px] transition-colors hover:bg-[#0077ED]"
+            className="app-a-primary-button app-a-focus-ring flex-1 px-6 text-[15px] transition-colors"
           >
             {t.retry}
           </button>
@@ -68,7 +74,7 @@ export default function DailyResetErrorPanel({
         <button
           type="button"
           onClick={onBackToEdit}
-          className="app-a-secondary-button app-a-focus-ring flex-1 px-6 text-[15px] transition-colors hover:bg-black/10 dark:hover:bg-white/15"
+          className="app-a-secondary-button app-a-focus-ring flex-1 px-6 text-[15px] transition-colors"
         >
           {t.backToEdit}
         </button>
