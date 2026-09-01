@@ -74,6 +74,11 @@ service cloud.firestore {
         allow get, create, update, delete: if request.auth != null && request.auth.uid == userId && isValidId(strategyId);
         allow list: if request.auth != null && request.auth.uid == userId;
       }
+
+      match /todayCandidates/{candidateId} {
+        allow get, create, update, delete: if request.auth != null && request.auth.uid == userId && isValidId(candidateId);
+        allow list: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
     // App A data is isolated from legacy task documents and is private to its owner.

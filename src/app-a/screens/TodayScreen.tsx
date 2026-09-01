@@ -28,6 +28,7 @@ import type { DailyPlanDraft } from '../domain/daily-reset/contracts';
 import { normalizeCompletedItemIds, toggleCompletedItemId } from './todayExecution';
 import DailyRoutinesSection from '../components/routines/DailyRoutinesSection';
 import ResetSessions from '../components/reset/ResetSessions';
+import TodayCandidatesSection from '../components/vision/TodayCandidatesSection';
 
 interface Props {
   language: AppALanguage;
@@ -271,6 +272,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
       {content}
       {!isLoadingSavedPlan && state.phase !== 'submitting' && state.phase !== 'resolving' && (
         <>
+          <TodayCandidatesSection userId={user?.uid} language={language} />
           <DailyRoutinesSection userId={user?.uid} language={language} />
           <ResetSessions language={language} />
         </>
