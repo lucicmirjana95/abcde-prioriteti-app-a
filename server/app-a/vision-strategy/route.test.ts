@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createVisionStrategyRoute, isVisionDecompositionResult, isVisionStrategyResult } from "./route";
+import { createVisionStrategyRoute, isVisionDecompositionResult, isVisionFeasibilityResult, isVisionStrategyResult } from "./route";
 
 const valid = {
   outcome: "A clear outcome",
@@ -18,6 +18,10 @@ assert.equal(isVisionDecompositionResult({ shouldDecompose: false, reason: "alre
 assert.equal(isVisionDecompositionResult({ shouldDecompose: true, reason: "too_broad", substeps: ["Define the outcome", "Validate it"] }), true);
 assert.equal(isVisionDecompositionResult({ shouldDecompose: true, reason: "too_broad", substeps: ["Only one"] }), false);
 assert.equal(isVisionDecompositionResult({ shouldDecompose: false, reason: "too_broad", substeps: [] }), false);
+const feasible = { status: "feasible", normalizedGoal: "Write a book", reason: "No conflicting timeframe was supplied.", assumptions: [], questions: [] };
+assert.equal(isVisionFeasibilityResult(feasible), true);
+assert.equal(isVisionFeasibilityResult({ ...feasible, status: "unrealistic_for_timeframe" }), false);
+assert.equal(isVisionFeasibilityResult({ ...feasible, status: "insufficient_information", questions: [] }), false);
 
 function responseHarness() {
   const result: { status?: number; body?: unknown } = {};
@@ -26,6 +30,15 @@ function responseHarness() {
     json(body: unknown) { result.body = body; return response; },
   };
   return { result, response };
+}
+
+{
+  const { result, response } = responseHarness();
+  await createVisionStrategyRoute(async () => feasible)(
+    { body: { language: "en", idea: "Write a useful book", mode: "feasibility", timeframe: "12 months" } } as never,
+    response as never,
+  );
+  assert.equal(result.status, 200);
 }
 
 {

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { CalendarPlus, ChevronDown, ChevronUp, Loader2, Route, Save, ShieldCheck, Sparkles, X } from "lucide-react";
-import type { VisionStrategyResult } from "../../../shared/domain/vision";
-import { createVisionStrategy, decomposeVisionStep } from "../../api/visionStrategyApi";
+import type { VisionFeasibilityResult, VisionStrategyResult } from "../../../shared/domain/vision";
+import { assessVisionFeasibility, createVisionStrategy, decomposeVisionStep } from "../../api/visionStrategyApi";
 import type { AppALanguage } from "../../types";
 import { createVisionStrategyId, type SavedVisionStrategy } from "../../../shared/domain/vision";
 import { saveVisionStrategy } from "../../../shared/persistence/vision";
@@ -14,8 +14,15 @@ const COPY = {
   tr: { develop: "Bu yönü geliştir", loading: "Fikir uygulanabilir bir yola dönüştürülüyor…", error: "Yön geliştirilemedi. Tekrar deneyin.", saveError: "Strateji kaydedilemedi.", saved: "Kaydedildi", imagine: "Hayal et", plan: "Planla", check: "Kontrol et", why: "Neden önemli", risks: "Riskler", assumptions: "Doğrulanacak varsayımlar", next: "En küçük yararlı sonraki adım", hide: "Stratejiyi gizle", show: "Stratejiyi göster", breakDown: "Yalnızca gerekirse böl", checking: "Yararlılık kontrol ediliyor…", concrete: "Bu adım zaten yeterince somut.", send: "Bugüne gönder", confirmTitle: "Bu aday Bugün'e gönderilsin mi?", confirmHelp: "Plansız bir aday olarak görünür ve onaylanan planınızı değiştirmez.", duration: "Tahmini dakika", cancel: "İptal", confirm: "Adayı gönder", sent: "Bugüne gönderildi" },
 } as const;
 
+const FEASIBILITY_COPY = {
+  en: { timeframe: "Desired timeframe (optional)", timeframePlaceholder: "e.g. 12 months", check: "Check feasibility and develop", assessment: "Feasibility check", useAdjusted: "Use realistic version", keepOriginal: "Keep original goal", useTimeframe: "Suggested timeframe", needsInfo: "Add the missing details to the direction and try again." },
+  sr: { timeframe: "Željeni rok (opciono)", timeframePlaceholder: "npr. 12 meseci", check: "Proveri izvodljivost i razradi", assessment: "Provera izvodljivosti", useAdjusted: "Koristi realniju verziju", keepOriginal: "Zadrži originalni cilj", useTimeframe: "Predloženi rok", needsInfo: "Dodajte nedostajuće podatke u opis pravca i pokušajte ponovo." },
+  tr: { timeframe: "İstenen süre (isteğe bağlı)", timeframePlaceholder: "örn. 12 ay", check: "Uygulanabilirliği kontrol et ve geliştir", assessment: "Uygulanabilirlik kontrolü", useAdjusted: "Gerçekçi sürümü kullan", keepOriginal: "Orijinal hedefi koru", useTimeframe: "Önerilen süre", needsInfo: "Eksik bilgileri yön açıklamasına ekleyip tekrar deneyin." },
+} as const;
+
 export default function VisionStrategyBuilder({ idea, language, userId, initialDocument, onSaved }: { idea: string; language: AppALanguage; userId: string; initialDocument?: SavedVisionStrategy; onSaved?: (document: SavedVisionStrategy) => void }) {
   const t = COPY[language];
+  const ft = FEASIBILITY_COPY[language];
   const [strategy, setStrategy] = useState<VisionStrategyResult | null>(initialDocument?.strategy || null);
   const [documentId] = useState(initialDocument?.id || createVisionStrategyId);
   const [breakdowns, setBreakdowns] = useState<Record<string, string[]>>(initialDocument?.stepBreakdowns || {});
@@ -25,6 +32,8 @@ export default function VisionStrategyBuilder({ idea, language, userId, initialD
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [expanded, setExpanded] = useState(true);
+  const [timeframe, setTimeframe] = useState("");
+  const [feasibility, setFeasibility] = useState<VisionFeasibilityResult | null>(null);
   const [showCandidateDialog, setShowCandidateDialog] = useState(false);
   const [candidateMinutes, setCandidateMinutes] = useState(25);
   const [candidateStatus, setCandidateStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -32,24 +41,40 @@ export default function VisionStrategyBuilder({ idea, language, userId, initialD
   async function sendToToday() {
     if (!strategy || candidateStatus === "saving") return;
     const now = new Date().toISOString();
-    const candidate: TodayCandidate = { id: createTodayCandidateId(), source: "vision", sourceId: documentId, title: strategy.nextStep.trim(), estimatedMinutes: candidateMinutes, status: "pending", createdAt: now, updatedAt: now };
+    const candidate: TodayCandidate = { id: createTodayCandidateId(documentId), source: "vision", sourceId: documentId, title: strategy.nextStep.trim(), estimatedMinutes: candidateMinutes, status: "pending", createdAt: now, updatedAt: now };
     setCandidateStatus("saving"); setError(false);
     try { await saveTodayCandidate(userId, candidate); setCandidateStatus("saved"); setShowCandidateDialog(false); }
     catch { setCandidateStatus("idle"); setError(true); }
   }
 
-  async function generate() {
+  async function generateStrategy(goal: string) {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 42_000);
     setLoading(true); setError(false);
     try {
-      const generated = await createVisionStrategy(idea, language, controller.signal);
+      const generated = await createVisionStrategy(goal, language, controller.signal);
       setStrategy(generated);
       setExpanded(true);
       const now = new Date().toISOString();
       const document: SavedVisionStrategy = { id: documentId, idea, language, strategy: generated, stepBreakdowns: {}, createdAt: initialDocument?.createdAt || now, updatedAt: now };
       await saveVisionStrategy(userId, document);
       setSaved(true); onSaved?.(document);
+    } catch { setError(true); }
+    finally { window.clearTimeout(timeout); setLoading(false); }
+  }
+
+  async function generate() {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 42_000);
+    setLoading(true); setError(false); setFeasibility(null);
+    try {
+      const result = await assessVisionFeasibility(idea, timeframe, language, controller.signal);
+      if (result.status === "feasible") {
+        window.clearTimeout(timeout); setLoading(false);
+        await generateStrategy(result.normalizedGoal);
+        return;
+      }
+      setFeasibility(result);
     } catch { setError(true); }
     finally { window.clearTimeout(timeout); setLoading(false); }
   }
@@ -69,7 +94,7 @@ export default function VisionStrategyBuilder({ idea, language, userId, initialD
     finally { setCheckingStep(null); }
   }
 
-  if (!strategy) return <div className="mt-4"><button type="button" onClick={() => void generate()} disabled={loading} className="app-a-secondary-button w-full justify-center">{loading ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />{t.loading}</> : <><Route className="h-4 w-4" aria-hidden="true" />{t.develop}</>}</button>{error ? <p className="mt-2 text-[13px] text-[#FF3B30]" role="alert">{t.error}</p> : null}</div>;
+  if (!strategy) return <div className="mt-4"><label className="block text-[13px] font-semibold">{ft.timeframe}<input value={timeframe} maxLength={200} onChange={(event) => setTimeframe(event.target.value)} placeholder={ft.timeframePlaceholder} className="app-a-field app-a-focus-ring mt-2 w-full p-3" /></label><button type="button" onClick={() => void generate()} disabled={loading} className="app-a-secondary-button mt-3 w-full justify-center">{loading ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />{t.loading}</> : <><Route className="h-4 w-4" aria-hidden="true" />{ft.check}</>}</button>{feasibility ? <div className="mt-3 rounded-[14px] border border-amber-500/25 bg-amber-500/10 p-4"><h3 className="text-[14px] font-semibold">{ft.assessment}</h3><p className="mt-2 text-[13px] leading-relaxed">{feasibility.reason}</p>{feasibility.assumptions.length ? <ul className="mt-2 list-disc pl-5 text-[12px] text-[#6E6E73] dark:text-[#AEAEB2]">{feasibility.assumptions.map((value) => <li key={value}>{value}</li>)}</ul> : null}{feasibility.questions.length ? <><ul className="mt-2 list-disc pl-5 text-[12px] text-[#6E6E73] dark:text-[#AEAEB2]">{feasibility.questions.map((value) => <li key={value}>{value}</li>)}</ul><p className="mt-2 text-[12px] font-medium">{ft.needsInfo}</p></> : null}{feasibility.adjustedGoal ? <button type="button" onClick={() => void generateStrategy(feasibility.adjustedGoal!)} className="app-a-primary-button app-a-focus-ring mt-3 w-full px-4">{ft.useAdjusted}: {feasibility.adjustedGoal}</button> : null}{feasibility.adjustedTimeframe ? <p className="mt-2 text-[12px]"><strong>{ft.useTimeframe}:</strong> {feasibility.adjustedTimeframe}</p> : null}{feasibility.status !== "insufficient_information" ? <button type="button" onClick={() => void generateStrategy(feasibility.normalizedGoal)} className="app-a-secondary-button app-a-focus-ring mt-2 w-full px-4">{ft.keepOriginal}</button> : null}</div> : null}{error ? <p className="mt-2 text-[13px] text-[#FF3B30]" role="alert">{t.error}</p> : null}</div>;
 
   return <div className="mt-4 border-t border-black/5 pt-4 dark:border-white/10">
     <button type="button" onClick={() => setExpanded((value) => !value)} className="flex w-full items-center justify-between text-[13px] font-semibold text-[#0071E3] dark:text-[#0A84FF]">{expanded ? t.hide : t.show}{expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</button>
@@ -77,7 +102,7 @@ export default function VisionStrategyBuilder({ idea, language, userId, initialD
       <section><h3 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.07em] text-[#AF52DE]"><Sparkles className="h-4 w-4" />{t.imagine}</h3><p className="mt-2 text-[15px] font-medium text-black dark:text-white">{strategy.outcome}</p><p className="mt-1 text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]"><strong>{t.why}:</strong> {strategy.importance}</p></section>
       <section><h3 className="flex items-center justify-between text-[13px] font-semibold uppercase tracking-[0.07em] text-[#0071E3] dark:text-[#0A84FF]"><span>{t.plan}</span>{saved ? <span className="flex items-center gap-1 normal-case tracking-normal text-[#34C759]"><Save className="h-3.5 w-3.5" />{t.saved}</span> : null}</h3><ol className="mt-2 space-y-3">{strategy.milestones.map((milestone, index) => <li key={`${milestone.title}-${index}`}><p className="text-[14px] font-semibold text-black dark:text-white">{index + 1}. {milestone.title}</p><p className="text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]">{milestone.result}</p><ul className="mt-1 space-y-2 text-[13px] text-[#3A3A3C] dark:text-[#D1D1D6]">{milestone.steps.map((step, stepIndex) => { const key = `m${index}-s${stepIndex}`; return <li key={key} className="border-l-2 border-black/10 pl-3 dark:border-white/15"><p>{step}</p>{breakdowns[key] ? <ul className="mt-1 list-disc space-y-2 pl-5">{breakdowns[key].map((substep, subIndex) => { const nestedKey = `${key}-d${subIndex}`; return <li key={nestedKey}><span>{substep}</span>{breakdowns[nestedKey] ? <ul className="mt-1 list-disc pl-5">{breakdowns[nestedKey].map((leaf) => <li key={leaf}>{leaf}</li>)}</ul> : <button type="button" disabled={checkingStep !== null} onClick={() => void breakDown(substep, nestedKey, 1)} className="app-a-focus-ring ml-2 text-[11px] font-semibold text-[#0071E3] dark:text-[#0A84FF]">{checkingStep === nestedKey ? t.checking : t.breakDown}</button>}{concreteStep === nestedKey ? <p className="text-[11px] text-[#34C759]">{t.concrete}</p> : null}</li>; })}</ul> : <button type="button" disabled={checkingStep !== null} onClick={() => void breakDown(step, key)} className="app-a-focus-ring mt-1 text-[12px] font-semibold text-[#0071E3] dark:text-[#0A84FF]">{checkingStep === key ? t.checking : t.breakDown}</button>}{concreteStep === key ? <p className="mt-1 text-[12px] text-[#34C759]">{t.concrete}</p> : null}</li>; })}</ul></li>)}</ol></section>
       <section><h3 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.07em] text-[#34C759]"><ShieldCheck className="h-4 w-4" />{t.check}</h3>{strategy.risks.length ? <><p className="mt-2 text-[13px] font-semibold">{t.risks}</p><ul className="list-disc pl-5 text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]">{strategy.risks.map((risk) => <li key={risk}>{risk}</li>)}</ul></> : null}{strategy.assumptions.length ? <><p className="mt-2 text-[13px] font-semibold">{t.assumptions}</p><ul className="list-disc pl-5 text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]">{strategy.assumptions.map((assumption) => <li key={assumption}>{assumption}</li>)}</ul></> : null}</section>
-      <div className="rounded-[14px] bg-[#0071E3]/8 p-3 text-[14px] text-black dark:bg-[#0A84FF]/15 dark:text-white"><strong>{t.next}:</strong> {strategy.nextStep}<button type="button" onClick={() => setShowCandidateDialog(true)} className="app-a-secondary-button app-a-focus-ring mt-3 w-full gap-2"><CalendarPlus className="h-4 w-4" />{candidateStatus === "saved" ? t.sent : t.send}</button></div>
+      <div className="rounded-[14px] bg-[#0071E3]/8 p-3 text-[14px] text-black dark:bg-[#0A84FF]/15 dark:text-white"><strong>{t.next}:</strong> {strategy.nextStep}<button type="button" disabled={candidateStatus === "saved"} onClick={() => setShowCandidateDialog(true)} className="app-a-secondary-button app-a-focus-ring mt-3 w-full gap-2"><CalendarPlus className="h-4 w-4" />{candidateStatus === "saved" ? t.sent : t.send}</button></div>
       {showCandidateDialog ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" role="dialog" aria-modal="true" aria-labelledby={`candidate-dialog-${documentId}`}><div className="app-a-surface w-full max-w-md p-5 shadow-2xl"><div className="flex items-start justify-between gap-4"><div><h3 id={`candidate-dialog-${documentId}`} className="text-[19px] font-semibold">{t.confirmTitle}</h3><p className="mt-2 text-[14px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">{t.confirmHelp}</p></div><button type="button" onClick={() => setShowCandidateDialog(false)} className="app-a-focus-ring rounded-full p-2" aria-label={t.cancel}><X className="h-5 w-5" /></button></div><p className="mt-4 text-[15px] font-medium">{strategy.nextStep}</p><label className="mt-4 block text-[13px] font-semibold">{t.duration}<input type="number" min={5} max={480} step={5} value={candidateMinutes} onChange={(event) => setCandidateMinutes(Math.max(5, Math.min(480, Number(event.target.value) || 5)))} className="app-a-field app-a-focus-ring mt-2 w-full p-3" /></label><div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setShowCandidateDialog(false)} className="app-a-secondary-button app-a-focus-ring px-4">{t.cancel}</button><button type="button" disabled={candidateStatus === "saving"} onClick={() => void sendToToday()} className="app-a-primary-button app-a-focus-ring px-4">{t.confirm}</button></div></div></div> : null}
       {error ? <p className="text-[13px] text-[#FF3B30]" role="alert">{t.saveError}</p> : null}
     </div> : null}

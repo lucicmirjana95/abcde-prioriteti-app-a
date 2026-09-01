@@ -29,6 +29,8 @@ import { normalizeCompletedItemIds, toggleCompletedItemId } from './todayExecuti
 import DailyRoutinesSection from '../components/routines/DailyRoutinesSection';
 import ResetSessions from '../components/reset/ResetSessions';
 import TodayCandidatesSection from '../components/vision/TodayCandidatesSection';
+import type { TodayCandidate } from '../../shared/domain/today-candidates';
+import { addVisionCandidateToPlan } from './visionCandidatePlan';
 
 interface Props {
   language: AppALanguage;
@@ -172,6 +174,23 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     }
   };
 
+  const handleAddVisionCandidate = async (candidate: TodayCandidate): Promise<string | null> => {
+    if (!user || !state.planDraft) return 'invalid_plan';
+    const result = addVisionCandidateToPlan(state.planDraft, candidate);
+    if ('error' in result) return result.error;
+    try {
+      const document = createDailyPlanDocument(state.inputData, result.draft, language, activePlanDate, preferences.timeZone);
+      document.execution = { completedItemIds };
+      await saveConfirmedDailyPlan(user.uid, document);
+      loadConfirmedPlan(result.draft, state.inputData);
+      setViewMode('execution');
+      setSaveStatus('saved');
+      return null;
+    } catch {
+      return 'invalid_plan';
+    }
+  };
+
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [state.phase]);
@@ -272,7 +291,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
       {content}
       {!isLoadingSavedPlan && state.phase !== 'submitting' && state.phase !== 'resolving' && (
         <>
-          <TodayCandidatesSection userId={user?.uid} language={language} />
+          <TodayCandidatesSection userId={user?.uid} language={language} canAddToPlan={Boolean(state.planDraft && viewMode === 'execution')} onAddToPlan={handleAddVisionCandidate} />
           <DailyRoutinesSection userId={user?.uid} language={language} />
           <ResetSessions language={language} />
         </>

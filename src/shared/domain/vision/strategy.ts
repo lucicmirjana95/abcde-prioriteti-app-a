@@ -13,6 +13,16 @@ export interface VisionDecompositionResult {
   substeps: string[];
 }
 
+export interface VisionFeasibilityResult {
+  status: "feasible" | "feasible_with_assumptions" | "unrealistic_for_timeframe" | "insufficient_information";
+  normalizedGoal: string;
+  reason: string;
+  assumptions: string[];
+  questions: string[];
+  adjustedGoal?: string;
+  adjustedTimeframe?: string;
+}
+
 function isText(value: unknown, max = 500): value is string {
   return typeof value === "string" && value.trim().length > 0 && value.length <= max;
 }
@@ -39,4 +49,18 @@ export function isVisionDecompositionResult(value: unknown): value is VisionDeco
   if (!(["already_actionable", "multiple_actions", "unclear_deliverable", "too_broad"] as unknown[]).includes(item.reason)) return false;
   if (!Array.isArray(item.substeps) || item.substeps.length > 5 || !item.substeps.every((step) => isText(step, 240))) return false;
   return item.shouldDecompose ? item.substeps.length >= 2 : item.substeps.length === 0 && item.reason === "already_actionable";
+}
+
+export function isVisionFeasibilityResult(value: unknown): value is VisionFeasibilityResult {
+  if (!value || typeof value !== "object") return false;
+  const item = value as Record<string, unknown>;
+  if (!(["feasible", "feasible_with_assumptions", "unrealistic_for_timeframe", "insufficient_information"] as unknown[]).includes(item.status)) return false;
+  if (!isText(item.normalizedGoal, 4000) || !isText(item.reason, 500)) return false;
+  if (!Array.isArray(item.assumptions) || item.assumptions.length > 5 || !item.assumptions.every((value) => isText(value, 240))) return false;
+  if (!Array.isArray(item.questions) || item.questions.length > 3 || !item.questions.every((value) => isText(value, 240))) return false;
+  if (item.adjustedGoal !== undefined && !isText(item.adjustedGoal, 4000)) return false;
+  if (item.adjustedTimeframe !== undefined && !isText(item.adjustedTimeframe, 200)) return false;
+  if (item.status === "unrealistic_for_timeframe" && !item.adjustedGoal && !item.adjustedTimeframe) return false;
+  if (item.status === "insufficient_information" && item.questions.length === 0) return false;
+  return true;
 }

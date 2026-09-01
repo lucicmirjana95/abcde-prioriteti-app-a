@@ -11,7 +11,11 @@ export interface TodayCandidate {
   updatedAt: string;
 }
 
-export function createTodayCandidateId(): string {
+export function createTodayCandidateId(sourceId?: string): string {
+  if (sourceId) {
+    const normalized = sourceId.toLowerCase().replace(/[^a-z0-9_]/g, "_").replace(/^vision_/, "").slice(0, 80);
+    if (normalized.length >= 4) return `candidate_${normalized}`;
+  }
   return `candidate_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
