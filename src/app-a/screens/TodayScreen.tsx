@@ -17,6 +17,7 @@ import {
   dailyResetDataFromDocument,
   getLocalDateKeyInTimeZone,
 } from '../persistence/dailyPlanDocument';
+import { getEffectiveTimeZone } from '../settings/preferences';
 import {
   loadConfirmedDailyPlan,
   saveDailyPlanCompletion,
@@ -31,6 +32,16 @@ import ResetSessions from '../components/reset/ResetSessions';
 import TodayCandidatesSection from '../components/vision/TodayCandidatesSection';
 import type { TodayCandidate } from '../../shared/domain/today-candidates';
 import { addVisionCandidateToPlan } from './visionCandidatePlan';
+import UnfinishedTasksSection from '../components/rollover/UnfinishedTasksSection';
+import {
+  loadUnfinishedRolloverCandidates,
+  markHistoricalTaskComplete,
+  saveDailyPlanWithRolloverDecisionAtomic,
+  saveRolloverDecision,
+} from '../persistence/rolloverRepository';
+import { shiftLocalDate, type UnfinishedRolloverCandidate } from '../domain/rollover/contracts';
+import { addRolloverCandidateToPlan } from './rolloverCandidatePlan';
+import type { DataResetEventDetail } from '../components/settings/DataResetModal';
 
 interface Props {
   language: AppALanguage;
@@ -42,6 +53,7 @@ interface Props {
 
 export default function TodayScreen({ language, client, demoConfig, initialData, preferences }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
+  const effectiveTimeZone = getEffectiveTimeZone(preferences);
   const {
     state,
     submitInitial,
@@ -61,13 +73,58 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
   const [completedItemIds, setCompletedItemIds] = useState<string[]>([]);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [executionError, setExecutionError] = useState<string | null>(null);
-  const [activePlanDate, setActivePlanDate] = useState(() => getLocalDateKeyInTimeZone(preferences.timeZone));
+  const [activePlanDate, setActivePlanDate] = useState(() => getLocalDateKeyInTimeZone(effectiveTimeZone));
+  const [rolloverCandidates, setRolloverCandidates] = useState<UnfinishedRolloverCandidate[]>([]);
+  const [isLoadingRollover, setIsLoadingRollover] = useState(false);
   const loadedForUserAndDate = useRef<string | null>(null);
   const isConfirmingRef = useRef(false);
 
   useEffect(() => {
+    if (demoConfig || !authReady || !user) return;
+    const localDate = getLocalDateKeyInTimeZone(effectiveTimeZone);
+    let cancelled = false;
+    setIsLoadingRollover(true);
+
+    void loadUnfinishedRolloverCandidates(user.uid, localDate)
+      .then((candidates) => {
+        if (!cancelled) setRolloverCandidates(candidates);
+      })
+      .catch((err) => {
+        console.error("Failed to load rollover candidates:", err);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingRollover(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, demoConfig, effectiveTimeZone, user, activePlanDate]);
+
+  useEffect(() => {
+    const handleDataReset = (event: Event) => {
+      const customEvent = event as CustomEvent<DataResetEventDetail>;
+      const completed = customEvent.detail?.completedScopes;
+      // Clear Today state only when app_a_daily was successfully reset (or fallback if untyped event)
+      if (!completed || completed.includes("app_a_daily")) {
+        loadedForUserAndDate.current = null;
+        setCompletedItemIds([]);
+        setSaveStatus('idle');
+        setSaveError(null);
+        setSaveDiagnostic(null);
+        setViewMode('review');
+        setRolloverCandidates([]);
+        cancel();
+      }
+    };
+
+    window.addEventListener('app-a-data-reset', handleDataReset);
+    return () => window.removeEventListener('app-a-data-reset', handleDataReset);
+  }, [cancel]);
+
+  useEffect(() => {
     if (demoConfig || !authReady || !user || isConfirmingRef.current) return;
-    const localDate = getLocalDateKeyInTimeZone(preferences.timeZone);
+    const localDate = getLocalDateKeyInTimeZone(effectiveTimeZone);
     const loadKey = `${user.uid}:${localDate}`;
     if (loadedForUserAndDate.current === loadKey) return;
     loadedForUserAndDate.current = loadKey;
@@ -99,7 +156,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     return () => {
       cancelled = true;
     };
-  }, [authReady, demoConfig, loadConfirmedPlan, preferences.timeZone, t.planLoadError, user]);
+  }, [authReady, demoConfig, effectiveTimeZone, loadConfirmedPlan, t.planLoadError, user]);
 
   const handleConfirm = async (draft: DailyPlanDraft) => {
     setSaveStatus('saving');
@@ -114,8 +171,8 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
         return;
       }
       const activeUser = user || await signInWithGoogle();
-      const localDate = getLocalDateKeyInTimeZone(preferences.timeZone);
-      const document = createDailyPlanDocument(state.inputData, draft, language, localDate, preferences.timeZone);
+      const localDate = getLocalDateKeyInTimeZone(effectiveTimeZone);
+      const document = createDailyPlanDocument(state.inputData, draft, language, localDate, effectiveTimeZone);
       await saveConfirmedDailyPlan(activeUser.uid, document);
       loadedForUserAndDate.current = `${activeUser.uid}:${document.localDate}`;
       setActivePlanDate(document.localDate);
@@ -146,7 +203,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
         authPresent: !!user,
         uidMatchesPath: true,
         dateKeyType: "string",
-        dateKeyLength: getLocalDateKeyInTimeZone(preferences.timeZone).length,
+        dateKeyLength: getLocalDateKeyInTimeZone(effectiveTimeZone).length,
       });
     } finally {
       isConfirmingRef.current = false;
@@ -179,7 +236,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     const result = addVisionCandidateToPlan(state.planDraft, candidate);
     if ('error' in result) return result.error;
     try {
-      const document = createDailyPlanDocument(state.inputData, result.draft, language, activePlanDate, preferences.timeZone);
+      const document = createDailyPlanDocument(state.inputData, result.draft, language, activePlanDate, effectiveTimeZone);
       document.execution = { completedItemIds };
       await saveConfirmedDailyPlan(user.uid, document);
       loadConfirmedPlan(result.draft, state.inputData);
@@ -189,6 +246,64 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     } catch {
       return 'invalid_plan';
     }
+  };
+
+  const handleAddRolloverCandidate = async (candidate: UnfinishedRolloverCandidate): Promise<string | null> => {
+    if (!user || !state.planDraft) return 'invalid_plan';
+    const result = addRolloverCandidateToPlan(state.planDraft, candidate);
+    if ('error' in result) return result.error;
+    try {
+      const document = createDailyPlanDocument(state.inputData, result.draft, language, activePlanDate, effectiveTimeZone);
+      document.execution = { completedItemIds };
+      await saveDailyPlanWithRolloverDecisionAtomic(user.uid, document, {
+        sourceLocalDate: candidate.sourceLocalDate,
+        sourcePlanItemId: candidate.id,
+        status: 'carried',
+      });
+      loadConfirmedPlan(result.draft, state.inputData);
+      setRolloverCandidates((prev) =>
+        prev.filter((item) => !(item.sourceLocalDate === candidate.sourceLocalDate && item.id === candidate.id)),
+      );
+      setViewMode('execution');
+      setSaveStatus('saved');
+      return null;
+    } catch {
+      return 'invalid_plan';
+    }
+  };
+
+  const handleRemindTomorrow = async (candidate: UnfinishedRolloverCandidate): Promise<void> => {
+    if (!user) return;
+    const nextDate = shiftLocalDate(activePlanDate, 1);
+    await saveRolloverDecision(user.uid, {
+      sourceLocalDate: candidate.sourceLocalDate,
+      sourcePlanItemId: candidate.id,
+      status: 'snoozed',
+      snoozedUntilLocalDate: nextDate,
+    });
+    setRolloverCandidates((prev) =>
+      prev.filter((item) => !(item.sourceLocalDate === candidate.sourceLocalDate && item.id === candidate.id)),
+    );
+  };
+
+  const handleMarkComplete = async (candidate: UnfinishedRolloverCandidate): Promise<void> => {
+    if (!user) return;
+    await markHistoricalTaskComplete(user.uid, candidate.sourceLocalDate, candidate.id);
+    setRolloverCandidates((prev) =>
+      prev.filter((item) => !(item.sourceLocalDate === candidate.sourceLocalDate && item.id === candidate.id)),
+    );
+  };
+
+  const handleDismiss = async (candidate: UnfinishedRolloverCandidate): Promise<void> => {
+    if (!user) return;
+    await saveRolloverDecision(user.uid, {
+      sourceLocalDate: candidate.sourceLocalDate,
+      sourcePlanItemId: candidate.id,
+      status: 'dismissed',
+    });
+    setRolloverCandidates((prev) =>
+      prev.filter((item) => !(item.sourceLocalDate === candidate.sourceLocalDate && item.id === candidate.id)),
+    );
   };
 
   useEffect(() => {
@@ -291,6 +406,16 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
       {content}
       {!isLoadingSavedPlan && state.phase !== 'submitting' && state.phase !== 'resolving' && (
         <>
+          <UnfinishedTasksSection
+            candidates={rolloverCandidates}
+            language={language}
+            hasConfirmedPlanToday={Boolean(state.planDraft && viewMode === 'execution')}
+            isLoading={isLoadingRollover}
+            onAddToToday={handleAddRolloverCandidate}
+            onRemindTomorrow={handleRemindTomorrow}
+            onMarkComplete={handleMarkComplete}
+            onDismiss={handleDismiss}
+          />
           <TodayCandidatesSection userId={user?.uid} language={language} canAddToPlan={Boolean(state.planDraft && viewMode === 'execution')} onAddToPlan={handleAddVisionCandidate} />
           <DailyRoutinesSection userId={user?.uid} language={language} />
           <ResetSessions language={language} />

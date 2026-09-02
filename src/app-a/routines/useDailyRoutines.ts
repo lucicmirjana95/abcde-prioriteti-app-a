@@ -51,6 +51,18 @@ export function useDailyRoutines(userId?: string | null) {
     void refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const handleReset = (event: Event) => {
+      const customEvent = event as CustomEvent<{ completedScopes?: string[] }>;
+      const completed = customEvent.detail?.completedScopes;
+      if (!completed || completed.includes("routines_shared")) {
+        void refresh();
+      }
+    };
+    window.addEventListener("app-a-data-reset", handleReset);
+    return () => window.removeEventListener("app-a-data-reset", handleReset);
+  }, [refresh]);
+
   const todayRoutines = useMemo(
     () => routines.filter((routine) => {
       const routineLocalDate = getLocalDateInTimeZone(new Date(), routine.timeZone);

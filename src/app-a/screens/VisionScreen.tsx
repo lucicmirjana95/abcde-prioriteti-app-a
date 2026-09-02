@@ -7,6 +7,7 @@ import { useAppAPlanHistory } from "./useAppAPlanHistory";
 import VisionStrategyBuilder from "../components/vision/VisionStrategyBuilder";
 import type { SavedVisionStrategy } from "../../shared/domain/vision";
 import { loadVisionStrategies } from "../../shared/persistence/vision";
+import type { DataResetEventDetail } from "../components/settings/DataResetModal";
 
 const COPY = {
   en: { eyebrow: "Long-term direction", title: "Vision", intro: "Ideas worth keeping, separated from what needs your attention today.", empty: "Long-term ideas from your daily plans will appear here.", captured: "Captured", placeholder: "Describe a direction or goal you want to develop…", add: "Add direction" },
@@ -25,6 +26,22 @@ export default function VisionScreen({ language }: { language: AppALanguage }) {
     let active = true;
     void loadVisionStrategies(history.user.uid).then((items) => { if (active) setSavedStrategies(items); }).catch(() => undefined);
     return () => { active = false; };
+  }, [history.user]);
+
+  useEffect(() => {
+    const handleReset = (event: Event) => {
+      const customEvent = event as CustomEvent<DataResetEventDetail>;
+      const completed = customEvent.detail?.completedScopes;
+      if (!completed || completed.includes("vision_shared")) {
+        setSavedStrategies([]);
+        setManualIdeas([]);
+        if (history.user) {
+          void loadVisionStrategies(history.user.uid).then(setSavedStrategies).catch(() => undefined);
+        }
+      }
+    };
+    window.addEventListener("app-a-data-reset", handleReset);
+    return () => window.removeEventListener("app-a-data-reset", handleReset);
   }, [history.user]);
   if (!history.authReady || history.loading) return <PlanHistoryState language={language} state="loading" />;
   if (history.error) return <PlanHistoryState language={language} state="error" onSignIn={history.user ? history.retry : () => void history.signIn()} />;

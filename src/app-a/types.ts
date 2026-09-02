@@ -2,10 +2,14 @@ export type AppADestination = 'today' | 'inbox' | 'vision' | 'progress' | 'setti
 export type AppALanguage = 'en' | 'sr' | 'tr';
 export type AppATheme = 'system' | 'light' | 'dark';
 
+export type AppATimeZoneSetting =
+  | { mode: 'automatic' }
+  | { mode: 'override'; timeZone: string };
+
 export interface AppAPreferences {
   language: AppALanguage;
   theme: AppATheme;
-  timeZone: string;
+  timeZoneSetting: AppATimeZoneSetting;
   defaultFocusMinutes: 15 | 25 | 45 | 60;
   aiSuggestionsEnabled: boolean;
 }

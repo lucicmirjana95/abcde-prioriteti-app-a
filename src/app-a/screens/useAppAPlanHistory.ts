@@ -38,6 +38,19 @@ export function useAppAPlanHistory(maximum = 30) {
     };
   }, [authReady, maximum, reloadKey, user]);
 
+  useEffect(() => {
+    const handleReset = (event: Event) => {
+      const customEvent = event as CustomEvent<{ completedScopes?: string[] }>;
+      const completed = customEvent.detail?.completedScopes;
+      if (!completed || completed.includes("app_a_daily")) {
+        setPlans([]);
+        setReloadKey((value) => value + 1);
+      }
+    };
+    window.addEventListener("app-a-data-reset", handleReset);
+    return () => window.removeEventListener("app-a-data-reset", handleReset);
+  }, []);
+
   const signIn = async () => {
     setError(false);
     try {
