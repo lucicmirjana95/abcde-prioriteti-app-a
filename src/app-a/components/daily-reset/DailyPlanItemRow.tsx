@@ -369,7 +369,7 @@ export default function DailyPlanItemRow({
                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
               >
-                {t.moveToLater}
+                {t.removeFromToday}
               </button>
 
               <button

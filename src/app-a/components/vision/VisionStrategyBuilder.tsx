@@ -170,6 +170,8 @@ export default function VisionStrategyBuilder({
       stepBreakdowns: currentBreakdowns,
       createdAt: initialDocument?.createdAt || now,
       updatedAt: now,
+      status: initialDocument?.status || "active",
+      ...(initialDocument?.archivedAt ? { archivedAt: initialDocument.archivedAt } : {}),
     };
     try {
       await saveVisionStrategy(userId, document);

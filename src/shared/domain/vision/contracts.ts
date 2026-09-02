@@ -9,6 +9,8 @@ export interface SavedVisionStrategy {
   stepBreakdowns: Record<string, string[]>;
   createdAt: string;
   updatedAt: string;
+  status?: "active" | "archived";
+  archivedAt?: string;
 }
 
 export function createVisionStrategyId(): string {
@@ -23,7 +25,10 @@ export function isSavedVisionStrategy(value: unknown): value is SavedVisionStrat
     (["en", "sr", "tr"] as unknown[]).includes(item.language) &&
     isVisionStrategyResult(item.strategy) && isValidBreakdowns(item.stepBreakdowns) &&
     typeof item.createdAt === "string" && !Number.isNaN(Date.parse(item.createdAt)) &&
-    typeof item.updatedAt === "string" && !Number.isNaN(Date.parse(item.updatedAt));
+    typeof item.updatedAt === "string" && !Number.isNaN(Date.parse(item.updatedAt)) &&
+    (item.status === undefined || item.status === "active" || item.status === "archived") &&
+    (item.archivedAt === undefined || (typeof item.archivedAt === "string" && !Number.isNaN(Date.parse(item.archivedAt)))) &&
+    (item.status !== "archived" || typeof item.archivedAt === "string");
 }
 
 function isValidBreakdowns(value: unknown): value is Record<string, string[]> {
