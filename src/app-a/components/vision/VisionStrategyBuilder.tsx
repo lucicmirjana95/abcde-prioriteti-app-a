@@ -16,6 +16,7 @@ import {
 import type { VisionFeasibilityResult, VisionStrategyResult } from "../../../shared/domain/vision";
 import { assessVisionFeasibility, createVisionStrategy, decomposeVisionStep } from "../../api/visionStrategyApi";
 import type { AppALanguage } from "../../types";
+import { useAppAAuth } from "../../auth/useAppAAuth";
 import { createVisionStrategyId, type SavedVisionStrategy } from "../../../shared/domain/vision";
 import { saveVisionStrategy } from "../../../shared/persistence/vision";
 import { createTodayCandidateId, type TodayCandidate } from "../../../shared/domain/today-candidates";
@@ -28,6 +29,7 @@ const COPY = {
     error: "The direction could not be developed. Try again.",
     saveError: "The strategy could not be saved.",
     signInToSave: "Your strategy is kept on this screen. Sign in again to save it.",
+    retrySave: "Sign in and save again",
     saved: "Saved",
     imagine: "Imagine",
     plan: "Plan",
@@ -58,6 +60,7 @@ const COPY = {
     error: "Pravac nije mogao da se razradi. Pokušajte ponovo.",
     saveError: "Strategija nije mogla da se sačuva.",
     signInToSave: "Strategija ostaje na ovom ekranu. Prijavite se ponovo da biste je sačuvali.",
+    retrySave: "Prijavi se i sačuvaj ponovo",
     saved: "Sačuvano",
     imagine: "Zamisli",
     plan: "Isplaniraj",
@@ -88,6 +91,7 @@ const COPY = {
     error: "Yön geliştirilemedi. Tekrar deneyin.",
     saveError: "Strateji kaydedilemedi.",
     signInToSave: "Stratejiniz bu ekranda tutuluyor. Kaydetmek için tekrar giriş yapın.",
+    retrySave: "Giriş yap ve tekrar kaydet",
     saved: "Kaydedildi",
     imagine: "Hayal et",
     plan: "Planla",
@@ -126,15 +130,18 @@ export default function VisionStrategyBuilder({
   userId,
   initialDocument,
   onSaved,
+  onRequestSignIn,
 }: {
   idea: string;
   language: AppALanguage;
   userId: string;
   initialDocument?: SavedVisionStrategy;
   onSaved?: (document: SavedVisionStrategy) => void;
+  onRequestSignIn?: () => Promise<void>;
 }) {
   const t = COPY[language];
   const ft = FEASIBILITY_COPY[language];
+  const { signInWithGoogle } = useAppAAuth();
   const [strategy, setStrategy] = useState<VisionStrategyResult | null>(initialDocument?.strategy || null);
   const [documentId] = useState(initialDocument?.id || createVisionStrategyId);
   const [breakdowns, setBreakdowns] = useState<Record<string, string[]>>(initialDocument?.stepBreakdowns || {});
@@ -152,6 +159,39 @@ export default function VisionStrategyBuilder({
   const [showCandidateDialog, setShowCandidateDialog] = useState(false);
   const [candidateMinutes, setCandidateMinutes] = useState(25);
   const [candidateStatus, setCandidateStatus] = useState<"idle" | "saving" | "saved">("idle");
+
+  async function persistStrategy(currentStrategy: VisionStrategyResult, currentBreakdowns: Record<string, string[]>) {
+    const now = new Date().toISOString();
+    const document: SavedVisionStrategy = {
+      id: documentId,
+      idea,
+      language,
+      strategy: currentStrategy,
+      stepBreakdowns: currentBreakdowns,
+      createdAt: initialDocument?.createdAt || now,
+      updatedAt: now,
+    };
+    try {
+      await saveVisionStrategy(userId, document);
+      setSaved(true);
+      setAuthRequired(false);
+      setError(false);
+      onSaved?.(document);
+      return true;
+    } catch (cause) {
+      if (cause instanceof Error && cause.message === "authentication_required") setAuthRequired(true);
+      else setError(true);
+      return false;
+    }
+  }
+
+  async function signInAndRetrySave() {
+    if (!strategy) return;
+    setError(false);
+    if (onRequestSignIn) await onRequestSignIn();
+    else await signInWithGoogle();
+    await persistStrategy(strategy, breakdowns);
+  }
 
   async function sendToToday() {
     if (!strategy || candidateStatus === "saving") return;
@@ -190,24 +230,7 @@ export default function VisionStrategyBuilder({
       const generated = await createVisionStrategy(goal, language, controller.signal);
       setStrategy(generated);
       setExpanded(true);
-      const now = new Date().toISOString();
-      const document: SavedVisionStrategy = {
-        id: documentId,
-        idea,
-        language,
-        strategy: generated,
-        stepBreakdowns: {},
-        createdAt: initialDocument?.createdAt || now,
-        updatedAt: now,
-      };
-      try {
-        await saveVisionStrategy(userId, document);
-        setSaved(true);
-        onSaved?.(document);
-      } catch (cause) {
-        if (cause instanceof Error && cause.message === "authentication_required") setAuthRequired(true);
-        else setError(true);
-      }
+      await persistStrategy(generated, {});
     } catch {
       setError(true);
     } finally {
@@ -255,24 +278,7 @@ export default function VisionStrategyBuilder({
       const nextBreakdowns = { ...breakdowns, [key]: result.substeps };
       setBreakdowns(nextBreakdowns);
       setCollapsedKeys((prev) => ({ ...prev, [key]: false }));
-      const now = new Date().toISOString();
-      const document: SavedVisionStrategy = {
-        id: documentId,
-        idea,
-        language,
-        strategy,
-        stepBreakdowns: nextBreakdowns,
-        createdAt: initialDocument?.createdAt || now,
-        updatedAt: now,
-      };
-      try {
-        await saveVisionStrategy(userId, document);
-        setSaved(true);
-        onSaved?.(document);
-      } catch (cause) {
-        if (cause instanceof Error && cause.message === "authentication_required") setAuthRequired(true);
-        else setError(true);
-      }
+      await persistStrategy(strategy, nextBreakdowns);
     } catch {
       setError(true);
     } finally {
@@ -626,7 +632,7 @@ export default function VisionStrategyBuilder({
               {t.saveError}
             </p>
           ) : null}
-          {authRequired ? <p className="text-[13px]" style={{ color: "var(--app-a-danger)" }} role="alert">{t.signInToSave}</p> : null}
+          {authRequired ? <div className="space-y-2" role="alert"><p className="text-[13px]" style={{ color: "var(--app-a-danger)" }}>{t.signInToSave}</p><button type="button" onClick={() => void signInAndRetrySave()} className="app-a-secondary-button app-a-focus-ring px-4 text-[13px]">{t.retrySave}</button></div> : null}
         </div>
       ) : null}
     </div>

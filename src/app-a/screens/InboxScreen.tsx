@@ -4,9 +4,9 @@ import { useAppAAuth } from "../auth/useAppAAuth";
 import PlanHistoryState from "../components/PlanHistoryState";
 import type { AppAInboxItem, InboxItemStatus } from "../domain/inbox/contracts";
 import { createManualInboxItemId, normalizeInboxTitle } from "../domain/inbox/contracts";
-import { deleteInboxItem, loadInboxItems, saveInboxItem, savePlanAndCompleteInboxItemAtomic, updateInboxItemStatus } from "../persistence/inboxRepository";
+import { deleteInboxItem, importDailyPlanItemsToInbox, loadInboxItems, saveInboxItem, savePlanAndCompleteInboxItemAtomic, updateInboxItemStatus } from "../persistence/inboxRepository";
 import { getLocalDateKeyInTimeZone } from "../persistence/dailyPlanDocument";
-import { loadConfirmedDailyPlan } from "../persistence/dailyPlanRepository";
+import { loadConfirmedDailyPlan, loadRecentDailyPlans } from "../persistence/dailyPlanRepository";
 import { getEffectiveTimeZone } from "../settings/preferences";
 import type { AppALanguage, AppAPreferences } from "../types";
 import { addInboxItemToPlan } from "./inboxCandidatePlan";
@@ -37,7 +37,13 @@ export default function InboxScreen({ language, preferences }: { language: AppAL
     if (!authReady) return;
     if (!user) { setItems([]); setLoading(false); return; }
     let active = true; setLoading(true); setError(null);
-    void loadInboxItems(user.uid).then((next) => { if (active) setItems(next); }).catch(() => { if (active) setError(t.error); }).finally(() => { if (active) setLoading(false); });
+    void (async () => {
+      // Bounded, idempotent migration: make deferred items from plans created before
+      // the Inbox feature available without scanning unbounded history.
+      const recentPlans = await loadRecentDailyPlans(user.uid, 30);
+      for (const plan of recentPlans) await importDailyPlanItemsToInbox(user.uid, plan);
+      return loadInboxItems(user.uid);
+    })().then((next) => { if (active) setItems(next); }).catch(() => { if (active) setError(t.error); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [authReady, t.error, user]);
 
