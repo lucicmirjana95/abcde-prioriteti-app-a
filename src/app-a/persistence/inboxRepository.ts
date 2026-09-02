@@ -77,6 +77,16 @@ export async function loadInboxItems(userId: string): Promise<AppAInboxItem[]> {
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
+export function dueScheduledInboxItems(items: AppAInboxItem[], localDate: string): AppAInboxItem[] {
+  return items.filter((item) => item.status === "scheduled"
+    && Boolean(item.scheduledLocalDate)
+    && item.scheduledLocalDate! <= localDate);
+}
+
+export async function loadDueScheduledInboxItems(userId: string, localDate: string): Promise<AppAInboxItem[]> {
+  return dueScheduledInboxItems(await loadInboxItems(userId), localDate);
+}
+
 export async function saveInboxItem(userId: string, item: AppAInboxItem): Promise<void> {
   if (!isAppAInboxItem(item)) throw new Error("invalid_inbox_item");
   await setDoc(inboxRef(userId, item.id), item, { merge: false });

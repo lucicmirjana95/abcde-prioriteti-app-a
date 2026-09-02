@@ -1,9 +1,10 @@
-import React, { Component, ErrorInfo, ReactNode, StrictMode } from "react";
+import React, { Component, ErrorInfo, lazy, ReactNode, StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import "./lib/safeStorageSetup";
-import App from "./App.tsx";
-import AppA from "./app-a/AppA.tsx";
 import "./index.css";
+
+const LegacyApp = lazy(() => import("./App.tsx"));
+const AppA = lazy(() => import("./app-a/AppA.tsx"));
 
 // Global Error and Unhandled Promise Rejection Interceptors to trace "Script error."
 window.addEventListener("error", (event) => {
@@ -74,7 +75,9 @@ const renderAppA = params.get("app") === "a";
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ErrorBoundary>
-      {renderAppA ? <AppA /> : <App />}
+      <Suspense fallback={<div role="status" aria-live="polite" className="flex min-h-screen items-center justify-center">Loading…</div>}>
+        {renderAppA ? <AppA /> : <LegacyApp />}
+      </Suspense>
     </ErrorBoundary>
   </StrictMode>,
 );

@@ -42,7 +42,10 @@ import {
 import { shiftLocalDate, type UnfinishedRolloverCandidate } from '../domain/rollover/contracts';
 import { addRolloverCandidateToPlan } from './rolloverCandidatePlan';
 import type { DataResetEventDetail } from '../components/settings/DataResetModal';
-import { importDailyPlanItemsToInbox } from '../persistence/inboxRepository';
+import { importDailyPlanItemsToInbox, savePlanAndCompleteInboxItemAtomic } from '../persistence/inboxRepository';
+import type { AppAInboxItem } from '../domain/inbox/contracts';
+import { addInboxItemToPlan } from './inboxCandidatePlan';
+import DueInboxItemsSection from '../components/inbox/DueInboxItemsSection';
 
 interface Props {
   language: AppALanguage;
@@ -252,6 +255,23 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     }
   };
 
+  const handleAddInboxItem = async (item: AppAInboxItem): Promise<string | null> => {
+    if (!user || !state.planDraft) return 'noPlan';
+    const result = addInboxItemToPlan(state.planDraft, item);
+    if ('error' in result) return result.error;
+    try {
+      const document = createDailyPlanDocument(state.inputData, result.draft, language, activePlanDate, effectiveTimeZone);
+      document.execution = { completedItemIds };
+      await savePlanAndCompleteInboxItemAtomic(user.uid, document, item);
+      loadConfirmedPlan(result.draft, state.inputData);
+      setViewMode('execution');
+      setSaveStatus('saved');
+      return null;
+    } catch {
+      return 'invalid_plan';
+    }
+  };
+
   const handleAddRolloverCandidate = async (candidate: UnfinishedRolloverCandidate): Promise<string | null> => {
     if (!user || !state.planDraft) return 'invalid_plan';
     const result = addRolloverCandidateToPlan(state.planDraft, candidate);
@@ -421,6 +441,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
             onDismiss={handleDismiss}
           />
           <TodayCandidatesSection userId={user?.uid} language={language} canAddToPlan={Boolean(state.planDraft && viewMode === 'execution')} onAddToPlan={handleAddVisionCandidate} />
+          <DueInboxItemsSection userId={user?.uid} localDate={activePlanDate} language={language} canAddToPlan={Boolean(state.planDraft && viewMode === 'execution')} onAddToPlan={handleAddInboxItem} />
           <DailyRoutinesSection userId={user?.uid} language={language} />
           <ResetSessions language={language} />
         </>
