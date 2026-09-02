@@ -129,14 +129,14 @@ export default function AppAShell({ currentDestination, onNavigate, language, th
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
                 aria-current={isCurrent ? "page" : undefined}
-                className="app-a-focus-ring flex h-[48px] min-w-[44px] w-full flex-col items-center justify-center gap-1 rounded-xl transition-colors"
+                className="app-a-focus-ring flex h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl transition-colors"
                 style={{
                   color: isCurrent ? "var(--app-a-accent)" : "var(--app-a-text-secondary)",
                 }}
               >
                 <Icon className="w-6 h-6 shrink-0" strokeWidth={isCurrent ? 2.5 : 2} />
                 <span
-                  className="text-[12px] leading-none"
+                  className="max-w-full truncate px-1 text-[12px] leading-none"
                   style={{ fontWeight: isCurrent ? 600 : 500 }}
                 >
                   {item.label}
