@@ -35,11 +35,12 @@ async function runDataResetRepositoryTests() {
   console.log("Starting Bounded Data Reset Repository Tests...");
 
   // 1. Exact scope allowlist test
-  assert.strictEqual(SUPPORTED_REMOTE_COLLECTIONS.length, 6);
+  assert.strictEqual(SUPPORTED_REMOTE_COLLECTIONS.length, 7);
   const collectionNames = SUPPORTED_REMOTE_COLLECTIONS.map((c) => c.collectionName);
   assert.deepStrictEqual(collectionNames, [
     "dailyResets",
     "rolloverDecisions",
+    "inboxItems",
     "visionStrategies",
     "todayCandidates",
     "routines",
@@ -47,6 +48,7 @@ async function runDataResetRepositoryTests() {
   ]);
   const rootCollections = SUPPORTED_REMOTE_COLLECTIONS.map((c) => c.rootCollection);
   assert.deepStrictEqual(rootCollections, [
+    "appAUsers",
     "appAUsers",
     "appAUsers",
     "users",
@@ -134,7 +136,7 @@ async function runDataResetRepositoryTests() {
     assert.strictEqual(res.totalDeletedDocuments, 0);
     assert.deepStrictEqual(res.completedScopes, ["app_a_daily"]);
     assert.strictEqual(deleteLog.length, 0, "No delete batches should be committed for 0 docs");
-    assert.strictEqual(queryLog.length, 2, "1 query for each of the 2 daily subcollections");
+    assert.strictEqual(queryLog.length, 3, "1 query for each of the 3 App A subcollections");
     for (const q of queryLog) {
       assert.strictEqual(q.limitCount, 400);
     }

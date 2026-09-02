@@ -41,7 +41,7 @@ export default function AppA() {
       );
       break;
     case "inbox":
-      screen = <InboxScreen language={language} />;
+      screen = <InboxScreen language={language} preferences={preferences} />;
       break;
     case "vision":
       screen = <VisionScreen language={language} />;

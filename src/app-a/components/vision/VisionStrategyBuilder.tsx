@@ -27,6 +27,7 @@ const COPY = {
     loading: "Turning the idea into a practical path…",
     error: "The direction could not be developed. Try again.",
     saveError: "The strategy could not be saved.",
+    signInToSave: "Your strategy is kept on this screen. Sign in again to save it.",
     saved: "Saved",
     imagine: "Imagine",
     plan: "Plan",
@@ -56,6 +57,7 @@ const COPY = {
     loading: "Pretvaram ideju u praktičan put…",
     error: "Pravac nije mogao da se razradi. Pokušajte ponovo.",
     saveError: "Strategija nije mogla da se sačuva.",
+    signInToSave: "Strategija ostaje na ovom ekranu. Prijavite se ponovo da biste je sačuvali.",
     saved: "Sačuvano",
     imagine: "Zamisli",
     plan: "Isplaniraj",
@@ -85,6 +87,7 @@ const COPY = {
     loading: "Fikir uygulanabilir bir yola dönüştürülüyor…",
     error: "Yön geliştirilemedi. Tekrar deneyin.",
     saveError: "Strateji kaydedilemedi.",
+    signInToSave: "Stratejiniz bu ekranda tutuluyor. Kaydetmek için tekrar giriş yapın.",
     saved: "Kaydedildi",
     imagine: "Hayal et",
     plan: "Planla",
@@ -142,6 +145,7 @@ export default function VisionStrategyBuilder({
   const [saved, setSaved] = useState(Boolean(initialDocument));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [authRequired, setAuthRequired] = useState(false);
   const [expanded, setExpanded] = useState(true);
   const [timeframe, setTimeframe] = useState("");
   const [feasibility, setFeasibility] = useState<VisionFeasibilityResult | null>(null);
@@ -164,13 +168,15 @@ export default function VisionStrategyBuilder({
     };
     setCandidateStatus("saving");
     setError(false);
+    setAuthRequired(false);
     try {
       await saveTodayCandidate(userId, candidate);
       setCandidateStatus("saved");
       setShowCandidateDialog(false);
-    } catch {
+    } catch (cause) {
       setCandidateStatus("idle");
-      setError(true);
+      if (cause instanceof Error && cause.message === "authentication_required") setAuthRequired(true);
+      else setError(true);
     }
   }
 
@@ -179,6 +185,7 @@ export default function VisionStrategyBuilder({
     const timeout = window.setTimeout(() => controller.abort(), 42_000);
     setLoading(true);
     setError(false);
+    setAuthRequired(false);
     try {
       const generated = await createVisionStrategy(goal, language, controller.signal);
       setStrategy(generated);
@@ -193,9 +200,14 @@ export default function VisionStrategyBuilder({
         createdAt: initialDocument?.createdAt || now,
         updatedAt: now,
       };
-      await saveVisionStrategy(userId, document);
-      setSaved(true);
-      onSaved?.(document);
+      try {
+        await saveVisionStrategy(userId, document);
+        setSaved(true);
+        onSaved?.(document);
+      } catch (cause) {
+        if (cause instanceof Error && cause.message === "authentication_required") setAuthRequired(true);
+        else setError(true);
+      }
     } catch {
       setError(true);
     } finally {
@@ -233,6 +245,7 @@ export default function VisionStrategyBuilder({
     setCheckingStep(key);
     setConcreteStep(null);
     setError(false);
+    setAuthRequired(false);
     try {
       const result = await decomposeVisionStep({ idea, step, depth, language });
       if (!result.shouldDecompose || result.reason === "already_actionable") {
@@ -252,9 +265,14 @@ export default function VisionStrategyBuilder({
         createdAt: initialDocument?.createdAt || now,
         updatedAt: now,
       };
-      await saveVisionStrategy(userId, document);
-      setSaved(true);
-      onSaved?.(document);
+      try {
+        await saveVisionStrategy(userId, document);
+        setSaved(true);
+        onSaved?.(document);
+      } catch (cause) {
+        if (cause instanceof Error && cause.message === "authentication_required") setAuthRequired(true);
+        else setError(true);
+      }
     } catch {
       setError(true);
     } finally {
@@ -608,6 +626,7 @@ export default function VisionStrategyBuilder({
               {t.saveError}
             </p>
           ) : null}
+          {authRequired ? <p className="text-[13px]" style={{ color: "var(--app-a-danger)" }} role="alert">{t.signInToSave}</p> : null}
         </div>
       ) : null}
     </div>

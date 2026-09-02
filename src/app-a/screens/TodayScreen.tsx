@@ -42,6 +42,7 @@ import {
 import { shiftLocalDate, type UnfinishedRolloverCandidate } from '../domain/rollover/contracts';
 import { addRolloverCandidateToPlan } from './rolloverCandidatePlan';
 import type { DataResetEventDetail } from '../components/settings/DataResetModal';
+import { importDailyPlanItemsToInbox } from '../persistence/inboxRepository';
 
 interface Props {
   language: AppALanguage;
@@ -174,6 +175,9 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
       const localDate = getLocalDateKeyInTimeZone(effectiveTimeZone);
       const document = createDailyPlanDocument(state.inputData, draft, language, localDate, effectiveTimeZone);
       await saveConfirmedDailyPlan(activeUser.uid, document);
+      // Inbox ingestion is secondary: a confirmed daily plan must never be reported as
+      // failed merely because deferred-item indexing is temporarily unavailable.
+      void importDailyPlanItemsToInbox(activeUser.uid, document).catch(() => undefined);
       loadedForUserAndDate.current = `${activeUser.uid}:${document.localDate}`;
       setActivePlanDate(document.localDate);
       setCompletedItemIds([]);

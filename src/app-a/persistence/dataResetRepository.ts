@@ -20,6 +20,7 @@ export type DataResetScopeKey =
 export type RemoteCollectionName =
   | "dailyResets"
   | "rolloverDecisions"
+  | "inboxItems"
   | "visionStrategies"
   | "todayCandidates"
   | "routines"
@@ -65,6 +66,11 @@ export const SUPPORTED_REMOTE_COLLECTIONS: readonly RemoteCollectionTarget[] = O
   Object.freeze({
     scopeCategory: "app_a_daily",
     collectionName: "rolloverDecisions",
+    rootCollection: "appAUsers",
+  }),
+  Object.freeze({
+    scopeCategory: "app_a_daily",
+    collectionName: "inboxItems",
     rootCollection: "appAUsers",
   }),
   Object.freeze({

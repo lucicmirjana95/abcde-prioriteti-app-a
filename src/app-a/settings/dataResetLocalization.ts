@@ -76,9 +76,9 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
     retryAction: "Retry remaining scopes",
     doneAction: "Done",
 
-    scopeDailyTitle: "App A daily plans & rollover decisions",
+    scopeDailyTitle: "App A plans, Inbox & rollover decisions",
     scopeDailyDescription:
-      "Deletes saved daily plans (appAUsers/{uid}/dailyResets/*), rollover decisions, and resets today's working session.",
+      "Deletes saved daily plans, Inbox items, rollover decisions, and resets today's working session.",
     scopePreferencesTitle: "Also reset App A preferences",
     scopePreferencesDescription:
       "Resets App A interface and planning preferences to defaults (app_a_preferences_v1). Preserves language.",
@@ -102,7 +102,7 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
       "Identity Guarantee: Your Firebase account will not be deleted, and you will stay signed in.",
     cannotBeUndone: "This destructive operation cannot be undone.",
 
-    summaryItemDaily: "• App A daily plans, rollover decisions, and execution state",
+    summaryItemDaily: "• App A daily plans, Inbox items, rollover decisions, and execution state",
     summaryItemPreferences: "• App A local preferences (rebuilt with clean defaults)",
     summaryItemVision: "• Shared vision strategies and candidate items",
     summaryItemRoutines: "• Shared daily routines and completion logs",
@@ -139,9 +139,9 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
     retryAction: "Pokušaj ponovo za preostalo",
     doneAction: "Završi",
 
-    scopeDailyTitle: "Dnevni planovi i odluke o prenosu",
+    scopeDailyTitle: "Dnevni planovi, Inboks i odluke o prenosu",
     scopeDailyDescription:
-      "Briše sačuvane dnevne planove (appAUsers/{uid}/dailyResets/*), odluke o prenosu i radno stanje današnjeg dana.",
+      "Briše sačuvane dnevne planove, stavke iz Inboksa, odluke o prenosu i radno stanje današnjeg dana.",
     scopePreferencesTitle: "Takođe resetuj podešavanja App A",
     scopePreferencesDescription:
       "Vraća podešavanja prikaza i planiranja na podrazumevane vrednosti (app_a_preferences_v1). Čuva jezik.",
@@ -165,7 +165,7 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
       "Garancija identiteta: Vaš Firebase nalog neće biti obrisan i ostajete prijavljeni.",
     cannotBeUndone: "Ova destruktivna radnja se ne može poništiti.",
 
-    summaryItemDaily: "• Dnevni planovi, odluke o prenosu i radno stanje",
+    summaryItemDaily: "• Dnevni planovi, stavke iz Inboksa, odluke o prenosu i radno stanje",
     summaryItemPreferences: "• Lokalna podešavanja App A (ponovo kreirana sa podrazumevanim vrednostima)",
     summaryItemVision: "• Deljene strategije vizije i kandidati za danas",
     summaryItemRoutines: "• Deljene dnevne rutine i evidencija završetaka",
@@ -202,9 +202,9 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
     retryAction: "Kalan kapsamları tekrar dene",
     doneAction: "Bitti",
 
-    scopeDailyTitle: "Günlük planlar ve devir kararları",
+    scopeDailyTitle: "Günlük planlar, Gelen Kutusu ve devir kararları",
     scopeDailyDescription:
-      "Kayıtlı günlük planları (appAUsers/{uid}/dailyResets/*), devir kararlarını ve bugünkü çalışma durumunu siler.",
+      "Kayıtlı günlük planları, Gelen Kutusu öğelerini, devir kararlarını ve bugünkü çalışma durumunu siler.",
     scopePreferencesTitle: "App A tercihlerini de sıfırla",
     scopePreferencesDescription:
       "App A görünüm ve planlama ayarlarını varsayılanlara sıfırlar (app_a_preferences_v1). Dili korur.",
@@ -228,7 +228,7 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
       "Kimlik Güvencesi: Firebase hesabınız silinmeyecek ve oturumunuz açık kalacaktır.",
     cannotBeUndone: "Bu yıkıcı işlem geri alınamaz.",
 
-    summaryItemDaily: "• Günlük planlar, devir kararları ve yürütme durumu",
+    summaryItemDaily: "• Günlük planlar, Gelen Kutusu öğeleri, devir kararları ve yürütme durumu",
     summaryItemPreferences: "• App A yerel tercihleri (varsayılanlarla yeniden oluşturulur)",
     summaryItemVision: "• Paylaşılan vizyon stratejileri ve aday maddeler",
     summaryItemRoutines: "• Paylaşılan günlük rutinler ve tamamlama kayıtları",

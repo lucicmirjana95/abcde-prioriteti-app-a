@@ -96,6 +96,11 @@ service cloud.firestore {
         allow get, create, update, delete: if request.auth != null && request.auth.uid == userId && isValidId(decisionId);
         allow list: if request.auth != null && request.auth.uid == userId;
       }
+
+      match /inboxItems/{inboxItemId} {
+        allow get, create, update, delete: if request.auth != null && request.auth.uid == userId && isValidId(inboxItemId);
+        allow list: if request.auth != null && request.auth.uid == userId;
+      }
     }
   }
 }
