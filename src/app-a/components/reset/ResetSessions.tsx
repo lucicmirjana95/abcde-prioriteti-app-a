@@ -24,6 +24,7 @@ import {
 } from "./resetTimingEngine";
 import { RESET_LOCALIZATION } from "./resetLocalization";
 import { lightChimeSynth } from "./lightChimeSynth";
+import { restSoundSynth } from "./restSoundSynth";
 import {
   BoxVisualizer,
   CircleExpander,
@@ -77,6 +78,7 @@ export default function ResetSessions({ language }: ResetSessionsProps) {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
       lightChimeSynth.cleanup();
+      restSoundSynth.cleanup();
     };
   }, []);
 
@@ -106,6 +108,7 @@ export default function ResetSessions({ language }: ResetSessionsProps) {
       cancelAnimationFrame(animationFrameIdRef.current);
       animationFrameIdRef.current = null;
     }
+    restSoundSynth.stop();
     if (soundEnabled) {
       lightChimeSynth.playPhaseChime("complete");
     }
@@ -188,9 +191,7 @@ export default function ResetSessions({ language }: ResetSessionsProps) {
       currentPhaseKey = `${dbl.cycle}_${dbl.phase}`;
       chimeType = dbl.phase === "exhale" ? "exhale" : "inhale";
     } else if (selectedExperience === "guided_rest") {
-      const rst = timingState as ReturnType<typeof calculateGuidedRestTiming>;
-      currentPhaseKey = `stage_${rst.stage}`;
-      chimeType = "stage";
+      return;
     }
 
     if (lastPhaseIdRef.current !== currentPhaseKey) {
@@ -203,6 +204,7 @@ export default function ResetSessions({ language }: ResetSessionsProps) {
 
   // User control handlers
   const handleSelectExperience = (id: ResetExperienceId) => {
+    restSoundSynth.stop();
     setSelectedExperience(id);
     setSessionStatus("idle");
     setElapsedMs(0);
@@ -218,7 +220,8 @@ export default function ResetSessions({ language }: ResetSessionsProps) {
 
   const handleStart = () => {
     if (soundEnabled) {
-      lightChimeSynth.init();
+      if (selectedExperience === "guided_rest") restSoundSynth.start();
+      else lightChimeSynth.init();
     }
     hasCompletedRef.current = false;
     lastPhaseIdRef.current = null;
@@ -228,6 +231,7 @@ export default function ResetSessions({ language }: ResetSessionsProps) {
   };
 
   const handlePause = () => {
+    restSoundSynth.stop();
     setSessionStatus("paused");
     accumulatedMsRef.current = elapsedMs;
     startTimestampRef.current = null;
@@ -235,7 +239,8 @@ export default function ResetSessions({ language }: ResetSessionsProps) {
 
   const handleResume = () => {
     if (soundEnabled) {
-      lightChimeSynth.init();
+      if (selectedExperience === "guided_rest") restSoundSynth.start();
+      else lightChimeSynth.init();
     }
     accumulatedMsRef.current = elapsedMs;
     startTimestampRef.current = null;
@@ -243,6 +248,7 @@ export default function ResetSessions({ language }: ResetSessionsProps) {
   };
 
   const handleRestart = () => {
+    restSoundSynth.stop();
     setSessionStatus("idle");
     setElapsedMs(0);
     accumulatedMsRef.current = 0;
@@ -252,6 +258,7 @@ export default function ResetSessions({ language }: ResetSessionsProps) {
   };
 
   const handleStop = () => {
+    restSoundSynth.stop();
     setSessionStatus("idle");
     setSelectedExperience(null);
     setElapsedMs(0);
@@ -265,8 +272,13 @@ export default function ResetSessions({ language }: ResetSessionsProps) {
     const next = !soundEnabled;
     setSoundEnabled(next);
     if (next) {
-      lightChimeSynth.init();
-      lightChimeSynth.playPhaseChime("inhale");
+      if (selectedExperience === "guided_rest" && sessionStatus === "running") restSoundSynth.start();
+      else {
+        lightChimeSynth.init();
+        lightChimeSynth.playPhaseChime("inhale");
+      }
+    } else {
+      restSoundSynth.stop();
     }
   };
 
@@ -659,13 +671,18 @@ export default function ResetSessions({ language }: ResetSessionsProps) {
               )}
 
               {selectedExperience === "guided_rest" && (
-                <GuidedRestVisualizer
-                  stage={(timingState as ReturnType<typeof calculateGuidedRestTiming>).stage}
-                  stageIndex={(timingState as ReturnType<typeof calculateGuidedRestTiming>).stageIndex}
-                  stageRemainingMs={(timingState as ReturnType<typeof calculateGuidedRestTiming>).stageRemainingMs}
-                  totalRemainingMs={totalDurationMs - elapsedMs}
-                  stageDescription={currentPhaseDescription}
-                />
+                <>
+                  <GuidedRestVisualizer
+                    stage={(timingState as ReturnType<typeof calculateGuidedRestTiming>).stage}
+                    stageIndex={(timingState as ReturnType<typeof calculateGuidedRestTiming>).stageIndex}
+                    stageRemainingMs={(timingState as ReturnType<typeof calculateGuidedRestTiming>).stageRemainingMs}
+                    totalRemainingMs={totalDurationMs - elapsedMs}
+                    stageDescription={currentPhaseDescription}
+                  />
+                  <p className="mx-auto mt-3 max-w-md text-[12px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
+                    {language === "sr" ? "Opcioni 4 Hz stereo zvuk radi samo kada ga uključite. Za stereo efekat koristite slušalice; prekinite ako vam ne prija." : language === "tr" ? "İsteğe bağlı 4 Hz stereo ses yalnızca siz açtığınızda çalışır. Stereo etki için kulaklık kullanın; rahatsız ederse kapatın." : "Optional 4 Hz stereo sound plays only when you turn it on. Use headphones for the stereo effect; stop if it feels uncomfortable."}
+                  </p>
+                </>
               )}
             </div>
 

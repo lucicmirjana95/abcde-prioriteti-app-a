@@ -59,6 +59,15 @@ export function BoxVisualizer({
   const side1Active = phase === "hold_full";
   const side2Active = phase === "exhale";
   const side3Active = phase === "hold_empty";
+  const breathScale = prefersReducedMotion
+    ? 0.86
+    : phase === "inhale"
+      ? 0.68 + 0.26 * progress
+      : phase === "hold_full"
+        ? 0.94
+        : phase === "exhale"
+          ? 0.94 - 0.26 * progress
+          : 0.68;
 
   return (
     <div className="relative mx-auto flex h-[240px] w-[240px] items-center justify-center">
@@ -147,6 +156,15 @@ export function BoxVisualizer({
           />
         )}
       </svg>
+
+      <div
+        aria-hidden="true"
+        className="absolute h-32 w-32 rounded-[42%_58%_55%_45%/48%_42%_58%_52%] bg-gradient-to-br from-[#64D2FF]/25 via-[#0071E3]/18 to-[#AF52DE]/20 shadow-[0_0_45px_rgba(0,113,227,0.16)]"
+        style={{
+          transform: `scale(${breathScale}) rotate(${prefersReducedMotion ? 0 : progress * 5}deg)`,
+          transition: prefersReducedMotion ? "none" : "transform 120ms linear",
+        }}
+      />
 
       {/* Central Accessible Phase & Countdown Display */}
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">

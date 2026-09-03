@@ -61,6 +61,8 @@ export function isVisionFeasibilityResult(value: unknown): value is VisionFeasib
   if (item.adjustedGoal !== undefined && !isText(item.adjustedGoal, 4000)) return false;
   if (item.adjustedTimeframe !== undefined && !isText(item.adjustedTimeframe, 200)) return false;
   if (item.status === "unrealistic_for_timeframe" && !item.adjustedGoal && !item.adjustedTimeframe) return false;
+  if (item.status === "unrealistic_for_timeframe" && item.questions.length > 0) return false;
   if (item.status === "insufficient_information" && item.questions.length === 0) return false;
+  if (item.status === "insufficient_information" && (item.adjustedGoal || item.adjustedTimeframe)) return false;
   return true;
 }

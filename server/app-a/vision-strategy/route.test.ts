@@ -22,6 +22,8 @@ const feasible = { status: "feasible", normalizedGoal: "Write a book", reason: "
 assert.equal(isVisionFeasibilityResult(feasible), true);
 assert.equal(isVisionFeasibilityResult({ ...feasible, status: "unrealistic_for_timeframe" }), false);
 assert.equal(isVisionFeasibilityResult({ ...feasible, status: "insufficient_information", questions: [] }), false);
+assert.equal(isVisionFeasibilityResult({ ...feasible, status: "unrealistic_for_timeframe", adjustedGoal: "Write a draft", questions: ["How much is written?"] }), false);
+assert.equal(isVisionFeasibilityResult({ ...feasible, status: "insufficient_information", adjustedGoal: "Write a draft", questions: ["How much is written?"] }), false);
 
 function responseHarness() {
   const result: { status?: number; body?: unknown } = {};

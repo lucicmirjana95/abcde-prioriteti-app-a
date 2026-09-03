@@ -45,11 +45,11 @@ const COPY = {
     alreadyActionable: "This step is already concrete enough to begin.",
     maxDepthReached: "Maximum breakdown depth reached.",
     send: "Send to Today",
-    confirmTitle: "Send this candidate to Today?",
-    confirmHelp: "It will appear as an unscheduled candidate and will not change your confirmed plan.",
+    confirmTitle: "Send this next step to Today?",
+    confirmHelp: "It will be saved under Today without changing your confirmed plan. Add it to the plan when you are ready.",
     duration: "Estimated minutes",
     cancel: "Cancel",
-    confirm: "Send candidate",
+    confirm: "Send next step",
     sent: "Sent to Today",
     stepOptions: "Step options",
     substepsCount: (count: number) => `${count} step${count === 1 ? "" : "s"}`,
@@ -76,11 +76,11 @@ const COPY = {
     alreadyActionable: "Ovaj korak je već dovoljno konkretan za početak.",
     maxDepthReached: "Maksimalan nivo raščlanjivanja je dostignut.",
     send: "Pošalji u Danas",
-    confirmTitle: "Poslati ovaj kandidat u Danas?",
-    confirmHelp: "Pojaviće se kao neraspoređen kandidat i neće promeniti potvrđeni plan.",
+    confirmTitle: "Poslati ovaj sledeći korak u Danas?",
+    confirmHelp: "Biće sačuvan u odeljku Danas bez menjanja potvrđenog plana. Dodajte ga u plan kada budete spremni.",
     duration: "Procenjeno minuta",
     cancel: "Otkaži",
-    confirm: "Pošalji kandidata",
+    confirm: "Pošalji sledeći korak",
     sent: "Poslato u Danas",
     stepOptions: "Opcije koraka",
     substepsCount: (count: number) => `${count} korak${count === 1 ? "" : count < 5 ? "a" : "a"}`,
@@ -107,11 +107,11 @@ const COPY = {
     alreadyActionable: "Bu adım başlamak için zaten yeterince somut.",
     maxDepthReached: "Maksimum ayrıştırma derinliğine ulaşıldı.",
     send: "Bugüne gönder",
-    confirmTitle: "Bu aday Bugün'e gönderilsin mi?",
-    confirmHelp: "Plansız bir aday olarak görünür ve onaylanan planınızı değiştirmez.",
+    confirmTitle: "Bu sonraki adım Bugün'e gönderilsin mi?",
+    confirmHelp: "Onaylı planınızı değiştirmeden Bugün bölümüne kaydedilir. Hazır olduğunuzda plana ekleyebilirsiniz.",
     duration: "Tahmini dakika",
     cancel: "İptal",
-    confirm: "Adayı gönder",
+    confirm: "Sonraki adımı gönder",
     sent: "Bugüne gönderildi",
     stepOptions: "Adım seçenekleri",
     substepsCount: (count: number) => `${count} adım`,
@@ -119,9 +119,9 @@ const COPY = {
 } as const;
 
 const FEASIBILITY_COPY = {
-  en: { timeframe: "Desired timeframe (optional)", timeframePlaceholder: "e.g. 12 months", check: "Check feasibility and develop", assessment: "Feasibility check", useAdjusted: "Use realistic version", keepOriginal: "Keep original goal", useTimeframe: "Suggested timeframe", needsInfo: "Add the missing details to the direction and try again." },
-  sr: { timeframe: "Željeni rok (opciono)", timeframePlaceholder: "npr. 12 meseci", check: "Proveri izvodljivost i razradi", assessment: "Provera izvodljivosti", useAdjusted: "Koristi realniju verziju", keepOriginal: "Zadrži originalni cilj", useTimeframe: "Predloženi rok", needsInfo: "Dodajte nedostajuće podatke u opis pravca i pokušajte ponovo." },
-  tr: { timeframe: "İstenen süre (isteğe bağlı)", timeframePlaceholder: "örn. 12 ay", check: "Uygulanabilirliği kontrol et ve geliştir", assessment: "Uygulanabilirlik kontrolü", useAdjusted: "Gerçekçi sürümü kullan", keepOriginal: "Orijinal hedefi koru", useTimeframe: "Önerilen süre", needsInfo: "Eksik bilgileri yön açıklamasına ekleyip tekrar deneyin." },
+  en: { timeframe: "Desired timeframe (optional)", timeframePlaceholder: "e.g. 12 months", check: "Check feasibility and develop", assessment: "Feasibility check", useAdjusted: "Use realistic version", keepOriginal: "Keep original goal", useTimeframe: "Suggested timeframe", needsInfo: "Answer the questions below. Your answers will be added to this Vision direction and checked again.", detailsLabel: "Your missing details", detailsPlaceholder: "Answer briefly in the same order…", recheck: "Add details and check again" },
+  sr: { timeframe: "Željeni rok (opciono)", timeframePlaceholder: "npr. 12 meseci", check: "Proveri izvodljivost i razradi", assessment: "Provera izvodljivosti", useAdjusted: "Koristi realniju verziju", keepOriginal: "Zadrži originalni cilj", useTimeframe: "Predloženi rok", needsInfo: "Odgovorite na pitanja ispod. Odgovori će biti dodati ovom pravcu Vizije i ponovo provereni.", detailsLabel: "Podaci koji nedostaju", detailsPlaceholder: "Odgovorite kratko, istim redosledom…", recheck: "Dodaj odgovore i proveri ponovo" },
+  tr: { timeframe: "İstenen süre (isteğe bağlı)", timeframePlaceholder: "örn. 12 ay", check: "Uygulanabilirliği kontrol et ve geliştir", assessment: "Uygulanabilirlik kontrolü", useAdjusted: "Gerçekçi sürümü kullan", keepOriginal: "Orijinal hedefi koru", useTimeframe: "Önerilen süre", needsInfo: "Aşağıdaki soruları yanıtlayın. Yanıtlar bu Vizyon yönüne eklenip yeniden kontrol edilir.", detailsLabel: "Eksik bilgileriniz", detailsPlaceholder: "Aynı sırayla kısaca yanıtlayın…", recheck: "Bilgileri ekle ve tekrar kontrol et" },
 } as const;
 
 export default function VisionStrategyBuilder({
@@ -156,6 +156,7 @@ export default function VisionStrategyBuilder({
   const [expanded, setExpanded] = useState(true);
   const [timeframe, setTimeframe] = useState("");
   const [feasibility, setFeasibility] = useState<VisionFeasibilityResult | null>(null);
+  const [feasibilityDetails, setFeasibilityDetails] = useState("");
   const [showCandidateDialog, setShowCandidateDialog] = useState(false);
   const [candidateMinutes, setCandidateMinutes] = useState(25);
   const [candidateStatus, setCandidateStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -241,14 +242,17 @@ export default function VisionStrategyBuilder({
     }
   }
 
-  async function generate() {
+  async function generate(additionalDetails = "") {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 42_000);
     setLoading(true);
     setError(false);
     setFeasibility(null);
     try {
-      const result = await assessVisionFeasibility(idea, timeframe, language, controller.signal);
+      const enrichedIdea = additionalDetails.trim()
+        ? `${idea}\n\nUser-provided clarifying details:\n${additionalDetails.trim()}`
+        : idea;
+      const result = await assessVisionFeasibility(enrichedIdea, timeframe, language, controller.signal);
       if (result.status === "feasible") {
         window.clearTimeout(timeout);
         setLoading(false);
@@ -338,6 +342,24 @@ export default function VisionStrategyBuilder({
                   ))}
                 </ul>
                 <p className="mt-2 text-[12px] font-medium">{ft.needsInfo}</p>
+                <label className="mt-3 block text-left text-[12px] font-semibold">
+                  {ft.detailsLabel}
+                  <textarea
+                    value={feasibilityDetails}
+                    onChange={(event) => setFeasibilityDetails(event.target.value)}
+                    placeholder={ft.detailsPlaceholder}
+                    rows={4}
+                    className="app-a-field app-a-focus-ring mt-2 w-full resize-y p-3 text-[13px] font-normal"
+                  />
+                </label>
+                <button
+                  type="button"
+                  disabled={!feasibilityDetails.trim() || loading}
+                  onClick={() => void generate(feasibilityDetails)}
+                  className="app-a-primary-button app-a-focus-ring mt-3 w-full px-4 disabled:opacity-50"
+                >
+                  {ft.recheck}
+                </button>
               </>
             ) : null}
             {feasibility.adjustedGoal ? (

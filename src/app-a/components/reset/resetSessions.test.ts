@@ -11,11 +11,14 @@ import {
   GUIDED_REST_STAGES,
 } from "./resetTimingEngine";
 import { RESET_LOCALIZATION } from "./resetLocalization";
+import { REST_SOUND_CARRIER_HZ, REST_SOUND_DIFFERENCE_HZ } from "./restSoundSynth";
 
 console.log("Running Reset Sessions & Timing Engine Tests...");
 
 // -------------------------------------------------------------
 // 1. Balanced Box (4-4-4-4) Exact Timing Transitions & Cycle Presets
+assert.equal(REST_SOUND_CARRIER_HZ, 95);
+assert.equal(REST_SOUND_DIFFERENCE_HZ, 4, "guided rest stereo frequencies must remain exactly 4 Hz apart");
 // -------------------------------------------------------------
 // Total cycle = 16 seconds (16,000ms)
 // Presets: 4 cycles (64,000ms), 8 cycles (128,000ms), 12 cycles (192,000ms)
