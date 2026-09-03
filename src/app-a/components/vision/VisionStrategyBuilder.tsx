@@ -18,9 +18,12 @@ import { assessVisionFeasibility, createVisionStrategy, decomposeVisionStep } fr
 import type { AppALanguage } from "../../types";
 import { useAppAAuth } from "../../auth/useAppAAuth";
 import { createVisionStrategyId, type SavedVisionStrategy } from "../../../shared/domain/vision";
-import { saveVisionStrategy } from "../../../shared/persistence/vision";
+import { getVisionSaveDiagnostic, saveVisionStrategy } from "../../../shared/persistence/vision";
 import { createTodayCandidateId, type TodayCandidate } from "../../../shared/domain/today-candidates";
 import { saveTodayCandidate } from "../../../shared/persistence/today-candidates";
+
+const SHOW_DEV_DIAGNOSTICS = typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" || window.location.hostname.startsWith("ais-"));
 
 const COPY = {
   en: {
@@ -31,6 +34,7 @@ const COPY = {
     signInToSave: "Your strategy is kept on this screen. Sign in again to save it.",
     retrySave: "Sign in and save again",
     saved: "Saved",
+    notSaved: "Not saved — try again",
     imagine: "Imagine",
     plan: "Plan",
     check: "Check",
@@ -62,6 +66,7 @@ const COPY = {
     signInToSave: "Strategija ostaje na ovom ekranu. Prijavite se ponovo da biste je sačuvali.",
     retrySave: "Prijavi se i sačuvaj ponovo",
     saved: "Sačuvano",
+    notSaved: "Nije sačuvano — pokušajte ponovo",
     imagine: "Zamisli",
     plan: "Isplaniraj",
     check: "Proveri",
@@ -93,6 +98,7 @@ const COPY = {
     signInToSave: "Stratejiniz bu ekranda tutuluyor. Kaydetmek için tekrar giriş yapın.",
     retrySave: "Giriş yap ve tekrar kaydet",
     saved: "Kaydedildi",
+    notSaved: "Kaydedilmedi — tekrar deneyin",
     imagine: "Hayal et",
     plan: "Planla",
     check: "Kontrol et",
@@ -141,7 +147,7 @@ export default function VisionStrategyBuilder({
 }) {
   const t = COPY[language];
   const ft = FEASIBILITY_COPY[language];
-  const { signInWithGoogle } = useAppAAuth();
+  const { user, authReady, signInWithGoogle } = useAppAAuth();
   const [strategy, setStrategy] = useState<VisionStrategyResult | null>(initialDocument?.strategy || null);
   const [documentId] = useState(initialDocument?.id || createVisionStrategyId);
   const [breakdowns, setBreakdowns] = useState<Record<string, string[]>>(initialDocument?.stepBreakdowns || {});
@@ -154,9 +160,10 @@ export default function VisionStrategyBuilder({
   const [error, setError] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
   const [expanded, setExpanded] = useState(true);
-  const [timeframe, setTimeframe] = useState("");
+  const [timeframe, setTimeframe] = useState(initialDocument?.planningContext?.timeframe || "");
   const [feasibility, setFeasibility] = useState<VisionFeasibilityResult | null>(null);
-  const [feasibilityDetails, setFeasibilityDetails] = useState("");
+  const [feasibilityDetails, setFeasibilityDetails] = useState(initialDocument?.planningContext?.clarificationDetails || "");
+  const [saveDiagnostic, setSaveDiagnostic] = useState<string | null>(null);
   const [showCandidateDialog, setShowCandidateDialog] = useState(false);
   const [candidateMinutes, setCandidateMinutes] = useState(25);
   const [candidateStatus, setCandidateStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -172,6 +179,10 @@ export default function VisionStrategyBuilder({
       createdAt: initialDocument?.createdAt || now,
       updatedAt: now,
       status: initialDocument?.status || "active",
+      ...(timeframe.trim() || feasibilityDetails.trim() ? { planningContext: {
+        ...(timeframe.trim() ? { timeframe: timeframe.trim() } : {}),
+        ...(feasibilityDetails.trim() ? { clarificationDetails: feasibilityDetails.trim() } : {}),
+      } } : {}),
       ...(initialDocument?.archivedAt ? { archivedAt: initialDocument.archivedAt } : {}),
     };
     try {
@@ -179,11 +190,16 @@ export default function VisionStrategyBuilder({
       setSaved(true);
       setAuthRequired(false);
       setError(false);
+      setSaveDiagnostic(null);
       onSaved?.(document);
       return true;
     } catch (cause) {
-      if (cause instanceof Error && cause.message === "authentication_required") setAuthRequired(true);
+      const diagnostic = getVisionSaveDiagnostic(cause);
+      setSaved(false);
+      setSaveDiagnostic(`${diagnostic.stage} / ${diagnostic.category} / ${diagnostic.firebaseCode}`);
+      if (diagnostic.category === "unauthenticated") setAuthRequired(true);
       else setError(true);
+      if (SHOW_DEV_DIAGNOSTICS) console.error({ feature: "app_a_vision_save", ...diagnostic, projectId: "daily-reset-app-a", databaseId: "(default)", authReady, authPresent: Boolean(user), uidMatchesPath: user?.uid === userId });
       return false;
     }
   }
@@ -652,9 +668,11 @@ export default function VisionStrategyBuilder({
           ) : null}
 
           {error ? (
-            <p className="text-[13px] text-[#FF3B30]" role="alert">
-              {t.saveError}
-            </p>
+            <div className="space-y-1 text-[13px] text-[#FF3B30]" role="alert">
+              <p>{t.saveError}</p>
+              <p className="font-medium">{t.notSaved}</p>
+              {SHOW_DEV_DIAGNOSTICS && saveDiagnostic ? <p className="font-mono text-[11px]">Save diagnostic: {saveDiagnostic}</p> : null}
+            </div>
           ) : null}
           {authRequired ? <div className="space-y-2" role="alert"><p className="text-[13px]" style={{ color: "var(--app-a-danger)" }}>{t.signInToSave}</p><button type="button" onClick={() => void signInAndRetrySave()} className="app-a-secondary-button app-a-focus-ring px-4 text-[13px]">{t.retrySave}</button></div> : null}
         </div>

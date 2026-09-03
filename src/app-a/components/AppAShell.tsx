@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { AppADestination, AppALanguage, APP_A_TRANSLATIONS, type AppATheme } from "../types";
 import { Sun, Inbox, Eye, TrendingUp, Sparkles, Settings } from "lucide-react";
+import AccountStatus from "./AccountStatus";
 
 interface Props {
   currentDestination: AppADestination;
@@ -44,7 +45,7 @@ export default function AppAShell({ currentDestination, onNavigate, language, th
         <h1 className="flex-1 text-[17px] font-semibold tracking-[-0.01em]">
           {navItems.find((n) => n.id === currentDestination)?.label}
         </h1>
-        <button type="button" onClick={() => onNavigate("settings")} aria-label={language === "sr" ? "Podešavanja" : language === "tr" ? "Ayarlar" : "Settings"} className="app-a-focus-ring rounded-lg p-1"><Settings className="h-5 w-5" /></button>
+        <div className="flex items-center gap-2"><AccountStatus language={language} compact /><button type="button" onClick={() => onNavigate("settings")} aria-label={language === "sr" ? "Podešavanja" : language === "tr" ? "Ayarlar" : "Settings"} className="app-a-focus-ring rounded-lg p-1"><Settings className="h-5 w-5" /></button></div>
       </header>
 
       {/* Desktop/Tablet Sidebar */}
@@ -102,6 +103,7 @@ export default function AppAShell({ currentDestination, onNavigate, language, th
             );
           })}
         </div>
+        <AccountStatus language={language} />
       </nav>
 
       {/* Main Content Area */}

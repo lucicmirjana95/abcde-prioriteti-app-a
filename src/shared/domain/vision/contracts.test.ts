@@ -22,4 +22,6 @@ assert.equal(isSavedVisionStrategy({ ...saved, status: "archived", archivedAt: "
 assert.equal(isSavedVisionStrategy({ ...saved, status: "archived" }), false);
 assert.equal(isSavedVisionStrategy({ ...saved, stepBreakdowns: { "m0-s0": ["Only one"] } }), false);
 assert.equal(isSavedVisionStrategy({ ...saved, strategy: { ...saved.strategy, milestones: [] } }), false);
+assert.equal(isSavedVisionStrategy({ ...saved, planningContext: { timeframe: "1 month", clarificationDetails: "Draft is 70% complete." } }), true);
+assert.equal(isSavedVisionStrategy({ ...saved, planningContext: { timeframe: "x".repeat(201) } }), false);
 console.log("Saved vision strategy contract tests passed.");
