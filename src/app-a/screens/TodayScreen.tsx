@@ -16,6 +16,7 @@ import {
   createDailyPlanDocument,
   dailyResetDataFromDocument,
   getLocalDateKeyInTimeZone,
+  planDraftFromDocument,
 } from '../persistence/dailyPlanDocument';
 import { getEffectiveTimeZone } from '../settings/preferences';
 import {
@@ -80,8 +81,18 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
   const [activePlanDate, setActivePlanDate] = useState(() => getLocalDateKeyInTimeZone(effectiveTimeZone));
   const [rolloverCandidates, setRolloverCandidates] = useState<UnfinishedRolloverCandidate[]>([]);
   const [isLoadingRollover, setIsLoadingRollover] = useState(false);
+  const [resetSessionsOpen, setResetSessionsOpen] = useState(false);
   const loadedForUserAndDate = useRef<string | null>(null);
   const isConfirmingRef = useRef(false);
+
+  useEffect(() => {
+    if (!resetSessionsOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setResetSessionsOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [resetSessionsOpen]);
 
   useEffect(() => {
     if (demoConfig || !authReady || !user) return;
@@ -138,9 +149,10 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     void loadConfirmedDailyPlan(user.uid, localDate)
       .then((saved) => {
         if (!cancelled && saved) {
-          loadConfirmedPlan(saved.plan, dailyResetDataFromDocument(saved));
+          const loadedPlan = planDraftFromDocument(saved);
+          loadConfirmedPlan(loadedPlan, dailyResetDataFromDocument(saved));
           setCompletedItemIds(
-            normalizeCompletedItemIds(saved.plan, saved.execution?.completedItemIds || []),
+            normalizeCompletedItemIds(loadedPlan, saved.execution?.completedItemIds || []),
           );
           setActivePlanDate(saved.localDate);
           setViewMode('execution');
@@ -383,6 +395,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
           setExecutionError(null);
         }}
         defaultFocusMinutes={preferences.defaultFocusMinutes}
+        onOpenReset={() => setResetSessionsOpen(true)}
       />
     ) : (
       <DailyPlanReview
@@ -443,9 +456,20 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
           <TodayCandidatesSection userId={user?.uid} language={language} canAddToPlan={Boolean(state.planDraft && viewMode === 'execution')} onAddToPlan={handleAddVisionCandidate} />
           <DueInboxItemsSection userId={user?.uid} localDate={activePlanDate} language={language} canAddToPlan={Boolean(state.planDraft && viewMode === 'execution')} onAddToPlan={handleAddInboxItem} />
           <DailyRoutinesSection userId={user?.uid} language={language} />
-          <ResetSessions language={language} />
         </>
       )}
+      {resetSessionsOpen ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={language === 'sr' ? 'Sesije za predah' : language === 'tr' ? 'Mola oturumları' : 'Reset sessions'} onMouseDown={(event) => { if (event.target === event.currentTarget) setResetSessionsOpen(false); }}>
+          <div className="app-a-surface max-h-[92vh] w-full max-w-[820px] overflow-y-auto p-1 shadow-2xl sm:p-2" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="sticky top-0 z-10 flex justify-end bg-[var(--app-a-surface)] px-3 pt-3">
+              <button type="button" onClick={() => setResetSessionsOpen(false)} className="app-a-secondary-button app-a-focus-ring px-3 text-[13px]">
+                {language === 'sr' ? 'Zatvori' : language === 'tr' ? 'Kapat' : 'Close'}
+              </button>
+            </div>
+            <ResetSessions language={language} embedded />
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

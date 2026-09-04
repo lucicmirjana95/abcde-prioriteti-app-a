@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Clock3, Pencil, Sparkles, Timer } from "lucide-react";
+import { Check, Clock3, Pencil, Sparkles, Timer, Wind } from "lucide-react";
 import type { DailyPlanDraft, DailyPlanItem } from "../../domain/daily-reset/contracts";
 import { APP_A_TRANSLATIONS, type AppALanguage } from "../../types";
 import SafeInterventionCard from "./SafeInterventionCard";
@@ -15,6 +15,7 @@ interface Props {
   onToggle: (itemId: string) => void;
   onEditPlan: () => void;
   defaultFocusMinutes: 15 | 25 | 45 | 60;
+  onOpenReset: () => void;
 }
 
 export default function TodayExecutionScreen({
@@ -26,6 +27,7 @@ export default function TodayExecutionScreen({
   onToggle,
   onEditPlan,
   defaultFocusMinutes,
+  onOpenReset,
 }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
   const [focusItem, setFocusItem] = useState<DailyPlanItem | null>(null);
@@ -85,7 +87,7 @@ export default function TodayExecutionScreen({
             )}
           </span>
         </span>
-        {!isComplete && <button type="button" onClick={() => setFocusItem(item)} className="app-a-focus-ring shrink-0 rounded-xl border border-black/10 p-2.5 text-[#0071E3] dark:border-white/15 dark:text-[#0A84FF]" aria-label={`Focus: ${item.title}`}><Timer className="h-4 w-4" /></button>}
+        {!isComplete && <div className="flex shrink-0 gap-1.5"><button type="button" onClick={() => setFocusItem(item)} className="app-a-focus-ring rounded-xl border border-black/10 p-2.5 text-[#0071E3] dark:border-white/15 dark:text-[#0A84FF]" aria-label={`Focus: ${item.title}`}><Timer className="h-4 w-4" /></button><button type="button" onClick={onOpenReset} className="app-a-focus-ring rounded-xl border border-black/10 p-2.5 text-[#0071E3] dark:border-white/15 dark:text-[#0A84FF]" aria-label={language === "sr" ? `Predah pre: ${item.title}` : language === "tr" ? `${item.title} öncesi mola` : `Reset before: ${item.title}`}><Wind className="h-4 w-4" /></button></div>}
       </div>
     );
   };
@@ -165,7 +167,7 @@ export default function TodayExecutionScreen({
       )}
 
       {draft.intervention && (
-        <SafeInterventionCard intervention={draft.intervention} language={language} />
+        <SafeInterventionCard intervention={draft.intervention} language={language} onOpenReset={onOpenReset} />
       )}
 
       {outsideCount > 0 && (

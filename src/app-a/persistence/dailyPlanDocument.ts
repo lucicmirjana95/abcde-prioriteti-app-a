@@ -120,6 +120,14 @@ export function dailyResetDataFromDocument(
   };
 }
 
+/** Restores an explicitly supplied capacity from legacy document envelopes. */
+export function planDraftFromDocument(document: AppADailyPlanDocument): DailyPlanDraft {
+  const availableMinutes = document.plan.availableMinutes ?? document.checkIn.availableMinutes;
+  return availableMinutes === undefined
+    ? document.plan
+    : { ...document.plan, availableMinutes };
+}
+
 export function isAppADailyPlanDocument(
   value: unknown,
 ): value is AppADailyPlanDocument {

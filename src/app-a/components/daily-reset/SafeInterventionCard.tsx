@@ -5,9 +5,10 @@ import { AppALanguage, APP_A_TRANSLATIONS } from "../../types";
 interface Props {
   intervention: SafeIntervention;
   language: AppALanguage;
+  onOpenReset?: () => void;
 }
 
-export default function SafeInterventionCard({ intervention, language }: Props) {
+export default function SafeInterventionCard({ intervention, language, onOpenReset }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
 
   return (
@@ -53,6 +54,11 @@ export default function SafeInterventionCard({ intervention, language }: Props) 
           "{intervention.reason}"
         </p>
       )}
+      {onOpenReset && (intervention.type === "breathing" || intervention.type === "rest" || intervention.type === "focus") ? (
+        <button type="button" onClick={onOpenReset} className="app-a-secondary-button app-a-focus-ring mt-3 px-3 text-[13px]">
+          {language === "sr" ? "Otvori sesije za predah" : language === "tr" ? "Mola oturumlarını aç" : "Open reset sessions"}
+        </button>
+      ) : null}
     </div>
   );
 }

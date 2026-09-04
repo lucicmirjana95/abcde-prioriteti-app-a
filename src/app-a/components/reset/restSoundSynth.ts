@@ -1,19 +1,26 @@
 export const REST_SOUND_CARRIER_HZ = 95;
 export const REST_SOUND_DIFFERENCE_HZ = 4;
+export type RestSoundStartResult = "playing" | "blocked" | "unsupported";
 
 /** User-initiated, low-volume stereo sound bed for the guided rest session. */
 class RestSoundSynthesizer {
   private ctx: AudioContext | null = null;
   private nodes: AudioNode[] = [];
   private oscillators: OscillatorNode[] = [];
+  private startGeneration = 0;
 
-  start(): void {
-    if (typeof window === "undefined" || this.oscillators.length) return;
+  async start(): Promise<RestSoundStartResult> {
+    if (typeof window === "undefined") return "unsupported";
+    if (this.oscillators.length && this.ctx?.state === "running") return "playing";
+    const generation = ++this.startGeneration;
     try {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (!AudioCtx) return;
+      if (!AudioCtx) return "unsupported";
       this.ctx ||= new AudioCtx();
-      void this.ctx.resume();
+      if (this.ctx.state !== "running") await this.ctx.resume();
+      if (generation !== this.startGeneration) return "blocked";
+      if (this.ctx.state !== "running") return "blocked";
+      if (this.oscillators.length) return "playing";
       const master = this.ctx.createGain();
       master.gain.setValueAtTime(0.0001, this.ctx.currentTime);
       master.gain.exponentialRampToValueAtTime(0.035, this.ctx.currentTime + 1.5);
@@ -35,12 +42,15 @@ class RestSoundSynthesizer {
         this.oscillators.push(oscillator);
         this.nodes.push(gain, pan);
       });
+      return "playing";
     } catch {
       this.stop();
+      return "blocked";
     }
   }
 
   stop(): void {
+    this.startGeneration++;
     this.oscillators.forEach((oscillator) => {
       try { oscillator.stop(); } catch { /* already stopped */ }
       oscillator.disconnect();

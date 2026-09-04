@@ -34,12 +34,14 @@ import {
 
 interface ResetSessionsProps {
   language: AppALanguage;
+  embedded?: boolean;
 }
 
-export default function ResetSessions({ language }: ResetSessionsProps) {
+export default function ResetSessions({ language, embedded = false }: ResetSessionsProps) {
   const [selectedExperience, setSelectedExperience] = useState<ResetExperienceId | null>(null);
   const [sessionStatus, setSessionStatus] = useState<ResetSessionStatus>("idle");
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const [soundStatus, setSoundStatus] = useState<"idle" | "playing" | "blocked" | "unsupported">("idle");
 
   // Experience configuration
   const [boxTargetCycles, setBoxTargetCycles] = useState<number>(12); // 4 (1:04), 8 (2:08), 12 (3:12) cycles default
@@ -218,9 +220,15 @@ export default function ResetSessions({ language }: ResetSessionsProps) {
     if (id === "double_inhale") setDoubleInhaleTargetCycles(3);
   };
 
-  const handleStart = () => {
+  const startGuidedRestSound = async () => {
+    const result = await restSoundSynth.start();
+    setSoundStatus(result);
+    return result;
+  };
+
+  const handleStart = async () => {
     if (soundEnabled) {
-      if (selectedExperience === "guided_rest") restSoundSynth.start();
+      if (selectedExperience === "guided_rest") await startGuidedRestSound();
       else lightChimeSynth.init();
     }
     hasCompletedRef.current = false;
@@ -237,9 +245,9 @@ export default function ResetSessions({ language }: ResetSessionsProps) {
     startTimestampRef.current = null;
   };
 
-  const handleResume = () => {
+  const handleResume = async () => {
     if (soundEnabled) {
-      if (selectedExperience === "guided_rest") restSoundSynth.start();
+      if (selectedExperience === "guided_rest") await startGuidedRestSound();
       else lightChimeSynth.init();
     }
     accumulatedMsRef.current = elapsedMs;
@@ -268,17 +276,18 @@ export default function ResetSessions({ language }: ResetSessionsProps) {
     hasCompletedRef.current = false;
   };
 
-  const toggleSound = () => {
+  const toggleSound = async () => {
     const next = !soundEnabled;
     setSoundEnabled(next);
     if (next) {
-      if (selectedExperience === "guided_rest" && sessionStatus === "running") restSoundSynth.start();
+      if (selectedExperience === "guided_rest") await startGuidedRestSound();
       else {
         lightChimeSynth.init();
         lightChimeSynth.playPhaseChime("inhale");
       }
     } else {
       restSoundSynth.stop();
+      setSoundStatus("idle");
     }
   };
 
@@ -325,7 +334,7 @@ export default function ResetSessions({ language }: ResetSessionsProps) {
   return (
     <section
       id="app-a-reset-sessions"
-      className="mx-auto mt-7 w-full max-w-[760px] px-5 pb-2 sm:px-6"
+      className={`mx-auto w-full max-w-[760px] px-4 pb-5 sm:px-6 ${embedded ? "mt-1" : "mt-7"}`}
       aria-labelledby="reset-sessions-heading"
     >
       {/* Header & Subtitle */}
@@ -352,23 +361,30 @@ export default function ResetSessions({ language }: ResetSessionsProps) {
           <button
             type="button"
             id="app-a-reset-sound-toggle"
-            onClick={toggleSound}
+            onClick={() => void toggleSound()}
             aria-label={soundEnabled ? tCommon.soundOn : tCommon.soundOff}
             className="app-a-focus-ring inline-flex h-9 items-center gap-1.5 rounded-lg border border-black/10 px-2.5 text-[12px] font-medium text-[#1d1d1f] hover:bg-black/5 dark:border-white/15 dark:text-[#f5f5f7] dark:hover:bg-white/5"
           >
             {soundEnabled ? (
               <>
                 <Volume2 className="h-4 w-4 text-[#0071e3] dark:text-[#2997ff]" />
-                <span>{tCommon.soundOn}</span>
+                <span>{selectedExperience === "guided_rest" ? (language === "sr" ? "4 Hz zvuk uključen" : language === "tr" ? "4 Hz ses açık" : "4 Hz sound on") : tCommon.soundOn}</span>
               </>
             ) : (
               <>
                 <VolumeX className="h-4 w-4 text-[#76767b] dark:text-[#7c7c82]" />
-                <span>{tCommon.soundOff}</span>
+                <span>{selectedExperience === "guided_rest" ? (language === "sr" ? "4 Hz zvuk isključen" : language === "tr" ? "4 Hz ses kapalı" : "4 Hz sound off") : tCommon.soundOff}</span>
               </>
             )}
           </button>
         </div>
+        {selectedExperience === "guided_rest" && soundEnabled ? (
+          <p role="status" className={`mb-3 text-[12px] ${soundStatus === "playing" ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>
+            {soundStatus === "playing"
+              ? (language === "sr" ? "4 Hz stereo zvuk se reprodukuje. Najbolje uz slušalice." : language === "tr" ? "4 Hz stereo ses çalıyor. Kulaklıkla en iyi sonucu verir." : "4 Hz stereo sound is playing. Best with headphones.")
+              : (language === "sr" ? "Zvuk nije pokrenut. Proverite dozvolu za zvuk u pregledaču i pokušajte ponovo." : language === "tr" ? "Ses başlatılamadı. Tarayıcı ses iznini kontrol edip tekrar deneyin." : "Sound did not start. Check browser audio permission and try again.")}
+          </p>
+        ) : null}
       </div>
 
       {/* Surface Container */}
@@ -727,7 +743,7 @@ export default function ResetSessions({ language }: ResetSessionsProps) {
                 <button
                   type="button"
                   id="reset-start-btn"
-                  onClick={handleStart}
+                  onClick={() => void handleStart()}
                   className="app-a-primary-button app-a-focus-ring gap-2 px-6 py-2.5 text-[15px] font-semibold"
                 >
                   <Play className="h-4 w-4" />
@@ -751,7 +767,7 @@ export default function ResetSessions({ language }: ResetSessionsProps) {
                 <button
                   type="button"
                   id="reset-resume-btn"
-                  onClick={handleResume}
+                  onClick={() => void handleResume()}
                   className="app-a-primary-button app-a-focus-ring gap-2 px-5 py-2.5 text-[15px] font-semibold"
                 >
                   <Play className="h-4 w-4" />

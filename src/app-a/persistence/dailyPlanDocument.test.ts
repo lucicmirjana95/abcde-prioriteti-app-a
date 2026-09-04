@@ -6,6 +6,7 @@ import {
   getLocalDateKey,
   getLocalDateKeyInTimeZone,
   isAppADailyPlanDocument,
+  planDraftFromDocument,
 } from "./dailyPlanDocument";
 
 const plan: DailyPlanDraft = {
@@ -88,6 +89,15 @@ assert.equal(restoredInput.energy, 2);
 assert.equal(restoredInput.availableTime?.customHours, 1);
 assert.equal(restoredInput.availableTime?.customMinutes, 30);
 assert.equal(restoredInput.brainDump, "");
+const legacyCapacityDocument = {
+  ...document,
+  plan: { ...document.plan, availableMinutes: undefined },
+};
+assert.equal(planDraftFromDocument(legacyCapacityDocument).availableMinutes, 90);
+assert.equal(planDraftFromDocument({
+  ...legacyCapacityDocument,
+  checkIn: { ...legacyCapacityDocument.checkIn, availableMinutes: undefined },
+}).availableMinutes, undefined);
 assert.equal(isAppADailyPlanDocument({ ...document, schemaVersion: 2 }), false);
 assert.equal(
   isAppADailyPlanDocument({
