@@ -454,7 +454,16 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
             onMarkComplete={handleMarkComplete}
             onDismiss={handleDismiss}
           />
-          <TodayCandidatesSection userId={user?.uid} language={language} canAddToPlan={Boolean(state.planDraft && viewMode === 'execution')} onAddToPlan={handleAddVisionCandidate} />
+          <TodayCandidatesSection
+            userId={user?.uid}
+            language={language}
+            planState={!state.planDraft ? 'none' : viewMode === 'execution' ? 'confirmed' : 'draft'}
+            onPlanAction={() => {
+              const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+              window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+            }}
+            onAddToPlan={handleAddVisionCandidate}
+          />
           <DueInboxItemsSection userId={user?.uid} localDate={activePlanDate} language={language} canAddToPlan={Boolean(state.planDraft && viewMode === 'execution')} onAddToPlan={handleAddInboxItem} />
           <DailyRoutinesSection userId={user?.uid} language={language} />
         </>
