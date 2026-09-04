@@ -32,6 +32,7 @@ import DailyRoutinesSection from '../components/routines/DailyRoutinesSection';
 import ResetSessions from '../components/reset/ResetSessions';
 import TodayCandidatesSection from '../components/vision/TodayCandidatesSection';
 import type { TodayCandidate } from '../../shared/domain/today-candidates';
+import { saveCompletionAndAdvanceVision } from '../../shared/persistence/today-candidates';
 import { addVisionCandidateToPlan } from './visionCandidatePlan';
 import UnfinishedTasksSection from '../components/rollover/UnfinishedTasksSection';
 import {
@@ -240,7 +241,14 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     try {
       if (!demoConfig) {
         if (!user) throw new Error('authentication_required');
-        await saveDailyPlanCompletion(user.uid, activePlanDate, next);
+        const newlyCompleted = next.includes(itemId) && !previous.includes(itemId);
+        const visionCandidateId = itemId.startsWith('vision_plan_') ? itemId.slice('vision_plan_'.length) : null;
+        if (newlyCompleted && visionCandidateId) {
+          await saveCompletionAndAdvanceVision(user.uid, activePlanDate, next, visionCandidateId);
+          window.dispatchEvent(new Event('app-a-vision-candidates-changed'));
+        } else {
+          await saveDailyPlanCompletion(user.uid, activePlanDate, next);
+        }
       }
     } catch {
       setCompletedItemIds(previous);

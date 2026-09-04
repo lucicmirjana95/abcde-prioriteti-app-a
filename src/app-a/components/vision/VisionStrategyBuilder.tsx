@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  CalendarPlus,
   ChevronDown,
   ChevronRight,
   ChevronUp,
@@ -11,7 +10,6 @@ import {
   ShieldCheck,
   Sparkles,
   Split,
-  X,
 } from "lucide-react";
 import type { VisionFeasibilityResult, VisionStrategyResult } from "../../../shared/domain/vision";
 import { assessVisionFeasibility, createVisionStrategy, decomposeVisionStep } from "../../api/visionStrategyApi";
@@ -19,8 +17,6 @@ import type { AppALanguage } from "../../types";
 import { useAppAAuth } from "../../auth/useAppAAuth";
 import { createVisionStrategyId, type SavedVisionStrategy } from "../../../shared/domain/vision";
 import { getVisionSaveDiagnostic, saveVisionStrategy } from "../../../shared/persistence/vision";
-import { createTodayCandidateId, type TodayCandidate } from "../../../shared/domain/today-candidates";
-import { saveTodayCandidate } from "../../../shared/persistence/today-candidates";
 
 const SHOW_DEV_DIAGNOSTICS = typeof window !== "undefined" &&
   (window.location.hostname === "localhost" || window.location.hostname.startsWith("ais-"));
@@ -48,13 +44,7 @@ const COPY = {
     checking: "Checking usefulness…",
     alreadyActionable: "This step is already concrete enough to begin.",
     maxDepthReached: "Maximum breakdown depth reached.",
-    send: "Send to Today",
-    confirmTitle: "Send this next step to Today?",
-    confirmHelp: "It will be saved under Today without changing your confirmed plan. Add it to the plan when you are ready.",
-    duration: "Estimated minutes",
-    cancel: "Cancel",
-    confirm: "Send next step",
-    sent: "Sent to Today",
+    nextFlow: "This step appears automatically in Today. You decide whether to add it to the daily plan. The following step appears after this one is completed.",
     stepOptions: "Step options",
     substepsCount: (count: number) => `${count} step${count === 1 ? "" : "s"}`,
   },
@@ -80,13 +70,7 @@ const COPY = {
     checking: "Proveravam korisnost…",
     alreadyActionable: "Ovaj korak je već dovoljno konkretan za početak.",
     maxDepthReached: "Maksimalan nivo raščlanjivanja je dostignut.",
-    send: "Pošalji u Danas",
-    confirmTitle: "Poslati ovaj sledeći korak u Danas?",
-    confirmHelp: "Biće sačuvan u odeljku Danas bez menjanja potvrđenog plana. Dodajte ga u plan kada budete spremni.",
-    duration: "Procenjeno minuta",
-    cancel: "Otkaži",
-    confirm: "Pošalji sledeći korak",
-    sent: "Poslato u Danas",
+    nextFlow: "Ovaj korak se automatski pojavljuje u odeljku Danas. Vi birate da li ćete ga dodati u dnevni plan. Naredni korak se pojavljuje kada završite ovaj.",
     stepOptions: "Opcije koraka",
     substepsCount: (count: number) => `${count} korak${count === 1 ? "" : count < 5 ? "a" : "a"}`,
   },
@@ -112,13 +96,7 @@ const COPY = {
     checking: "Yararlılık kontrol ediliyor…",
     alreadyActionable: "Bu adım başlamak için zaten yeterince somut.",
     maxDepthReached: "Maksimum ayrıştırma derinliğine ulaşıldı.",
-    send: "Bugüne gönder",
-    confirmTitle: "Bu sonraki adım Bugün'e gönderilsin mi?",
-    confirmHelp: "Onaylı planınızı değiştirmeden Bugün bölümüne kaydedilir. Hazır olduğunuzda plana ekleyebilirsiniz.",
-    duration: "Tahmini dakika",
-    cancel: "İptal",
-    confirm: "Sonraki adımı gönder",
-    sent: "Bugüne gönderildi",
+    nextFlow: "Bu adım Bugün bölümünde otomatik olarak görünür. Günlük plana ekleyip eklememeye siz karar verirsiniz. Sonraki adım, bunu tamamladığınızda görünür.",
     stepOptions: "Adım seçenekleri",
     substepsCount: (count: number) => `${count} adım`,
   },
@@ -164,9 +142,6 @@ export default function VisionStrategyBuilder({
   const [feasibility, setFeasibility] = useState<VisionFeasibilityResult | null>(null);
   const [feasibilityDetails, setFeasibilityDetails] = useState(initialDocument?.planningContext?.clarificationDetails || "");
   const [saveDiagnostic, setSaveDiagnostic] = useState<string | null>(null);
-  const [showCandidateDialog, setShowCandidateDialog] = useState(false);
-  const [candidateMinutes, setCandidateMinutes] = useState(25);
-  const [candidateStatus, setCandidateStatus] = useState<"idle" | "saving" | "saved">("idle");
 
   async function persistStrategy(currentStrategy: VisionStrategyResult, currentBreakdowns: Record<string, string[]>) {
     const now = new Date().toISOString();
@@ -210,33 +185,6 @@ export default function VisionStrategyBuilder({
     if (onRequestSignIn) await onRequestSignIn();
     else await signInWithGoogle();
     await persistStrategy(strategy, breakdowns);
-  }
-
-  async function sendToToday() {
-    if (!strategy || candidateStatus === "saving") return;
-    const now = new Date().toISOString();
-    const candidate: TodayCandidate = {
-      id: createTodayCandidateId(documentId),
-      source: "vision",
-      sourceId: documentId,
-      title: strategy.nextStep.trim(),
-      estimatedMinutes: candidateMinutes,
-      status: "pending",
-      createdAt: now,
-      updatedAt: now,
-    };
-    setCandidateStatus("saving");
-    setError(false);
-    setAuthRequired(false);
-    try {
-      await saveTodayCandidate(userId, candidate);
-      setCandidateStatus("saved");
-      setShowCandidateDialog(false);
-    } catch (cause) {
-      setCandidateStatus("idle");
-      if (cause instanceof Error && cause.message === "authentication_required") setAuthRequired(true);
-      else setError(true);
-    }
   }
 
   async function generateStrategy(goal: string) {
@@ -594,78 +542,8 @@ export default function VisionStrategyBuilder({
 
           <div className="rounded-[14px] bg-[#0071E3]/8 p-3 text-[14px] text-black dark:bg-[#0A84FF]/15 dark:text-white">
             <strong>{t.next}:</strong> {strategy.nextStep}
-            <button
-              type="button"
-              disabled={candidateStatus === "saved"}
-              onClick={() => setShowCandidateDialog(true)}
-              className="app-a-secondary-button app-a-focus-ring mt-3 w-full gap-2"
-            >
-              <CalendarPlus className="h-4 w-4" />
-              {candidateStatus === "saved" ? t.sent : t.send}
-            </button>
+            {saved ? <p className="mt-2 text-[13px] leading-relaxed text-[#3C3C43] dark:text-[#D1D1D6]">{t.nextFlow}</p> : null}
           </div>
-
-          {showCandidateDialog ? (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby={`candidate-dialog-${documentId}`}
-            >
-              <div className="app-a-surface w-full max-w-md p-5 shadow-2xl">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 id={`candidate-dialog-${documentId}`} className="text-[19px] font-semibold">
-                      {t.confirmTitle}
-                    </h3>
-                    <p className="mt-2 text-[14px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
-                      {t.confirmHelp}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowCandidateDialog(false)}
-                    className="app-a-focus-ring rounded-full p-2"
-                    aria-label={t.cancel}
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-                <p className="mt-4 text-[15px] font-medium">{strategy.nextStep}</p>
-                <label className="mt-4 block text-[13px] font-semibold">
-                  {t.duration}
-                  <input
-                    type="number"
-                    min={5}
-                    max={480}
-                    step={5}
-                    value={candidateMinutes}
-                    onChange={(event) =>
-                      setCandidateMinutes(Math.max(5, Math.min(480, Number(event.target.value) || 5)))
-                    }
-                    className="app-a-field app-a-focus-ring mt-2 w-full p-3"
-                  />
-                </label>
-                <div className="mt-5 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowCandidateDialog(false)}
-                    className="app-a-secondary-button app-a-focus-ring px-4"
-                  >
-                    {t.cancel}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={candidateStatus === "saving"}
-                    onClick={() => void sendToToday()}
-                    className="app-a-primary-button app-a-focus-ring px-4"
-                  >
-                    {t.confirm}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : null}
 
           {error ? (
             <div className="space-y-1 text-[13px] text-[#FF3B30]" role="alert">

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowUp, CalendarPlus, Clock3, Compass, X } from "lucide-react";
 import type { AppALanguage } from "../../types";
 import type { TodayCandidate } from "../../../shared/domain/today-candidates";
-import { dismissTodayCandidate, loadPendingTodayCandidates } from "../../../shared/persistence/today-candidates";
+import { dismissTodayCandidate, ensurePendingVisionCandidates, loadPendingTodayCandidates, markTodayCandidateScheduled } from "../../../shared/persistence/today-candidates";
 
 export type TodayPlanState = "none" | "draft" | "confirmed";
 
@@ -24,15 +24,22 @@ export default function TodayCandidatesSection({ userId, language, planState, on
   const [items, setItems] = useState<TodayCandidate[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const t = COPY[language];
 
   useEffect(() => {
     if (!userId) { setItems([]); return; }
     let active = true;
     setError(null);
-    void loadPendingTodayCandidates(userId).then((value) => { if (active) setItems(value); }).catch(() => { if (active) setError("error"); });
+    void ensurePendingVisionCandidates(userId).then(() => loadPendingTodayCandidates(userId)).then((value) => { if (active) setItems(value); }).catch(() => { if (active) setError("error"); });
     return () => { active = false; };
-  }, [userId]);
+  }, [userId, refreshVersion]);
+
+  useEffect(() => {
+    const refresh = () => setRefreshVersion((value) => value + 1);
+    window.addEventListener("app-a-vision-candidates-changed", refresh);
+    return () => window.removeEventListener("app-a-vision-candidates-changed", refresh);
+  }, []);
 
   async function dismiss(item: TodayCandidate) {
     if (!userId) return;
@@ -47,7 +54,9 @@ export default function TodayCandidatesSection({ userId, language, planState, on
     try {
       const result = await onAddToPlan(item);
       if (result) { setError(result); return; }
-      await dismiss(item);
+      if (!userId) return;
+      await markTodayCandidateScheduled(userId, item);
+      setItems((current) => current.filter((entry) => entry.id !== item.id));
     } finally { setBusyId(null); }
   }
 
