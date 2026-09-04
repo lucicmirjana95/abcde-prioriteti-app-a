@@ -119,13 +119,19 @@ export default function VoiceInputButton({ language, value, onChange, maxLength,
         onClick={listening ? stop : start}
         disabled={!supported}
         aria-pressed={listening}
+        aria-label={listening ? copy.stop : copy.start}
+        title={listening ? copy.stop : copy.start}
         aria-describedby={describedBy}
-        className="app-a-secondary-button app-a-focus-ring min-h-[44px] gap-2 px-3 disabled:cursor-not-allowed disabled:opacity-60"
+        className="app-a-focus-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border disabled:cursor-not-allowed disabled:opacity-60"
+        style={{
+          backgroundColor: listening ? "var(--app-a-danger-soft)" : "var(--app-a-surface-secondary)",
+          borderColor: listening ? "var(--app-a-danger)" : "var(--app-a-border)",
+          color: listening ? "var(--app-a-danger)" : "var(--app-a-accent)",
+        }}
       >
         {listening ? <Square className="h-4 w-4" aria-hidden="true" /> : <Mic className="h-5 w-5" aria-hidden="true" />}
-        <span className="text-[14px] font-medium">{listening ? copy.stop : copy.start}</span>
       </button>
-      <p id={describedBy} className="max-w-[320px] text-right text-[12px] leading-snug" style={{ color: messageKey ? "var(--app-a-danger)" : "var(--app-a-text-secondary)" }} role="status" aria-live="polite">
+      <p id={describedBy} className="max-w-[320px] text-right text-[12px] leading-snug empty:hidden" style={{ color: messageKey ? "var(--app-a-danger)" : "var(--app-a-text-secondary)" }} role="status" aria-live="polite">
         {listening ? copy.listening : !supported ? copy.unavailable : messageKey ? copy[messageKey] : ""}
       </p>
     </div>
