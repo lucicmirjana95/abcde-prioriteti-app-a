@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
-import { DailyResetData, EnergyLevel, PleasantnessLevel, AvailableTimeValue } from '../../types';
+import { DailyResetData, EnergyLevel, PleasantnessLevel, AvailableTimeValue, type AppALanguage } from '../../types';
 import FiveLevelScale from './FiveLevelScale';
 import AvailableTimeSelector from './AvailableTimeSelector';
 import BrainDumpInput from './BrainDumpInput';
 
 interface Props {
   t: any;
+  language: AppALanguage;
   initialData: DailyResetData;
   onSubmit: (data: DailyResetData) => void;
   aiEnabled?: boolean;
   aiDisabledMessage?: string;
 }
 
-export default function DailyResetForm({ t, initialData, onSubmit, aiEnabled = true, aiDisabledMessage }: Props) {
+export default function DailyResetForm({ t, language, initialData, onSubmit, aiEnabled = true, aiDisabledMessage }: Props) {
   const [energy, setEnergy] = useState<EnergyLevel | undefined>(initialData.energy);
   const [pleasantness, setPleasantness] = useState<PleasantnessLevel | undefined>(initialData.pleasantness);
   const [time, setTime] = useState<AvailableTimeValue | undefined>(initialData.availableTime);
@@ -145,6 +146,7 @@ export default function DailyResetForm({ t, initialData, onSubmit, aiEnabled = t
              setBrainDumpError(undefined);
           }}
           t={t}
+          language={language}
           error={brainDumpError}
         />
       </section>

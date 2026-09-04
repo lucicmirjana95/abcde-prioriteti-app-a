@@ -1,14 +1,16 @@
 import React, { useRef, useEffect } from 'react';
-import { Mic } from 'lucide-react';
+import type { AppALanguage } from '../../types';
+import VoiceInputButton from '../voice/VoiceInputButton';
 
 interface Props {
   value: string;
   onChange: (val: string) => void;
   t: any;
+  language: AppALanguage;
   error?: string;
 }
 
-export default function BrainDumpInput({ value, onChange, t, error }: Props) {
+export default function BrainDumpInput({ value, onChange, t, language, error }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const MAX_CHARS = 10000;
 
@@ -25,19 +27,7 @@ export default function BrainDumpInput({ value, onChange, t, error }: Props) {
         <label htmlFor="brain-dump" className="text-[16px] font-medium" style={{ color: "var(--app-a-text)" }}>
           {t.brainDumpLabel}
         </label>
-        <button
-          type="button"
-          disabled
-          aria-label={t.voiceLabel}
-          className="flex min-h-[44px] cursor-not-allowed items-center gap-2 rounded-xl px-3 py-1.5"
-          style={{
-            backgroundColor: "var(--app-a-disabled-bg)",
-            color: "var(--app-a-disabled-text)",
-          }}
-        >
-          <Mic className="w-5 h-5 shrink-0" />
-          <span className="text-[14px] font-medium">{t.voicePlaceholder}</span>
-        </button>
+        <VoiceInputButton language={language} value={value} onChange={onChange} maxLength={MAX_CHARS} describedBy="brain-dump-voice-status" />
       </div>
 
       <div className="relative">

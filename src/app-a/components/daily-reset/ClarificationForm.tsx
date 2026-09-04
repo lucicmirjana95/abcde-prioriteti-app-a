@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ClarificationQuestion, SupportedLanguage } from "../../domain/daily-reset/contracts";
+import VoiceInputButton from "../voice/VoiceInputButton";
 
 interface Props {
   questions: ClarificationQuestion[];
@@ -122,6 +123,17 @@ export default function ClarificationForm({
               placeholder={t.placeholder}
               className="app-a-field mt-1 min-h-[104px] w-full resize-y p-3.5 text-[16px] transition-shadow"
             />
+            <div className="flex justify-end">
+              <VoiceInputButton
+                language={language}
+                value={answers[q.id] || ""}
+                onChange={(value) => {
+                  onAnswerChange(q.id, value);
+                  setValidationError(null);
+                }}
+                maxLength={4000}
+              />
+            </div>
           </div>
         ))}
       </div>

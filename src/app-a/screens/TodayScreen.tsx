@@ -424,6 +424,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
         </div>
         <DailyResetForm
           t={t}
+          language={language}
           initialData={state.inputData}
           onSubmit={(validatedData) => {
             submitInitial(validatedData);

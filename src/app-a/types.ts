@@ -83,8 +83,8 @@ export const APP_A_TRANSLATIONS = {
     brainDumpLabel: "Brain dump",
     brainDumpPlaceholder: "Write whatever is on your mind. Tasks, ideas, worries...",
     brainDumpEmptyError: "Please write what is on your mind to create a plan.",
-    voicePlaceholder: "Coming next",
-    voiceLabel: "Use voice (Coming next)",
+    voicePlaceholder: "Use voice",
+    voiceLabel: "Use voice",
     charCount: "characters",
     // Actions
     submitPlan: "Create my plan",
@@ -203,8 +203,8 @@ export const APP_A_TRANSLATIONS = {
     brainDumpLabel: "Misli (Brain dump)",
     brainDumpPlaceholder: "Napišite sve što vam je na umu. Zadaci, ideje, brige...",
     brainDumpEmptyError: "Napišite šta vam je na umu da bismo kreirali plan.",
-    voicePlaceholder: "Uskoro",
-    voiceLabel: "Koristi glas (Uskoro)",
+    voicePlaceholder: "Koristi glas",
+    voiceLabel: "Koristi glas",
     charCount: "karaktera",
     // Actions
     submitPlan: "Kreiraj moj plan",
@@ -323,8 +323,8 @@ export const APP_A_TRANSLATIONS = {
     brainDumpLabel: "Beyin boşaltma",
     brainDumpPlaceholder: "Aklınızdan geçenleri yazın. Görevler, fikirler, endişeler...",
     brainDumpEmptyError: "Bir plan oluşturmak için lütfen aklınızdakileri yazın.",
-    voicePlaceholder: "Yakında",
-    voiceLabel: "Ses kullan (Yakında)",
+    voicePlaceholder: "Sesle yaz",
+    voiceLabel: "Sesle yaz",
     charCount: "karakter",
     // Actions
     submitPlan: "Planımı oluştur",
