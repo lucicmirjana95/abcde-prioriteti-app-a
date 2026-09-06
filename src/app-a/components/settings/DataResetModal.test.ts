@@ -6,7 +6,7 @@ import {
   type FirestoreAdapter,
   type DataResetScopeSelection,
 } from "../../persistence/dataResetRepository";
-import { DATA_RESET_LOCALIZATION } from "../../settings/dataResetLocalization";
+import { DATA_RESET_LOCALIZATION, matchesDataResetPhrase } from "../../settings/dataResetLocalization";
 import { resetAppAPreferencesToDefaults, getDefaultAppAPreferences, APP_A_PREFERENCES_KEY } from "../../settings/preferences";
 
 // Setup localStorage for mock testing
@@ -81,7 +81,7 @@ async function runDataResetModalAndUIStateTests() {
   assert.strictEqual(activeScopes.sharedRoutinesData, false);
   console.log("✅ 3. Shared scopes are unselected by default");
 
-  // 4. Exact Localized Phrase Verification (case-sensitive, trimmed)
+  // 4. Localized phrase verification (case-insensitive, trimmed)
   for (const lang of ["en", "sr", "tr"] as const) {
     const copy = DATA_RESET_LOCALIZATION[lang];
     const phrase = copy.requiredPhrase;
@@ -90,14 +90,14 @@ async function runDataResetModalAndUIStateTests() {
     assert.strictEqual(phrase.trim() === copy.requiredPhrase, true);
     assert.strictEqual(`  ${phrase}  `.trim() === copy.requiredPhrase, true);
 
-    // Rejecting lowercase, capitalized, and mixed case
-    assert.strictEqual(phrase.toLowerCase().trim() === copy.requiredPhrase, false);
+    // Lowercase and mixed case are intentionally accepted.
+    assert.strictEqual(matchesDataResetPhrase(phrase.toLowerCase(), copy.requiredPhrase), true);
     assert.strictEqual(
-      (phrase.charAt(0).toUpperCase() + phrase.slice(1).toLowerCase()).trim() === copy.requiredPhrase,
-      false
+      matchesDataResetPhrase(phrase.charAt(0).toUpperCase() + phrase.slice(1).toLowerCase(), copy.requiredPhrase),
+      true
     );
   }
-  console.log("✅ 4. Exact localized phrase validation verified in EN, SR, TR");
+  console.log("✅ 4. Case-insensitive localized phrase validation verified in EN, SR, TR");
 
   // 5. Enter in Step 1 advances ONLY to final confirmation and NEVER deletes
   let inputPhrase = "RESET";

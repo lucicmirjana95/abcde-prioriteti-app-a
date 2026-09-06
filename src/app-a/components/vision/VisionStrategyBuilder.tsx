@@ -138,6 +138,7 @@ export default function VisionStrategyBuilder({
   const [error, setError] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
   const [expanded, setExpanded] = useState(true);
+  const [expandedMilestone, setExpandedMilestone] = useState(0);
   const [timeframe, setTimeframe] = useState(initialDocument?.planningContext?.timeframe || "");
   const [feasibility, setFeasibility] = useState<VisionFeasibilityResult | null>(null);
   const [feasibilityDetails, setFeasibilityDetails] = useState(initialDocument?.planningContext?.clarificationDetails || "");
@@ -483,6 +484,12 @@ export default function VisionStrategyBuilder({
             </p>
           </section>
 
+          <div className="rounded-[16px] border-2 border-[#0071E3]/25 bg-[#0071E3]/8 p-4 text-[14px] text-black dark:border-[#0A84FF]/35 dark:bg-[#0A84FF]/15 dark:text-white">
+            <p className="mb-1 text-[12px] font-semibold uppercase tracking-[0.07em] text-[#0071E3] dark:text-[#0A84FF]">{t.next}</p>
+            <p className="text-[15px] font-semibold leading-relaxed">{strategy.nextStep}</p>
+            {saved ? <p className="mt-2 text-[13px] leading-relaxed text-[#3C3C43] dark:text-[#D1D1D6]">{t.nextFlow}</p> : null}
+          </div>
+
           <section>
             <h3 className="flex items-center justify-between text-[13px] font-semibold uppercase tracking-[0.07em] text-[#0071E3] dark:text-[#0A84FF]">
               <span>{t.plan}</span>
@@ -494,20 +501,20 @@ export default function VisionStrategyBuilder({
               ) : null}
             </h3>
 
-            <ol className="mt-2 space-y-3">
+            <ol className="mt-3 space-y-3">
               {strategy.milestones.map((milestone, index) => (
-                <li key={`${milestone.title}-${index}`}>
-                  <p className="text-[14px] font-semibold text-black dark:text-white">
-                    {index + 1}. {milestone.title}
-                  </p>
-                  <p className="text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]">{milestone.result}</p>
+                <li key={`${milestone.title}-${index}`} className="overflow-hidden rounded-[14px] border border-black/10 bg-white/70 dark:border-white/15 dark:bg-white/5">
+                  <button type="button" onClick={() => setExpandedMilestone((current) => current === index ? -1 : index)} className="app-a-focus-ring flex min-h-14 w-full items-start justify-between gap-3 p-3 text-left" aria-expanded={expandedMilestone === index}>
+                    <span><span className="block text-[14px] font-semibold text-black dark:text-white">{index + 1}. {milestone.title}</span><span className="mt-0.5 block text-[13px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">{milestone.result}</span></span>
+                    {expandedMilestone === index ? <ChevronUp className="mt-0.5 h-5 w-5 shrink-0 text-[#0071E3]" /> : <ChevronDown className="mt-0.5 h-5 w-5 shrink-0 text-[#8E8E93]" />}
+                  </button>
 
-                  <div className="mt-2 space-y-1">
+                  {expandedMilestone === index ? <div className="space-y-1 border-t border-black/10 px-3 py-2 dark:border-white/10">
                     {milestone.steps.map((step, stepIndex) => {
                       const key = `m${index}-s${stepIndex}`;
                       return <div key={key}>{renderStepItem(step, key, 0)}</div>;
                     })}
-                  </div>
+                  </div> : null}
                 </li>
               ))}
             </ol>
@@ -539,11 +546,6 @@ export default function VisionStrategyBuilder({
               </>
             ) : null}
           </section>
-
-          <div className="rounded-[14px] bg-[#0071E3]/8 p-3 text-[14px] text-black dark:bg-[#0A84FF]/15 dark:text-white">
-            <strong>{t.next}:</strong> {strategy.nextStep}
-            {saved ? <p className="mt-2 text-[13px] leading-relaxed text-[#3C3C43] dark:text-[#D1D1D6]">{t.nextFlow}</p> : null}
-          </div>
 
           {error ? (
             <div className="space-y-1 text-[13px] text-[#FF3B30]" role="alert">

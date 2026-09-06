@@ -208,7 +208,7 @@ export function createDailyResetRoute(
       }
       
       const parseStartTime = clock();
-      const parsed = parseModelResponse(
+      let parsed = parseModelResponse(
         rawResponse,
         idFactory,
         isClarification,
@@ -216,6 +216,38 @@ export function createDailyResetRoute(
         onRejection
       );
       const parseEndTime = clock();
+
+      // Structured output can occasionally satisfy the provider schema while
+      // still violating a cross-field invariant (for example, a bad source
+      // index). Repair once inside the original bounded server budget so the
+      // user does not have to re-enter or resubmit their brain dump.
+      if (parsed.phase === "error") {
+        const remainingBudgetMs = serverBudgetTimeoutMs - (clock() - routeStartTime);
+        if (remainingBudgetMs > 3000) {
+          let repairTimer: any = null;
+          try {
+            const repairPrompt = `${prompt}\n\nREPAIR REQUIRED\nThe previous generated object failed strict cross-field validation. Generate the answer again from the same user input. Follow the response schema exactly, use valid zero-based sourceItemIndex values, keep every subset consistent with its classifiedItems timeHorizon, use at most three firstFocus items, and keep required planned minutes within explicit availableMinutes. Return JSON only.`;
+            const repairTimeout = new Promise((_, reject) => {
+              repairTimer = setTimeout(() => reject(new Error("Timeout")), remainingBudgetMs);
+            });
+            const repairedRaw = await Promise.race([
+              generateFn(repairPrompt, modelSchema, {
+                phase: phaseType,
+                brainDumpCharCount,
+                clarificationAnswersCharCount,
+                routeStartTime,
+                repairAttempt: true,
+              }),
+              repairTimeout,
+            ]);
+            parsed = parseModelResponse(repairedRaw, idFactory, isClarification, knownQuestionIds, onRejection);
+          } catch {
+            // Preserve the original, localized invalid-response result below.
+          } finally {
+            if (repairTimer) clearTimeout(repairTimer);
+          }
+        }
+      }
       
       if (parsed.phase === "error") {
         res.status(502).json({

@@ -94,8 +94,8 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
       "Warning: Routines and completion history are shared across Apps A, B, and C.",
 
     requiredPhrase: "RESET",
-    confirmationPrompt: (phrase: string) => `To proceed, type "${phrase}" below:`,
-    confirmationPlaceholder: "Type RESET to confirm",
+    confirmationPrompt: (phrase: string) => `To proceed, type "${phrase}" below (uppercase or lowercase):`,
+    confirmationPlaceholder: "Type RESET or reset",
     finalConfirmationTitle: "Confirm permanent deletion",
     finalSummaryIntro: "The following selected data will be permanently removed:",
     accountSafeNotice:
@@ -157,8 +157,8 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
       "Upozorenje: Rutine i istorija završetaka se dele između aplikacija A, B i C.",
 
     requiredPhrase: "RESETUJ",
-    confirmationPrompt: (phrase: string) => `Za nastavak, unesite "${phrase}" ispod:`,
-    confirmationPlaceholder: "Unesite RESETUJ za potvrdu",
+    confirmationPrompt: (phrase: string) => `Za nastavak, unesite "${phrase}" ispod (velika ili mala slova):`,
+    confirmationPlaceholder: "Unesite RESETUJ ili resetuj",
     finalConfirmationTitle: "Potvrdite trajno brisanje",
     finalSummaryIntro: "Sledeći izabrani podaci biće trajno uklonjeni:",
     accountSafeNotice:
@@ -220,8 +220,8 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
       "Uyarı: Rutinler ve tamamlama geçmişi App A, B ve C arasında paylaşılır.",
 
     requiredPhrase: "SIFIRLA",
-    confirmationPrompt: (phrase: string) => `Devam etmek için aşağıya "${phrase}" yazın:`,
-    confirmationPlaceholder: "Onaylamak için SIFIRLA yazın",
+    confirmationPrompt: (phrase: string) => `Devam etmek için aşağıya "${phrase}" yazın (büyük veya küçük harf):`,
+    confirmationPlaceholder: "SIFIRLA veya sıfırla yazın",
     finalConfirmationTitle: "Kalıcı silmeyi onaylayın",
     finalSummaryIntro: "Aşağıda seçilen veriler kalıcı olarak kaldırılacaktır:",
     accountSafeNotice:
@@ -247,3 +247,13 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
     selectAtLeastOneScopeError: "Lütfen sıfırlamak için en az bir veri kapsamı seçin.",
   },
 };
+
+export function matchesDataResetPhrase(input: string, requiredPhrase: string): boolean {
+  const normalize = (value: string) => value
+    .trim()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[ıİ]/g, "I")
+    .toUpperCase();
+  return normalize(input) === normalize(requiredPhrase);
+}

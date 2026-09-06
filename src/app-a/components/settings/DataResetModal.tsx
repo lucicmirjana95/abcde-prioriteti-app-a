@@ -11,6 +11,7 @@ import {
 import type { AppALanguage, AppAPreferences } from "../../types";
 import {
   DATA_RESET_LOCALIZATION,
+  matchesDataResetPhrase,
   type DataResetCopy,
 } from "../../settings/dataResetLocalization";
 import {
@@ -151,7 +152,7 @@ export default function DataResetModal({
   };
 
   const isConfirmationPhraseMatched = useMemo(() => {
-    return confirmInput.trim() === t.requiredPhrase;
+    return matchesDataResetPhrase(confirmInput, t.requiredPhrase);
   }, [confirmInput, t.requiredPhrase]);
 
   const handleProceedToFinalConfirm = (e: React.FormEvent) => {
@@ -461,7 +462,7 @@ export default function DataResetModal({
                   placeholder={t.confirmationPlaceholder}
                   autoComplete="off"
                   spellCheck="false"
-                  className="app-a-field app-a-focus-ring w-full p-3 font-mono text-[14px] uppercase tracking-wider"
+                  className="app-a-field app-a-focus-ring w-full p-3 font-mono text-[14px] tracking-wider"
                 />
                 {inputError && (
                   <p className="mt-1 text-[12px] text-[#FF3B30] dark:text-[#FF453A]" role="alert">
