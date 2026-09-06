@@ -11,14 +11,16 @@ interface Props {
   onSubmit: (data: DailyResetData) => void;
   aiEnabled?: boolean;
   aiDisabledMessage?: string;
+  onboardingCompleted?: boolean;
 }
 
-export default function DailyResetForm({ t, language, initialData, onSubmit, aiEnabled = true, aiDisabledMessage }: Props) {
+export default function DailyResetForm({ t, language, initialData, onSubmit, aiEnabled = true, aiDisabledMessage, onboardingCompleted = false }: Props) {
   const [energy, setEnergy] = useState<EnergyLevel | undefined>(initialData.energy);
   const [pleasantness, setPleasantness] = useState<PleasantnessLevel | undefined>(initialData.pleasantness);
   const [time, setTime] = useState<AvailableTimeValue | undefined>(initialData.availableTime);
   const [stateNote, setStateNote] = useState(initialData.stateNote);
   const [brainDump, setBrainDump] = useState(initialData.brainDump);
+  const [showHelp, setShowHelp] = useState(!onboardingCompleted);
 
   const [timeError, setTimeError] = useState<string | undefined>();
   const [brainDumpError, setBrainDumpError] = useState<string | undefined>();
@@ -75,12 +77,20 @@ export default function DailyResetForm({ t, language, initialData, onSubmit, aiE
 
   return (
     <form onSubmit={handleSubmit} className="app-a-surface overflow-hidden">
+      <div className="border-b p-5 sm:p-6" style={{ borderColor: "var(--app-a-border)", backgroundColor: "var(--app-a-accent-soft)" }}>
+        {showHelp ? <>
+          <h2 className="text-[21px] font-semibold tracking-[-0.02em]">{t.onboardingTitle}</h2>
+          <p className="mt-1 text-[14px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>{t.onboardingIntro}</p>
+          {onboardingCompleted ? <button type="button" onClick={() => setShowHelp(false)} className="app-a-focus-ring mt-2 min-h-[44px] rounded-lg text-[14px] font-medium" style={{ color: "var(--app-a-accent)" }}>{t.onboardingHideHelp}</button> : null}
+        </> : <button type="button" onClick={() => setShowHelp(true)} className="app-a-focus-ring min-h-[44px] rounded-lg text-[14px] font-medium" style={{ color: "var(--app-a-accent)" }}>{t.onboardingHowItWorks}</button>}
+      </div>
       
       {/* SECTION 1: State */}
       <section className="flex flex-col gap-6 p-5 sm:p-6">
         <h2 className="text-[20px] font-semibold tracking-[-0.02em]" style={{ color: "var(--app-a-text)" }}>
-          {t.sectionState}
+          {showHelp ? "1. " : ""}{t.sectionState}
         </h2>
+        {showHelp ? <p className="-mt-4 text-[14px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>{t.onboardingStateHelp}</p> : null}
         <FiveLevelScale 
           id="energy-scale"
           label={t.energyLabel}
@@ -118,8 +128,9 @@ export default function DailyResetForm({ t, language, initialData, onSubmit, aiE
         style={{ borderColor: "var(--app-a-border)" }}
       >
         <h2 className="text-[20px] font-semibold tracking-[-0.02em]" style={{ color: "var(--app-a-text)" }}>
-          {t.sectionTime}
+          {showHelp ? "2. " : ""}{t.sectionTime}
         </h2>
+        {showHelp ? <div className="-mt-3 rounded-xl border p-3 text-[14px] leading-relaxed" style={{ borderColor: "var(--app-a-border)", backgroundColor: "var(--app-a-surface)" }}><p>{t.onboardingTimeHelp}</p><p className="mt-1" style={{ color: "var(--app-a-text-secondary)" }}>{t.onboardingTimeOptional}</p></div> : null}
         <AvailableTimeSelector 
           value={time}
           onChange={(val) => {
@@ -137,8 +148,9 @@ export default function DailyResetForm({ t, language, initialData, onSubmit, aiE
         style={{ borderColor: "var(--app-a-border)" }}
       >
         <h2 className="text-[20px] font-semibold tracking-[-0.02em]" style={{ color: "var(--app-a-text)" }}>
-          {t.sectionMind}
+          {showHelp ? "3. " : ""}{t.sectionMind}
         </h2>
+        {showHelp ? <p className="-mt-3 text-[14px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>{t.onboardingMindHelp}</p> : null}
         <BrainDumpInput
           value={brainDump}
           onChange={(val) => {
@@ -163,7 +175,7 @@ export default function DailyResetForm({ t, language, initialData, onSubmit, aiE
           disabled={!aiEnabled}
           className="app-a-primary-button app-a-focus-ring w-full px-8 transition-colors sm:w-auto"
         >
-          {t.submitPlan}
+          {onboardingCompleted ? t.submitPlan : t.submitFirstPlan}
         </button>
         {!aiEnabled && aiDisabledMessage ? <p className="mt-3 text-[13px] text-[#6E6E73] sm:mr-auto sm:mt-0 dark:text-[#AEAEB2]">{aiDisabledMessage}</p> : null}
       </div>

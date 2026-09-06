@@ -175,6 +175,10 @@ INDEX AND REFERENCING RULES:
 
 Capacity and Duration Rules:
 - "first_focus" plus "later_today" must not exceed availableMinutes when the user supplied available time.
+- If the dedicated time selector is empty, inspect the user's own text for an explicit availability statement (for example, "I have two hours" or "until 14:00"). Treat it as authoritative only when unambiguous; otherwise leave availableMinutes unknown.
+- Never invent a hidden default capacity and never interpret an empty time selector as "most of the day".
+- When capacity remains unknown, still create a useful, conservative plan: choose at most 1–3 high-value or necessary actions, keep additional work outside the committed plan, and state plainly in the rationale that adding available time would improve capacity checking.
+- Ask one short clarification about available time only when the answer would materially change which actions belong today. Do not delay a useful plan merely because total capacity is unknown.
 - "if_capacity_remains" is explicitly optional.
 - Do not overload the day to make every task fit.
 - Move nonessential items to "this_week", "later", "long_term_idea", or "no_action".
@@ -275,5 +279,4 @@ CRITICAL RULE: If the intended clarification questions list is empty or zero que
 
   return prompt;
 }
-
 

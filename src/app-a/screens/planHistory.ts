@@ -13,6 +13,7 @@ export interface ProgressDay {
   localDate: string;
   completed: number;
   total: number;
+  completedItems: Array<{ id: string; title: string; estimatedMinutes?: number }>;
 }
 
 export interface ProgressSummary {
@@ -74,12 +75,13 @@ export function getProgressSummary(
   plans: AppADailyPlanDocument[],
 ): ProgressSummary {
   const days = plans.map((document) => {
-    const completed = normalizeCompletedItemIds(
+    const completedIds = normalizeCompletedItemIds(
       document.plan,
       document.execution?.completedItemIds ?? [],
-    ).length;
-    const total = document.plan.firstFocus.length + document.plan.laterToday.length + document.plan.ifCapacityRemains.length;
-    return { localDate: document.localDate, completed, total };
+    );
+    const allItems = [...document.plan.firstFocus, ...document.plan.laterToday, ...document.plan.ifCapacityRemains];
+    const completedItems = allItems.filter((item) => completedIds.includes(item.id)).map((item) => ({ id: item.id, title: item.title, ...(item.estimatedMinutes ? { estimatedMinutes: item.estimatedMinutes } : {}) }));
+    return { localDate: document.localDate, completed: completedIds.length, total: allItems.length, completedItems };
   });
 
   return {

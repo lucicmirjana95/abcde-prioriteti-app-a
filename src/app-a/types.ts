@@ -48,6 +48,14 @@ export const APP_A_TRANSLATIONS = {
     // Today Daily Reset
     dailyResetTitle: "Daily Reset",
     dailyResetIntro: "Empty your mind and let AI help you create a realistic plan for the day.",
+    onboardingTitle: "Let’s make a realistic plan for today",
+    onboardingIntro: "Three short steps are enough. You can change everything before saving.",
+    onboardingStateHelp: "This helps avoid demanding suggestions when your energy is limited.",
+    onboardingTimeHelp: "Time keeps the plan realistic. We use it as a limit—not a target to fill.",
+    onboardingTimeOptional: "You can skip this. The plan may be less precise, and we may ask before adding more work.",
+    onboardingMindHelp: "Write or say tasks, ideas, deadlines, and worries. You do not need to organize them.",
+    onboardingHowItWorks: "How does this work?",
+    onboardingHideHelp: "Hide help",
     sectionState: "How are you right now?",
     sectionTime: "How much time do you have?",
     sectionMind: "What’s on your mind?",
@@ -88,6 +96,7 @@ export const APP_A_TRANSLATIONS = {
     charCount: "characters",
     // Actions
     submitPlan: "Create my plan",
+    submitFirstPlan: "Create my first plan",
     // Success
     successTitle: "Input Prepared",
     successMsg: "Your daily reset input has been prepared for AI processing. (Temporary development state)",
@@ -168,6 +177,14 @@ export const APP_A_TRANSLATIONS = {
     // Today Daily Reset
     dailyResetTitle: "Dnevni Reset",
     dailyResetIntro: "Oslobodite um i dozvolite veštačkoj inteligenciji da vam pomogne u kreiranju realnog plana za danas.",
+    onboardingTitle: "Hajde da napravimo realan plan za danas",
+    onboardingIntro: "Dovoljna su tri kratka koraka. Sve možete promeniti pre čuvanja.",
+    onboardingStateHelp: "Ovo pomaže da ne dobijete zahtevne predloge kada imate manje energije.",
+    onboardingTimeHelp: "Vreme sprečava pretrpan plan. Koristimo ga kao granicu, a ne kao prostor koji treba popuniti.",
+    onboardingTimeOptional: "Možete preskočiti. Plan može biti manje precizan, pa ćemo možda pitati pre dodavanja novih obaveza.",
+    onboardingMindHelp: "Napišite ili izgovorite zadatke, ideje, rokove i brige. Ne morate ih organizovati.",
+    onboardingHowItWorks: "Kako ovo radi?",
+    onboardingHideHelp: "Sakrij objašnjenja",
     sectionState: "Kako ste trenutno?",
     sectionTime: "Koliko vremena imate?",
     sectionMind: "Šta vam je na umu?",
@@ -208,6 +225,7 @@ export const APP_A_TRANSLATIONS = {
     charCount: "karaktera",
     // Actions
     submitPlan: "Kreiraj moj plan",
+    submitFirstPlan: "Kreiraj moj prvi plan",
     // Success
     successTitle: "Unos je spreman",
     successMsg: "Vaš dnevni unos je pripremljen za AI obradu. (Privremeno razvojno stanje)",
@@ -288,6 +306,14 @@ export const APP_A_TRANSLATIONS = {
     // Today Daily Reset
     dailyResetTitle: "Günlük Sıfırlama",
     dailyResetIntro: "Zihninizi boşaltın ve yapay zekanın gün için gerçekçi bir plan oluşturmanıza yardımcı olmasına izin verin.",
+    onboardingTitle: "Bugün için gerçekçi bir plan yapalım",
+    onboardingIntro: "Üç kısa adım yeterli. Kaydetmeden önce her şeyi değiştirebilirsiniz.",
+    onboardingStateHelp: "Bu, enerjiniz sınırlıyken zorlayıcı öneriler verilmesini önler.",
+    onboardingTimeHelp: "Süre planı gerçekçi tutar. Onu doldurulacak bir hedef değil, sınır olarak kullanırız.",
+    onboardingTimeOptional: "Bu adımı atlayabilirsiniz. Plan daha az kesin olabilir ve yeni işler eklemeden önce size sorabiliriz.",
+    onboardingMindHelp: "Görevleri, fikirleri, son tarihleri ve endişeleri yazın veya söyleyin. Düzenlemeniz gerekmez.",
+    onboardingHowItWorks: "Bu nasıl çalışır?",
+    onboardingHideHelp: "Yardımı gizle",
     sectionState: "Şu an nasılsınız?",
     sectionTime: "Ne kadar zamanınız var?",
     sectionMind: "Aklınızda ne var?",
@@ -328,6 +354,7 @@ export const APP_A_TRANSLATIONS = {
     charCount: "karakter",
     // Actions
     submitPlan: "Planımı oluştur",
+    submitFirstPlan: "İlk planımı oluştur",
     // Success
     successTitle: "Girdi Hazırlandı",
     successMsg: "Günlük sıfırlama girdiniz AI işleme için hazırlandı. (Geçici geliştirme durumu)",

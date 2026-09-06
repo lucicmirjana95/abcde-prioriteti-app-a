@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  serverTimestamp,
   setDoc,
   writeBatch,
 } from "firebase/firestore";
@@ -114,15 +115,51 @@ export async function deleteInboxItem(userId: string, itemId: string): Promise<v
   await deleteDoc(inboxRef(userId, itemId));
 }
 
-export async function savePlanAndCompleteInboxItemAtomic(
+export async function savePlanAndScheduleInboxItemAtomic(
   userId: string,
   document: AppADailyPlanDocument,
   inboxItem: AppAInboxItem,
 ): Promise<AppAInboxItem> {
-  const completed: AppAInboxItem = { ...inboxItem, status: "completed", updatedAt: new Date().toISOString() };
+  const scheduled: AppAInboxItem = {
+    ...inboxItem,
+    status: "scheduled",
+    scheduledLocalDate: document.localDate,
+    waitingOn: undefined,
+    updatedAt: new Date().toISOString(),
+  };
+  const safe = JSON.parse(JSON.stringify(scheduled)) as AppAInboxItem;
   const batch = writeBatch(db);
   batch.set(doc(db, "appAUsers", requireUserId(userId), "dailyResets", document.localDate), document, { merge: true });
-  batch.set(inboxRef(userId, inboxItem.id), completed, { merge: false });
+  batch.set(inboxRef(userId, inboxItem.id), safe, { merge: false });
   await batch.commit();
-  return completed;
+  return safe;
+}
+
+export async function saveDailyPlanCompletionAndInboxStatusAtomic(
+  userId: string,
+  localDate: string,
+  completedItemIds: string[],
+  inboxItemId: string,
+  completed: boolean,
+): Promise<void> {
+  const itemReference = inboxRef(userId, inboxItemId);
+  const snapshot = await getDoc(itemReference);
+  if (!snapshot.exists() || !isAppAInboxItem(snapshot.data())) throw new Error("invalid_inbox_item");
+
+  const current = snapshot.data() as AppAInboxItem;
+  const next: AppAInboxItem = {
+    ...current,
+    status: completed ? "completed" : "scheduled",
+    scheduledLocalDate: completed ? undefined : localDate,
+    waitingOn: undefined,
+    updatedAt: new Date().toISOString(),
+  };
+  const safe = JSON.parse(JSON.stringify(next)) as AppAInboxItem;
+  const batch = writeBatch(db);
+  batch.set(doc(db, "appAUsers", requireUserId(userId), "dailyResets", localDate), {
+    execution: { completedItemIds: Array.from(new Set(completedItemIds)) },
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+  batch.set(itemReference, safe, { merge: false });
+  await batch.commit();
 }

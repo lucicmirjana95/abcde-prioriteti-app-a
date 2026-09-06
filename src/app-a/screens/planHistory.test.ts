@@ -24,7 +24,7 @@ assert.deepEqual(getInboxItems([document]).map((entry) => entry.item.id), ["late
 assert.deepEqual(getVisionItems([document]).map((entry) => entry.item.id), ["idea"]);
 assert.deepEqual(getProgressSummary([document]), {
   completedTasks: 1, activeDays: 1, plannedDays: 1,
-  days: [{ localDate: "2026-08-30", completed: 1, total: 3 }],
+  days: [{ localDate: "2026-08-30", completed: 1, total: 3, completedItems: [{ id: "p1", title: undefined }] }],
 });
 assert.deepEqual(getProgressSummary([]), { completedTasks: 0, activeDays: 0, plannedDays: 0, days: [] });
 assert.match(formatHistoryDate("2026-08-30", "sr"), /30/);

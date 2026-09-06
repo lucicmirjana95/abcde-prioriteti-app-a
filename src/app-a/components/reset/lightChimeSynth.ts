@@ -8,8 +8,8 @@
 class LightChimeSynthesizer {
   private ctx: AudioContext | null = null;
 
-  public init(): void {
-    if (typeof window === "undefined") return;
+  public async init(): Promise<boolean> {
+    if (typeof window === "undefined") return false;
     try {
       if (!this.ctx) {
         const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -18,17 +18,19 @@ class LightChimeSynthesizer {
         }
       }
       if (this.ctx && this.ctx.state === "suspended") {
-        void this.ctx.resume();
+        await this.ctx.resume();
       }
+      return this.ctx?.state === "running";
     } catch (e) {
       console.warn("Chime synth init skipped:", e);
+      return false;
     }
   }
 
-  public playPhaseChime(type: "inhale" | "hold" | "exhale" | "complete" | "stage"): void {
+  public async playPhaseChime(type: "inhale" | "hold" | "exhale" | "complete" | "stage"): Promise<boolean> {
     try {
-      this.init();
-      if (!this.ctx || this.ctx.state === "suspended") return;
+      const ready = await this.init();
+      if (!ready || !this.ctx) return false;
 
       const now = this.ctx.currentTime;
       let baseFreq = 440; // A4
@@ -83,8 +85,10 @@ class LightChimeSynthesizer {
         osc2.start(now + 0.1);
         osc2.stop(now + 1.25);
       }
+      return true;
     } catch {
       // Audio playback fails gracefully without disturbing user
+      return false;
     }
   }
 

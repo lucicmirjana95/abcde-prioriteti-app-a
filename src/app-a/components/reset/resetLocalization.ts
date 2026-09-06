@@ -4,6 +4,8 @@ export interface ResetExperienceCopy {
   name: string;
   shortDesc: string;
   detailDesc: string;
+  bestFor: string;
+  whyItMayHelp: string;
   phaseInhale: string;
   phaseHoldFull: string;
   phaseExhale: string;
@@ -41,6 +43,10 @@ export interface ResetCommonCopy {
   presetBox4: string;
   presetBox8: string;
   presetBox12: string;
+  choosePrompt: string;
+  infoLabel: string;
+  whyTitle: string;
+  beginnerBadge: string;
 }
 
 export const RESET_LOCALIZATION: Record<
@@ -80,11 +86,17 @@ export const RESET_LOCALIZATION: Record<
       presetBox4: "4 cycles — 1:04",
       presetBox8: "8 cycles — 2:08",
       presetBox12: "12 cycles — 3:12",
+      choosePrompt: "What do you need right now?",
+      infoLabel: "About this session",
+      whyTitle: "Why this may help",
+      beginnerBadge: "Easiest to start",
     },
     balancedBox: {
-      name: "Balanced Box",
-      shortDesc: "Equal 4-4-4-4 rhythm for a steady, grounded pause.",
+      name: "Slow down and steady",
+      shortDesc: "Equal 4-4-4-4 breathing when gentle breath holds feel comfortable.",
       detailDesc: "Inhale, hold gently, exhale, and hold empty for four equal counts.",
+      bestFor: "Best for: a structured pause when you feel tense or scattered.",
+      whyItMayHelp: "Slow, evenly paced breathing can provide a simple attentional anchor. The equal phases make the rhythm predictable; comfort matters more than completing a count.",
       phaseInhale: "Inhale gently",
       phaseHoldFull: "Hold gently",
       phaseExhale: "Exhale slowly",
@@ -97,9 +109,11 @@ export const RESET_LOCALIZATION: Record<
       stageGradualReturn: "Gradual return",
     },
     longerExhale: {
-      name: "Gentle Longer Exhale",
-      shortDesc: "4-second inhale with an extended 6-second exhale.",
+      name: "Gentle calming breath",
+      shortDesc: "A 4-second inhale and 6-second exhale, with no breath hold.",
       detailDesc: "A continuous flow with no breath hold, giving extra time to the exhale.",
+      bestFor: "Best for: beginners, tired moments, or anyone who dislikes breath holds.",
+      whyItMayHelp: "A slower exhale can make breathing feel calmer and more regular. This version avoids holds, which many people find easier and more comfortable.",
       phaseInhale: "Inhale smoothly",
       phaseHoldFull: "Hold",
       phaseExhale: "Exhale slowly",
@@ -112,9 +126,11 @@ export const RESET_LOCALIZATION: Record<
       stageGradualReturn: "Gradual return",
     },
     doubleInhale: {
-      name: "Short Double-Inhale Reset",
+      name: "Quick refresh",
       shortDesc: "Two comfortable inhales followed by one long, easy exhale.",
       detailDesc: "A gentle nasal inhale, a small top-up inhale, then a slow relaxed exhale. 1 to 3 cycles.",
+      bestFor: "Best for: a very short pause between tasks.",
+      whyItMayHelp: "Two comfortable inhales followed by a longer exhale can briefly interrupt rushed, shallow breathing. Only a few gentle cycles are needed; never force the second inhale.",
       phaseInhale: "Inhale",
       phaseHoldFull: "Hold",
       phaseExhale: "Slow, comfortable exhale",
@@ -127,9 +143,11 @@ export const RESET_LOCALIZATION: Record<
       stageGradualReturn: "Gradual return",
     },
     guidedRest: {
-      name: "Guided Deep Rest",
+      name: "10-minute guided rest",
       shortDesc: "10-minute text-guided pause for still attention and quiet rest.",
       detailDesc: "A structured pause through settling, gentle body attention, quiet rest, and a gradual return.",
+      bestFor: "Best for: a longer break when you can sit or lie down safely.",
+      whyItMayHelp: "Moving attention through the body and then resting quietly can reduce mental effort and support a deliberate transition back to activity. The optional stereo sound is ambient support, not a treatment.",
       phaseInhale: "Breathe naturally",
       phaseHoldFull: "Rest",
       phaseExhale: "Release",
@@ -169,11 +187,17 @@ export const RESET_LOCALIZATION: Record<
       presetBox4: "4 ciklusa — 1:04",
       presetBox8: "8 ciklusa — 2:08",
       presetBox12: "12 ciklusa — 3:12",
+      choosePrompt: "Šta vam sada treba?",
+      infoLabel: "O ovoj sesiji",
+      whyTitle: "Zašto ovo može pomoći",
+      beginnerBadge: "Najlakše za početak",
     },
     balancedBox: {
-      name: "Uravnotežena kutija",
-      shortDesc: "Jednak 4-4-4-4 ritam za stabilnu i prizemljenu pauzu.",
+      name: "Usporite i umirite ritam",
+      shortDesc: "Jednak ritam 4-4-4-4 kada vam prija blago zadržavanje daha.",
       detailDesc: "Udahnite, zadržite nežno, izdahnite i zadržite prazno po četiri jednaka brojanja.",
+      bestFor: "Najbolje za: strukturisanu pauzu kada ste napeti ili rasuti.",
+      whyItMayHelp: "Sporo i ravnomerno disanje može pružiti jednostavan oslonac za pažnju. Jednake faze čine ritam predvidljivim; udobnost je važnija od završavanja brojanja.",
       phaseInhale: "Udahnite nežno",
       phaseHoldFull: "Zadržite nežno",
       phaseExhale: "Izdahnite polako",
@@ -186,9 +210,11 @@ export const RESET_LOCALIZATION: Record<
       stageGradualReturn: "Postepeni povratak",
     },
     longerExhale: {
-      name: "Blagi duži izdah",
+      name: "Blago umirujuće disanje",
       shortDesc: "Udah od 4 sekunde uz produženi izdah od 6 sekundi.",
       detailDesc: "Kontinuirani tok bez zadržavanja daha, pružajući više vremena izdisaju.",
+      bestFor: "Najbolje za: početnike, umor ili kada vam zadržavanje daha ne prija.",
+      whyItMayHelp: "Sporiji izdah može učiniti disanje mirnijim i pravilnijim. Ova verzija nema zadržavanje daha, pa je mnogim ljudima lakša i prijatnija.",
       phaseInhale: "Udahnite ujednačeno",
       phaseHoldFull: "Pauza",
       phaseExhale: "Izdahnite polako",
@@ -201,9 +227,11 @@ export const RESET_LOCALIZATION: Record<
       stageGradualReturn: "Postepeni povratak",
     },
     doubleInhale: {
-      name: "Kratki dvostruki udah",
+      name: "Kratko osveženje",
       shortDesc: "Dva udobna udaha praćena jednim dugim, opuštenim izdahom.",
       detailDesc: "Blag udah na nos, mali dopunski udah, pa spor i opušten izdah. 1 do 3 ciklusa.",
+      bestFor: "Najbolje za: veoma kratku pauzu između zadataka.",
+      whyItMayHelp: "Dva udobna udaha praćena dužim izdahom mogu nakratko prekinuti ubrzano i plitko disanje. Dovoljno je nekoliko blagih ciklusa; drugi udah ne treba forsirati.",
       phaseInhale: "Udah",
       phaseHoldFull: "Pauza",
       phaseExhale: "Spor, udoban izdah",
@@ -216,9 +244,11 @@ export const RESET_LOCALIZATION: Record<
       stageGradualReturn: "Postepeni povratak",
     },
     guidedRest: {
-      name: "Vođeni duboki odmor",
+      name: "Vođeni odmor od 10 minuta",
       shortDesc: "10-minutna tekstualno vođena pauza za pažnju u miru i odmor.",
       detailDesc: "Strukturisana pauza kroz smirivanje, blagu pažnju na telo, tihi odmor i postepeni povratak.",
+      bestFor: "Najbolje za: dužu pauzu kada možete bezbedno da sednete ili legnete.",
+      whyItMayHelp: "Usmeravanje pažnje kroz telo, a zatim miran odmor, može smanjiti mentalni napor i olakšati postepen povratak aktivnosti. Opcioni stereo zvuk je ambijentalna podrška, ne terapija.",
       phaseInhale: "Dišite prirodno",
       phaseHoldFull: "Odmor",
       phaseExhale: "Otpustite",
@@ -258,11 +288,17 @@ export const RESET_LOCALIZATION: Record<
       presetBox4: "4 döngü — 1:04",
       presetBox8: "8 döngü — 2:08",
       presetBox12: "12 döngü — 3:12",
+      choosePrompt: "Şu anda neye ihtiyacınız var?",
+      infoLabel: "Bu oturum hakkında",
+      whyTitle: "Bu neden yardımcı olabilir",
+      beginnerBadge: "Başlamak için en kolay",
     },
     balancedBox: {
-      name: "Dengeli Kutu",
+      name: "Yavaşla ve dengelen",
       shortDesc: "Dengeli ve sakin bir mola için eşit 4-4-4-4 ritmi.",
       detailDesc: "Dört eşit sayıda nefes alın, nazikçe tutun, verin ve boşlukta tutun.",
+      bestFor: "En uygun: gergin veya dağınık hissettiğinizde yapılandırılmış bir mola.",
+      whyItMayHelp: "Yavaş ve eşit tempolu nefes, dikkat için basit bir dayanak sağlayabilir. Eşit aşamalar ritmi öngörülebilir kılar; rahatlık sayıyı tamamlamaktan daha önemlidir.",
       phaseInhale: "Nazikçe nefes alın",
       phaseHoldFull: "Nazikçe tutun",
       phaseExhale: "Yavaşça nefes verin",
@@ -275,9 +311,11 @@ export const RESET_LOCALIZATION: Record<
       stageGradualReturn: "Kademeli dönüş",
     },
     longerExhale: {
-      name: "Nazik Uzun Nefes Verme",
+      name: "Nazik sakinleştirici nefes",
       shortDesc: "4 saniyelik nefes alma ve 6 saniyelik uzatılmış nefes verme.",
       detailDesc: "Nefes tutmadan sürekli bir akış, nefes vermeye ekstra zaman tanır.",
+      bestFor: "En uygun: yeni başlayanlar, yorgun anlar veya nefes tutmayı sevmeyenler.",
+      whyItMayHelp: "Daha yavaş nefes vermek, solunumu daha sakin ve düzenli hissettirebilir. Nefes tutma olmadığı için birçok kişi bu sürümü daha kolay bulur.",
       phaseInhale: "Akıcı nefes alın",
       phaseHoldFull: "Tutun",
       phaseExhale: "Yavaşça nefes verin",
@@ -290,9 +328,11 @@ export const RESET_LOCALIZATION: Record<
       stageGradualReturn: "Kademeli dönüş",
     },
     doubleInhale: {
-      name: "Kısa Çift Nefesli Sıfırlama",
+      name: "Hızlı yenilenme",
       shortDesc: "İki rahat nefes almayı takip eden uzun, rahat bir nefes verme.",
       detailDesc: "Nazik burun nefesi, küçük bir tamamlayıcı nefes ve ardından yavaş, rahat bir nefes verme. 1 ila 3 döngü.",
+      bestFor: "En uygun: görevler arasında çok kısa bir mola.",
+      whyItMayHelp: "İki rahat nefes alıp ardından daha uzun nefes vermek, aceleci ve sığ solunumu kısa süreliğine kesebilir. Birkaç nazik döngü yeterlidir; ikinci nefesi zorlamayın.",
       phaseInhale: "Nefes alın",
       phaseHoldFull: "Tutun",
       phaseExhale: "Yavaş ve rahatça nefes verin",
@@ -305,9 +345,11 @@ export const RESET_LOCALIZATION: Record<
       stageGradualReturn: "Kademeli dönüş",
     },
     guidedRest: {
-      name: "Rehberli Derin Dinlenme",
+      name: "10 dakikalık rehberli dinlenme",
       shortDesc: "Sakin dikkat ve dinlenme için 10 dakikalık metin rehberli mola.",
       detailDesc: "Yerleşme, nazik beden dikkati, sessiz dinlenme ve kademeli dönüş ile yapılandırılmış bir mola.",
+      bestFor: "En uygun: güvenle oturabileceğiniz veya uzanabileceğiniz daha uzun bir mola.",
+      whyItMayHelp: "Dikkati bedende gezdirip ardından sessizce dinlenmek zihinsel çabayı azaltabilir ve aktiviteye bilinçli dönüşü destekleyebilir. İsteğe bağlı stereo ses bir tedavi değil, ortam desteğidir.",
       phaseInhale: "Doğal nefes alın",
       phaseHoldFull: "Dinlenin",
       phaseExhale: "Bırakın",

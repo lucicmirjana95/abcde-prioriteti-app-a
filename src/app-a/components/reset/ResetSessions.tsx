@@ -42,6 +42,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
   const [sessionStatus, setSessionStatus] = useState<ResetSessionStatus>("idle");
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [soundStatus, setSoundStatus] = useState<"idle" | "playing" | "blocked" | "unsupported">("idle");
+  const [showExplanation, setShowExplanation] = useState(false);
 
   // Experience configuration
   const [boxTargetCycles, setBoxTargetCycles] = useState<number>(12); // 4 (1:04), 8 (2:08), 12 (3:12) cycles default
@@ -214,6 +215,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
     startTimestampRef.current = null;
     lastPhaseIdRef.current = null;
     hasCompletedRef.current = false;
+    setShowExplanation(false);
 
     if (id === "balanced_box") setBoxTargetCycles(12);
     if (id === "longer_exhale") setDurationPresetMs(180000);
@@ -229,7 +231,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
   const handleStart = async () => {
     if (soundEnabled) {
       if (selectedExperience === "guided_rest") await startGuidedRestSound();
-      else lightChimeSynth.init();
+      else setSoundStatus(await lightChimeSynth.init() ? "playing" : "blocked");
     }
     hasCompletedRef.current = false;
     lastPhaseIdRef.current = null;
@@ -248,7 +250,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
   const handleResume = async () => {
     if (soundEnabled) {
       if (selectedExperience === "guided_rest") await startGuidedRestSound();
-      else lightChimeSynth.init();
+      else setSoundStatus(await lightChimeSynth.init() ? "playing" : "blocked");
     }
     accumulatedMsRef.current = elapsedMs;
     startTimestampRef.current = null;
@@ -282,8 +284,8 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
     if (next) {
       if (selectedExperience === "guided_rest") await startGuidedRestSound();
       else {
-        lightChimeSynth.init();
-        lightChimeSynth.playPhaseChime("inhale");
+        const played = await lightChimeSynth.playPhaseChime("inhale");
+        setSoundStatus(played ? "playing" : "blocked");
       }
     } else {
       restSoundSynth.stop();
@@ -392,6 +394,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
         {/* VIEW 1: EXPERIENCE SELECTION GRID */}
         {!selectedExperience ? (
           <div>
+            <h3 className="mb-3 text-[17px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">{tCommon.choosePrompt}</h3>
             <div className="grid gap-3 sm:grid-cols-2">
               {/* Option A: Balanced Box */}
               <button
@@ -552,7 +555,10 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
                 {selectedExperience === "double_inhale" && loc.doubleInhale.name}
                 {selectedExperience === "guided_rest" && loc.guidedRest.name}
               </span>
+              <button type="button" onClick={() => setShowExplanation((value) => !value)} aria-expanded={showExplanation} aria-label={tCommon.infoLabel} className="app-a-focus-ring flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 text-[#0071e3] dark:border-white/15 dark:text-[#2997ff]"><Info className="h-5 w-5" aria-hidden="true" /></button>
             </div>
+
+            {showExplanation ? <div className="mb-5 rounded-xl border p-4 text-left" style={{ borderColor: "var(--app-a-border)", backgroundColor: "var(--app-a-surface-secondary)" }}><h3 className="text-[15px] font-semibold">{tCommon.whyTitle}</h3><p className="mt-1 text-[14px] leading-relaxed">{loc[selectedExperience === "balanced_box" ? "balancedBox" : selectedExperience === "longer_exhale" ? "longerExhale" : selectedExperience === "double_inhale" ? "doubleInhale" : "guidedRest"].bestFor}</p><p className="mt-2 text-[13px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>{loc[selectedExperience === "balanced_box" ? "balancedBox" : selectedExperience === "longer_exhale" ? "longerExhale" : selectedExperience === "double_inhale" ? "doubleInhale" : "guidedRest"].whyItMayHelp}</p></div> : null}
 
             {/* Preset Selector (Visible before starting) */}
             {sessionStatus === "idle" && selectedExperience === "balanced_box" && (

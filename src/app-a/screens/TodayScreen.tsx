@@ -44,7 +44,7 @@ import {
 import { shiftLocalDate, type UnfinishedRolloverCandidate } from '../domain/rollover/contracts';
 import { addRolloverCandidateToPlan } from './rolloverCandidatePlan';
 import type { DataResetEventDetail } from '../components/settings/DataResetModal';
-import { importDailyPlanItemsToInbox, savePlanAndCompleteInboxItemAtomic } from '../persistence/inboxRepository';
+import { importDailyPlanItemsToInbox, saveDailyPlanCompletionAndInboxStatusAtomic, savePlanAndScheduleInboxItemAtomic } from '../persistence/inboxRepository';
 import type { AppAInboxItem } from '../domain/inbox/contracts';
 import { addInboxItemToPlan } from './inboxCandidatePlan';
 import DueInboxItemsSection from '../components/inbox/DueInboxItemsSection';
@@ -55,6 +55,16 @@ interface Props {
   demoConfig?: DailyResetDemoConfig | null;
   initialData?: Partial<DailyResetData>;
   preferences: AppAPreferences;
+}
+
+const APP_A_ONBOARDING_KEY = 'app_a_daily_reset_onboarding_v1';
+
+function readOnboardingCompleted(): boolean {
+  try {
+    return localStorage.getItem(APP_A_ONBOARDING_KEY) === 'completed';
+  } catch {
+    return false;
+  }
 }
 
 export default function TodayScreen({ language, client, demoConfig, initialData, preferences }: Props) {
@@ -83,6 +93,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
   const [rolloverCandidates, setRolloverCandidates] = useState<UnfinishedRolloverCandidate[]>([]);
   const [isLoadingRollover, setIsLoadingRollover] = useState(false);
   const [resetSessionsOpen, setResetSessionsOpen] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(readOnboardingCompleted);
   const loadedForUserAndDate = useRef<string | null>(null);
   const isConfirmingRef = useRef(false);
 
@@ -199,6 +210,12 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
       setCompletedItemIds([]);
       setViewMode('execution');
       setSaveStatus('saved');
+      setOnboardingCompleted(true);
+      try {
+        localStorage.setItem(APP_A_ONBOARDING_KEY, 'completed');
+      } catch {
+        // Onboarding remains visible next time when browser storage is unavailable.
+      }
     } catch (error: unknown) {
       setSaveStatus('error');
       setSaveError(t.planSaveError);
@@ -243,7 +260,11 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
         if (!user) throw new Error('authentication_required');
         const newlyCompleted = next.includes(itemId) && !previous.includes(itemId);
         const visionCandidateId = itemId.startsWith('vision_plan_') ? itemId.slice('vision_plan_'.length) : null;
-        if (newlyCompleted && visionCandidateId) {
+        const inboxItemId = itemId.startsWith('inbox_plan_') ? itemId.slice('inbox_plan_'.length) : null;
+        if (inboxItemId) {
+          await saveDailyPlanCompletionAndInboxStatusAtomic(user.uid, activePlanDate, next, inboxItemId, newlyCompleted);
+          window.dispatchEvent(new Event('app-a-inbox-changed'));
+        } else if (newlyCompleted && visionCandidateId) {
           await saveCompletionAndAdvanceVision(user.uid, activePlanDate, next, visionCandidateId);
           window.dispatchEvent(new Event('app-a-vision-candidates-changed'));
         } else {
@@ -282,7 +303,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     try {
       const document = createDailyPlanDocument(state.inputData, result.draft, language, activePlanDate, effectiveTimeZone);
       document.execution = { completedItemIds };
-      await savePlanAndCompleteInboxItemAtomic(user.uid, document, item);
+      await savePlanAndScheduleInboxItemAtomic(user.uid, document, item);
       loadConfirmedPlan(result.draft, state.inputData);
       setViewMode('execution');
       setSaveStatus('saved');
@@ -438,6 +459,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
             submitInitial(validatedData);
           }}
           aiEnabled={preferences.aiSuggestionsEnabled}
+          onboardingCompleted={onboardingCompleted}
           aiDisabledMessage={language === 'sr' ? 'AI predlozi su isključeni u Podešavanjima.' : language === 'tr' ? 'AI önerileri Ayarlar bölümünde kapalı.' : 'AI suggestions are turned off in Settings.'}
         />
       </div>
