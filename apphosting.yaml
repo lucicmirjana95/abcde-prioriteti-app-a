@@ -1,0 +1,20 @@
+runConfig:
+  minInstances: 0
+  maxInstances: 2
+  concurrency: 40
+  cpu: 1
+  memoryMiB: 512
+
+scripts:
+  buildCommand: pnpm run build
+  runCommand: node dist/server.cjs
+
+env:
+  - variable: NODE_ENV
+    value: production
+    availability:
+      - RUNTIME
+  - variable: APP_A_DAILY_RESET_ENABLED
+    value: "true"
+    availability:
+      - RUNTIME

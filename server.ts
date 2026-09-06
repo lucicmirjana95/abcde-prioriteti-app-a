@@ -12,7 +12,7 @@ import { buildVisionStrategyInstruction } from "./server/app-a/vision-strategy/p
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = Number.parseInt(process.env.PORT || "3000", 10);
 
 const STRUCTOGRAM_INSTRUCTION = `
 STRUCTOGRAM ADAPTATION RULE (MANDATORY):
