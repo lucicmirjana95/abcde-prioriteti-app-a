@@ -6,6 +6,8 @@ import SafeInterventionCard from "./SafeInterventionCard";
 import { normalizeCompletedItemIds } from "../../screens/todayExecution";
 import FocusTimer from "../focus/FocusTimer";
 import QuickAddTodayTask from "./QuickAddTodayTask";
+import type { QuickAddInput, QuickAddResult } from "./QuickAddTodayTask";
+import DailyLoadWarning from "./DailyLoadWarning";
 
 interface Props {
   draft: DailyPlanDraft;
@@ -17,8 +19,8 @@ interface Props {
   onEditPlan: () => void;
   defaultFocusMinutes: 15 | 25 | 45 | 60;
   onOpenReset: () => void;
-  onQuickAddToday: (title: string, minutes: number) => Promise<"duplicate" | "capacity_unknown" | "capacity_exceeded" | "invalid_plan" | null>;
-  onQuickSaveLater: (title: string, minutes: number) => Promise<boolean>;
+  onQuickAddToday: (input: QuickAddInput) => Promise<QuickAddResult>;
+  onQuickSaveLater: (title: string, minutes: number, capacityType: "flexible" | "fixed") => Promise<boolean>;
 }
 
 export default function TodayExecutionScreen({
@@ -143,6 +145,8 @@ export default function TodayExecutionScreen({
         </div>
         {draft.plannedFixedMinutes ? <p className="mt-2 text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]">{language === 'sr' ? `${draft.plannedFlexibleMinutes ?? 0} min fleksibilno + ${draft.plannedFixedMinutes} min fiksnih obaveza` : language === 'tr' ? `${draft.plannedFlexibleMinutes ?? 0} dk esnek + ${draft.plannedFixedMinutes} dk sabit yükümlülük` : `${draft.plannedFlexibleMinutes ?? 0} min flexible + ${draft.plannedFixedMinutes} min fixed commitments`}</p> : null}
       </section>
+
+      <DailyLoadWarning draft={draft} language={language} completedItemIds={completed} onReview={onEditPlan} />
 
       <QuickAddTodayTask language={language} availableMinutes={draft.availableMinutes} plannedRequiredMinutes={draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes} onAddToday={onQuickAddToday} onSaveLater={onQuickSaveLater} onAdjustPlan={onEditPlan} />
 

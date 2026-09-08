@@ -13,6 +13,7 @@ import {
 import {
   normalizeDailyResetInput,
   validateDailyResetInput,
+  validateRequiredPlanningState,
   validateClarificationSubmission,
   validateClarificationResponse,
   validatePlanDraft,
@@ -166,6 +167,8 @@ class DailyResetApiClientImpl implements DailyResetApiClient {
         val.fieldErrors
       );
     }
+    const stateValidation = validateRequiredPlanningState(normalizedInput);
+    if (!stateValidation.valid) return createErrorResponse("invalid_input", "invalid_input", normalizedInput.language, false, stateValidation.fieldErrors);
 
     const payload: DailyResetInitialRequest = {
       phase: "initial",

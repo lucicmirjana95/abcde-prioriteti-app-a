@@ -44,10 +44,11 @@ import {
 import { shiftLocalDate, type UnfinishedRolloverCandidate } from '../domain/rollover/contracts';
 import { addRolloverCandidateToPlan } from './rolloverCandidatePlan';
 import type { DataResetEventDetail } from '../components/settings/DataResetModal';
-import { createInboxItemAndAddToPlanAtomic, importDailyPlanItemsToInbox, saveDailyPlanCompletionAndInboxStatusAtomic, saveInboxItem, savePlanAndScheduleInboxItemAtomic } from '../persistence/inboxRepository';
+import { createInboxItemAndAddToPlanAtomic, createInboxItemAndReplacePlanAtomic, importDailyPlanItemsToInbox, saveDailyPlanCompletionAndInboxStatusAtomic, saveInboxItem, savePlanAndScheduleInboxItemAtomic } from '../persistence/inboxRepository';
 import { createManualInboxItemId, type AppAInboxItem } from '../domain/inbox/contracts';
 import { addInboxItemToPlan } from './inboxCandidatePlan';
 import DueInboxItemsSection from '../components/inbox/DueInboxItemsSection';
+import type { QuickAddInput, QuickAddResult } from '../components/daily-reset/QuickAddTodayTask';
 
 interface Props {
   language: AppALanguage;
@@ -370,12 +371,13 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     }
   };
 
-  const makeManualInboxItem = (title: string, minutes: number): AppAInboxItem => {
+  const makeManualInboxItem = (title: string, minutes: number, capacityType: "flexible" | "fixed" = "flexible"): AppAInboxItem => {
     const now = new Date().toISOString();
     return {
       id: createManualInboxItemId(),
       title: title.trim(),
       estimatedMinutes: minutes,
+      capacityType,
       kind: 'task',
       horizon: 'later',
       status: 'inbox',
@@ -386,37 +388,41 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     };
   };
 
-  const handleQuickAddToday = async (title: string, minutes: number): Promise<'duplicate' | 'capacity_unknown' | 'capacity_exceeded' | 'invalid_plan' | null> => {
-    if (!state.planDraft) return 'invalid_plan';
-    const item = makeManualInboxItem(title, minutes);
-    const result = addInboxItemToPlan(state.planDraft, item);
-    if ('error' in result) return result.error === 'duration_required' ? 'invalid_plan' : result.error;
+  const handleQuickAddToday = async (input: QuickAddInput): Promise<QuickAddResult> => {
+    if (!state.planDraft) return { status: 'error', code: 'invalid_plan' };
+    const item = makeManualInboxItem(input.title, input.minutes, input.capacityType);
+    const result = addInboxItemToPlan(state.planDraft, item, { reconsiderPriorities: input.reconsiderPriorities, completedItemIds });
+    if ('error' in result) return { status: 'error', code: result.error === 'duration_required' ? 'invalid_plan' : result.error };
+    if (input.reconsiderPriorities && !input.confirmReprioritization) return { status: 'preview', changes: result.changes };
     if (demoConfig) {
       loadConfirmedPlan(result.draft, state.inputData);
       setViewMode('execution');
-      return null;
+      return { status: 'saved' };
     }
-    if (!user) return 'invalid_plan';
+    if (!user) return { status: 'error', code: 'invalid_plan' };
     try {
       const document = createDailyPlanDocument(state.inputData, result.draft, language, activePlanDate, effectiveTimeZone);
+      document.revision = planRevision.current;
       document.execution = { completedItemIds };
-      const saved = await createInboxItemAndAddToPlanAtomic(user.uid, document, item);
+      const saved = input.reconsiderPriorities
+        ? await createInboxItemAndReplacePlanAtomic(user.uid, document, item)
+        : await createInboxItemAndAddToPlanAtomic(user.uid, document, item);
       planRevision.current = saved.document.revision || 0;
       setCompletedItemIds(saved.document.execution?.completedItemIds || []);
       loadConfirmedPlan(planDraftFromDocument(saved.document), state.inputData);
       setViewMode('execution');
       setSaveStatus('saved');
       window.dispatchEvent(new Event('app-a-inbox-changed'));
-      return null;
+      return { status: 'saved' };
     } catch (error) {
-      return error instanceof Error && error.message === 'duplicate' ? 'duplicate' : 'invalid_plan';
+      return { status: 'error', code: error instanceof Error && error.message === 'duplicate' ? 'duplicate' : 'invalid_plan' };
     }
   };
 
-  const handleQuickSaveLater = async (title: string, minutes: number): Promise<boolean> => {
+  const handleQuickSaveLater = async (title: string, minutes: number, capacityType: "flexible" | "fixed"): Promise<boolean> => {
     if (!user || demoConfig) return false;
     try {
-      await saveInboxItem(user.uid, makeManualInboxItem(title, minutes));
+      await saveInboxItem(user.uid, makeManualInboxItem(title, minutes, capacityType === "fixed" ? "fixed" : "flexible"));
       window.dispatchEvent(new Event('app-a-inbox-changed'));
       return true;
     } catch { return false; }

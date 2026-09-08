@@ -26,17 +26,24 @@ export default function DailyResetForm({ t, language, initialData, onSubmit, onD
 
   const [timeError, setTimeError] = useState<string | undefined>();
   const [brainDumpError, setBrainDumpError] = useState<string | undefined>();
+  const [stateError, setStateError] = useState<string | undefined>();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setTimeError(undefined);
     setBrainDumpError(undefined);
+    setStateError(undefined);
 
     let hasError = false;
 
     // Validate brain dump
     if (!brainDump.trim()) {
       setBrainDumpError(t.brainDumpEmptyError);
+      hasError = true;
+    }
+
+    if (energy === undefined || pleasantness === undefined) {
+      setStateError(language === 'sr' ? 'Izaberite energiju i trenutno raspoloženje da bi plan bio prilagođen vašem stanju.' : language === 'tr' ? 'Planı durumunuza göre uyarlamak için enerji ve mevcut ruh halinizi seçin.' : 'Choose your energy and current mood so the plan can be adapted to your state.');
       hasError = true;
     }
 
@@ -131,23 +138,25 @@ export default function DailyResetForm({ t, language, initialData, onSubmit, onD
       </section>
 
       {/* SECTION 1: State */}
-      <details className="order-3 border-t p-5 sm:p-6">
-        <summary className="app-a-focus-ring cursor-pointer py-2 text-[16px] font-medium">{language === 'sr' ? 'Prilagodi energiji i raspoloženju — opciono' : language === 'tr' ? 'Enerji ve ruh haline göre ayarla — isteğe bağlı' : 'Adjust for energy and mood — optional'}</summary>
+      <section className="order-3 border-t p-5 sm:p-6" aria-labelledby="daily-state-heading">
+        <h2 id="daily-state-heading" className="text-[20px] font-semibold tracking-[-0.02em]">{language === 'sr' ? 'Energija i raspoloženje' : language === 'tr' ? 'Enerji ve ruh hali' : 'Energy and mood'}</h2>
+        <p className="mt-1 text-[14px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>{language === 'sr' ? 'Potrebno je da bi AI prilagodio zahtevnost, veličinu koraka i redosled zadataka.' : language === 'tr' ? 'Yapay zekanın zorluk düzeyini, adım boyutunu ve görev sırasını ayarlaması için gereklidir.' : 'Required so the AI can adapt difficulty, step size, and task order.'}</p>
         <div className="mt-5 flex flex-col gap-6">
         {showHelp ? <p className="-mt-4 text-[14px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>{t.onboardingStateHelp}</p> : null}
         <FiveLevelScale 
           id="energy-scale"
           label={t.energyLabel}
           value={energy}
-          onChange={(value) => { setEnergy(value); onDraftChange?.({ energy: value }); }}
+          onChange={(value) => { setEnergy(value); setStateError(undefined); onDraftChange?.({ energy: value }); }}
           options={energyOptions}
           clearLabel={t.clearSelection}
         />
+        {stateError ? <p role="alert" className="text-[13px]" style={{ color: "var(--app-a-danger)" }}>{stateError}</p> : null}
         <FiveLevelScale 
           id="pleasantness-scale"
           label={t.pleasantnessLabel}
           value={pleasantness}
-          onChange={(value) => { setPleasantness(value); onDraftChange?.({ pleasantness: value }); }}
+          onChange={(value) => { setPleasantness(value); setStateError(undefined); onDraftChange?.({ pleasantness: value }); }}
           options={pleasantnessOptions}
           clearLabel={t.clearSelection}
         />
@@ -165,7 +174,7 @@ export default function DailyResetForm({ t, language, initialData, onSubmit, onD
           />
         </div>
         </div>
-      </details>
+      </section>
 
 
       <div

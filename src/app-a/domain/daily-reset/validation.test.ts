@@ -2,6 +2,7 @@ import assert from "node:assert";
 import {
   normalizeDailyResetInput,
   validateDailyResetInput,
+  validateRequiredPlanningState,
   validateClarificationSubmission,
   validateClarificationResponse,
   validatePlanDraft,
@@ -36,6 +37,15 @@ runTest("valid minimal input", () => {
   };
   const result = validateDailyResetInput(input);
   assert.strictEqual(result.valid, true, "Should be valid");
+});
+
+runTest("new AI planning requires energy and pleasantness", () => {
+  const missing = validateRequiredPlanningState({ brainDump: "Plan my day", language: "en" });
+  assert.strictEqual(missing.valid, false);
+  assert.strictEqual(missing.fieldErrors?.energy, "Required");
+  assert.strictEqual(missing.fieldErrors?.pleasantness, "Required");
+  const complete = validateRequiredPlanningState({ brainDump: "Plan my day", language: "en", energy: 2, pleasantness: 4 });
+  assert.strictEqual(complete.valid, true);
 });
 
 // 2. whitespace-only brain dump

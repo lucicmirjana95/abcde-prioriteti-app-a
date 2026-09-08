@@ -15,6 +15,7 @@ import {
 import DailyPlanBlock from "./DailyPlanBlock";
 import DeferredItemsSection from "./DeferredItemsSection";
 import SafeInterventionCard from "./SafeInterventionCard";
+import DailyLoadWarning from "./DailyLoadWarning";
 
 interface Props {
   initialDraft: DailyPlanDraft;
@@ -212,6 +213,7 @@ export default function DailyPlanReview({
         }}>{language === 'sr' ? 'Za sada samo prvi korak' : language === 'tr' ? 'Şimdilik yalnızca ilk adım' : 'Start with the first step'}</button>
       </div> : null}
       {draft.availableMinutes !== undefined && plannedFlexible > draft.availableMinutes ? <p role="status" className="app-a-panel-danger mb-4">{language === 'sr' ? 'Fleksibilni zadaci prelaze izabrano vreme. Pomeri neki za kasnije ili povećaj vreme.' : language === 'tr' ? 'Esnek görevler seçilen süreyi aşıyor. Bazılarını sonraya taşı veya süreyi artır.' : 'Flexible tasks exceed your selected time. Move one to later or increase the time.'}</p> : null}
+      <DailyLoadWarning draft={draft} language={language} />
       {/* Undo Header Banner */}
       {reviewState.undoDraft && (
         <div

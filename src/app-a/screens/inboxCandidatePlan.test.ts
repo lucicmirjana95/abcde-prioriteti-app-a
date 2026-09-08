@@ -45,4 +45,15 @@ assert.equal("error" in missingDuration && missingDuration.error, "duration_requ
 assert.equal("error" in unknownCapacity && unknownCapacity.error, "capacity_unknown");
 assert.equal("error" in exceededCapacity && exceededCapacity.error, "capacity_exceeded");
 
+const fixed = addInboxItemToPlan({ ...draft, availableMinutes: 10 }, { ...item, id: "in_fixed", capacityType: "fixed", estimatedMinutes: 90 });
+assert.equal("draft" in fixed, true, "Fixed commitments do not consume flexible capacity");
+if ("draft" in fixed) {
+  assert.equal(fixed.draft.laterToday[0].capacityType, "fixed");
+  assert.equal(fixed.draft.plannedFixedMinutes, 90);
+}
+
+const urgent = addInboxItemToPlan({ ...draft, firstFocus: [{ id: "existing", sourceItemIds: ["existing"], title: "Routine review", block: "first_focus", estimatedMinutes: 20, requiredEnergy: 3, timeSensitivity: "none", priority: { consequence: 1, urgency: 1, goalContribution: 1, explanation: "" }, needsCheck: false }], classifiedItems: [{ id: "existing", originalText: "Routine review", kind: "task", timeHorizon: "today", timeSensitivity: "none", isAmbiguous: false, needsCheck: false, priority: { explanation: "" } }] }, { ...item, id: "in_urgent", title: "Emergency call", estimatedMinutes: 20 }, { reconsiderPriorities: true, completedItemIds: [] });
+assert.equal("draft" in urgent, true, "Urgent addition should produce a reviewed proposal");
+if ("draft" in urgent) assert.ok(urgent.changes.firstFocus.includes("Emergency call"));
+
 console.log("Inbox candidate plan tests passed.");

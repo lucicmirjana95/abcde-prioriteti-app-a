@@ -14,6 +14,8 @@ export interface AppAInboxItem {
   horizon: InboxItemHorizon;
   status: InboxItemStatus;
   estimatedMinutes?: number;
+  /** Manual Today additions may explicitly be unavoidable appointments. */
+  capacityType?: "flexible" | "fixed";
   scheduledLocalDate?: string;
   waitingOn?: string;
   source: InboxItemSource;
@@ -51,6 +53,7 @@ export function isAppAInboxItem(value: unknown): value is AppAInboxItem {
     && (item.language === "en" || item.language === "sr" || item.language === "tr")
     && typeof item.createdAt === "string" && typeof item.updatedAt === "string"
     && (item.estimatedMinutes === undefined || (Number.isInteger(item.estimatedMinutes) && item.estimatedMinutes > 0 && item.estimatedMinutes <= 1440))
+    && (item.capacityType === undefined || item.capacityType === "flexible" || item.capacityType === "fixed")
     && (item.scheduledLocalDate === undefined || isLocalDate(item.scheduledLocalDate));
 }
 

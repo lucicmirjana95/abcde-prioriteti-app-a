@@ -7,8 +7,11 @@ import {
 } from "./fixtures";
 
 function createMockReq(body: any): any {
+  const cloned = JSON.parse(JSON.stringify(body));
+  if (cloned?.input && typeof cloned.input === "object") cloned.input = { energy: 3, pleasantness: 3, ...cloned.input };
+  if (cloned?.submission && typeof cloned.submission === "object") cloned.submission = { energy: 3, pleasantness: 3, ...cloned.submission };
   return {
-    body: JSON.parse(JSON.stringify(body)),
+    body: cloned,
   };
 }
 
@@ -330,12 +333,14 @@ async function runTests() {
 
   // 30. request and parsed objects remain unmutated
   resetMocks();
-  const rawInput = { phase: "initial", input: { brainDump: "test test", language: "en" } };
+  const rawInput = { phase: "initial", input: { brainDump: "test test", language: "en", energy: 3, pleasantness: 3 } };
   const rawInputStr = JSON.stringify(rawInput);
   req = createMockReq(rawInput);
+  const requestBodyStr = JSON.stringify(req.body);
   res = createMockRes();
   await route(req, res);
-  assert.strictEqual(JSON.stringify(req.body), rawInputStr);
+  assert.strictEqual(JSON.stringify(req.body), requestBodyStr);
+  assert.strictEqual(JSON.stringify(rawInput), rawInputStr);
 
   // 31. Serbian errors are localized
   resetMocks();
@@ -350,7 +355,7 @@ async function runTests() {
   res = createMockRes();
   await route(req, res);
   assert.strictEqual(res.statusCode, 502);
-  assert.strictEqual(res.body.error, "Neispravan odgovor veštačke inteligencije. Molimo pokušajte ponovo.");
+  assert.strictEqual(res.body.error, "Struktura AI odgovora nije validna. Pokušajte ponovo.");
 
   // 32. Turkish errors are localized
   resetMocks();
@@ -365,7 +370,7 @@ async function runTests() {
   res = createMockRes();
   await route(req, res);
   assert.strictEqual(res.statusCode, 502);
-  assert.strictEqual(res.body.error, "Geçersiz yapay zeka yanıtı. Lütfen tekrar deneyin.");
+  assert.strictEqual(res.body.error, "Yapay zeka yanıtının yapısı geçersiz. Tekrar deneyin.");
 
   // 33. English errors are localized
   resetMocks();

@@ -6,6 +6,7 @@ import {
 } from "./index";
 import {
   validateDailyResetInput,
+  validateRequiredPlanningState,
   validateClarificationSubmission
 } from "../../../src/app-a/domain/daily-reset/validation";
 
@@ -20,9 +21,19 @@ function localizeInvalidInput(lang: string) {
   return "Invalid input. Please check your data.";
 }
 
-function localizeAiError(lang: string) {
-  if (lang === "sr") return "Neispravan odgovor veštačke inteligencije. Molimo pokušajte ponovo.";
-  if (lang === "tr") return "Geçersiz yapay zeka yanıtı. Lütfen tekrar deneyin.";
+function localizeAiError(lang: string, reason?: string) {
+  if (reason === "capacity_overflow") {
+    if (lang === "sr") return "AI je predložio više fleksibilnog rada nego što ste naveli. Pokušajte ponovo.";
+    if (lang === "tr") return "Yapay zeka belirttiğiniz esnek süreden daha fazla iş önerdi. Tekrar deneyin.";
+    return "The AI proposed more flexible work than the time you provided. Please try again.";
+  }
+  if (reason === "first_focus_cap_exceeded") {
+    if (lang === "sr") return "AI je predložio više od tri zadatka u Prvom fokusu. Pokušajte ponovo.";
+    if (lang === "tr") return "Yapay zeka İlk Odak için üçten fazla görev önerdi. Tekrar deneyin.";
+    return "The AI proposed more than three First Focus tasks. Please try again.";
+  }
+  if (lang === "sr") return "Struktura AI odgovora nije validna. Pokušajte ponovo.";
+  if (lang === "tr") return "Yapay zeka yanıtının yapısı geçersiz. Tekrar deneyin.";
   return "Invalid AI response structure. Please try again.";
 }
 
@@ -116,6 +127,11 @@ export function createDailyResetRoute(
           });
           return;
         }
+        const stateValidation = validateRequiredPlanningState(body.input || {});
+        if (!stateValidation.valid) {
+          res.status(400).json({ success: false, phase: "error", code: "invalid_input", error: localizeInvalidInput(body.input?.language || "en"), fieldErrors: stateValidation.fieldErrors });
+          return;
+        }
         prompt = buildDailyResetPrompt(body.input);
         isClarification = false;
         language = body.input.language;
@@ -141,6 +157,11 @@ export function createDailyResetRoute(
             error: localizeInvalidInput(body.submission?.language || "en"),
             fieldErrors: validation.fieldErrors
           });
+          return;
+        }
+        const stateValidation = validateRequiredPlanningState(body.submission || {});
+        if (!stateValidation.valid) {
+          res.status(400).json({ success: false, phase: "error", code: "invalid_input", error: localizeInvalidInput(body.submission?.language || "en"), fieldErrors: stateValidation.fieldErrors });
           return;
         }
         prompt = buildDailyResetPrompt(body.submission, body.questions);
@@ -255,7 +276,7 @@ export function createDailyResetRoute(
       if (parsed.phase === "error") {
         res.status(502).json({
           ...parsed,
-          error: localizeAiError(language)
+          error: localizeAiError(language, rejectionReason)
         });
         return;
       }

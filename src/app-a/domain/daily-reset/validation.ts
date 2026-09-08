@@ -88,6 +88,15 @@ export function validateDailyResetInput(input: DailyResetInput): ValidationResul
   };
 }
 
+/** Legacy documents may omit state ratings; a new AI plan may not. */
+export function validateRequiredPlanningState(input: DailyResetInput): ValidationResult {
+  const fieldErrors: Record<string, string> = {};
+  const errors: string[] = [];
+  if (input.energy === undefined) { errors.push("Energy is required for planning."); fieldErrors.energy = "Required"; }
+  if (input.pleasantness === undefined) { errors.push("Pleasantness is required for planning."); fieldErrors.pleasantness = "Required"; }
+  return { valid: errors.length === 0, errors, fieldErrors: Object.keys(fieldErrors).length ? fieldErrors : undefined };
+}
+
 export function validateClarificationSubmission(
   submission: DailyResetClarificationSubmission,
   knownQuestions: ClarificationQuestion[]

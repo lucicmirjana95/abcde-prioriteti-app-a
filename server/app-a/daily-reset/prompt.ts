@@ -52,12 +52,8 @@ ${input.brainDump}
 [BRAIN DUMP END]
 `;
 
-  if (input.energy !== undefined) {
-    prompt += `\nEnergy Level (1-5): ${input.energy}`;
-  }
-  if (input.pleasantness !== undefined) {
-    prompt += `\nPleasantness Level (1-5): ${input.pleasantness}`;
-  }
+  prompt += `\nEnergy Level (1-5, required for planning): ${input.energy}`;
+  prompt += `\nPleasantness/Mood Level (1-5, required for planning): ${input.pleasantness}`;
   if (input.availableMinutes !== undefined) {
     prompt += `\nAvailable Minutes: ${input.availableMinutes}`;
   }
@@ -209,9 +205,9 @@ SAFEGUARDS & CONSTRAINTS FOR ABCDE REASONING:
 4. Do not create or expose an unexplained composite priority score.
 5. Do not mechanically place every internally A-like item into first_focus. first_focus remains strictly capped at a maximum of 3 items.
 6. Available time is a hard constraint for flexible work: flexible first_focus plus flexible later_today durations must remain within availableMinutes when specified. Explicit fixed commitments are preserved and reported separately.
-7. Energy and pleasantness are optional context, never prerequisites:
-   - Missing values mean unknown. Never invent a default score, mood, fatigue, or diagnosis.
-   - Do not ask clarification questions solely to obtain these ratings. Use explicit descriptions such as "tired" qualitatively, without assigning a numerical score.
+7. Energy and pleasantness are required planning inputs:
+   - Use the supplied ratings to adapt cognitive load, step size, and sequencing. Never invent, overwrite, or average them.
+   - The UI must collect both ratings before the AI planner runs; do not proceed with missing values.
    - Pleasantness is not energy or work capacity. Do not infer incapacity from unpleasant feelings.
    - When energy is low, a consequential task should be broken down into a smaller executable step or scaled down rather than discarded.
    - Low energy must never erase a genuinely critical task.

@@ -18,6 +18,8 @@ import {
 } from "../domain/inbox/contracts";
 import type { AppADailyPlanDocument } from "./dailyPlanDocument";
 import { mergePlanAddition } from './planMutations';
+import { validatePlanDraft } from '../domain/daily-reset/validation';
+import { normalizeCompletedItemIds } from '../screens/todayExecution';
 
 function requireUserId(userId: string): string {
   const value = userId.trim();
@@ -206,6 +208,40 @@ export async function createInboxItemAndAddToPlanAtomic(
     transaction.set(planReference, { ...merged, updatedAt: serverTimestamp() });
     transaction.set(sourceReference, safe);
     return merged;
+  });
+  return { item: safe, document: saved };
+}
+
+/** Saves a user-reviewed reprioritization as one atomic plan + Inbox change. */
+export async function createInboxItemAndReplacePlanAtomic(
+  userId: string,
+  document: AppADailyPlanDocument,
+  inboxItem: AppAInboxItem,
+): Promise<{ item: AppAInboxItem; document: AppADailyPlanDocument }> {
+  if (!isAppAInboxItem(inboxItem) || inboxItem.source !== "manual" || inboxItem.status !== "inbox" || !validatePlanDraft(document.plan).valid) {
+    throw new Error("invalid_plan");
+  }
+  const scheduled: AppAInboxItem = { ...inboxItem, status: "scheduled", scheduledLocalDate: document.localDate, updatedAt: new Date().toISOString() };
+  const safe = JSON.parse(JSON.stringify(scheduled)) as AppAInboxItem;
+  const saved = await runTransaction(db, async (transaction) => {
+    const planReference = doc(db, "appAUsers", requireUserId(userId), "dailyResets", document.localDate);
+    const sourceReference = inboxRef(userId, inboxItem.id);
+    const latest = await transaction.get(planReference);
+    const existingSource = await transaction.get(sourceReference);
+    if (existingSource.exists()) throw new Error("duplicate");
+    const current = latest.data();
+    if (!latest.exists() || (current?.revision || 0) !== (document.revision || 0)) throw new Error("plan_changed_elsewhere");
+    const currentCompleted = [...(current?.execution?.completedItemIds || [])].sort();
+    const reviewedCompleted = [...(document.execution?.completedItemIds || [])].sort();
+    if (currentCompleted.join("\u0000") !== reviewedCompleted.join("\u0000")) throw new Error("plan_changed_elsewhere");
+    const next: AppADailyPlanDocument = {
+      ...document,
+      revision: (current?.revision || 0) + 1,
+      execution: { completedItemIds: normalizeCompletedItemIds(document.plan, currentCompleted) },
+    };
+    transaction.set(planReference, { ...next, updatedAt: serverTimestamp() });
+    transaction.set(sourceReference, safe);
+    return next;
   });
   return { item: safe, document: saved };
 }

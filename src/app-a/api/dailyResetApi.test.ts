@@ -175,6 +175,8 @@ async function runTests() {
   const validInitialInput: DailyResetInput = {
     brainDump: "I have so many things to do today",
     language: "en",
+    energy: 3,
+    pleasantness: 3,
   };
 
   const validQuestions: ClarificationQuestion[] = [
@@ -245,6 +247,8 @@ async function runTests() {
       input: {
         brainDump: "I have so many things to do today",
         language: "en",
+        energy: 3,
+        pleasantness: 3,
       },
     });
   }
@@ -260,6 +264,8 @@ async function runTests() {
       submission: {
         brainDump: "I have so many things to do today",
         language: "en",
+        energy: 3,
+        pleasantness: 3,
         clarificationAnswers: [{ questionId: "q1", answer: "Answer 1" }],
       },
       questions: validQuestions,

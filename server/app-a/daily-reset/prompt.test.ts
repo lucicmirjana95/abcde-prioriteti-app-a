@@ -15,12 +15,16 @@ function runTest(name: string, fn: () => void) {
 const initialInput = {
   brainDump: "I need to review the report and prepare for team sync",
   language: "en" as const,
+  energy: 3 as const,
+  pleasantness: 3 as const,
   availableMinutes: 120,
 };
 
 const resolveInput = {
   brainDump: "I need to review the report and prepare for team sync",
   language: "en" as const,
+  energy: 3 as const,
+  pleasantness: 3 as const,
   availableMinutes: 120,
   clarificationAnswers: [
     { questionId: "q1", answer: "The report is due at 3pm" },
@@ -170,6 +174,9 @@ runTest("prompt handles waiting-for items appropriately and preserves all items"
 
 runTest("prompt treats energy and pleasantness as constraints rather than judgments", () => {
   const prompt = buildDailyResetPrompt(initialInput);
+  assert.ok(prompt.includes("Energy Level (1-5, required for planning): 3"));
+  assert.ok(prompt.includes("Pleasantness/Mood Level (1-5, required for planning): 3"));
+  assert.ok(prompt.includes("Energy and pleasantness are required planning inputs"));
   assert.ok(
     prompt.includes("Treat energy and pleasantness as planning constraints, not judgments"),
     "Prompt must treat energy as constraint"
