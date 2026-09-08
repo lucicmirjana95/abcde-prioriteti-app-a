@@ -216,6 +216,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
     lastPhaseIdRef.current = null;
     hasCompletedRef.current = false;
     setShowExplanation(false);
+    setSoundStatus("idle");
 
     if (id === "balanced_box") setBoxTargetCycles(12);
     if (id === "longer_exhale") setDurationPresetMs(180000);
@@ -370,21 +371,21 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
             {soundEnabled ? (
               <>
                 <Volume2 className="h-4 w-4 text-[#0071e3] dark:text-[#2997ff]" />
-                <span>{selectedExperience === "guided_rest" ? (language === "sr" ? "4 Hz zvuk uključen" : language === "tr" ? "4 Hz ses açık" : "4 Hz sound on") : tCommon.soundOn}</span>
+                <span>{selectedExperience === "guided_rest" ? tCommon.restSoundEnabled : tCommon.soundOn}</span>
               </>
             ) : (
               <>
                 <VolumeX className="h-4 w-4 text-[#76767b] dark:text-[#7c7c82]" />
-                <span>{selectedExperience === "guided_rest" ? (language === "sr" ? "4 Hz zvuk isključen" : language === "tr" ? "4 Hz ses kapalı" : "4 Hz sound off") : tCommon.soundOff}</span>
+                <span>{selectedExperience === "guided_rest" ? tCommon.restSoundDisabled : tCommon.soundOff}</span>
               </>
             )}
           </button>
         </div>
-        {selectedExperience === "guided_rest" && soundEnabled ? (
+        {selectedExperience === "guided_rest" && soundEnabled && soundStatus !== "idle" ? (
           <p role="status" className={`mb-3 text-[12px] ${soundStatus === "playing" ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>
             {soundStatus === "playing"
-              ? (language === "sr" ? "4 Hz stereo zvuk se reprodukuje. Najbolje uz slušalice." : language === "tr" ? "4 Hz stereo ses çalıyor. Kulaklıkla en iyi sonucu verir." : "4 Hz stereo sound is playing. Best with headphones.")
-              : (language === "sr" ? "Zvuk nije pokrenut. Proverite dozvolu za zvuk u pregledaču i pokušajte ponovo." : language === "tr" ? "Ses başlatılamadı. Tarayıcı ses iznini kontrol edip tekrar deneyin." : "Sound did not start. Check browser audio permission and try again.")}
+              ? tCommon.restSoundPlaying
+              : tCommon.restSoundFailed}
           </p>
         ) : null}
       </div>
@@ -415,7 +416,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
                   </p>
                 </div>
                 <span className="mt-3 inline-block text-[11px] font-medium text-[#76767b] dark:text-[#7c7c82]">
-                  4–12 Cycles (1:04–3:12) • 4-4-4-4
+                  {tCommon.boxTiming}
                 </span>
               </button>
 
@@ -438,7 +439,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
                   </p>
                 </div>
                 <span className="mt-3 inline-block text-[11px] font-medium text-[#76767b] dark:text-[#7c7c82]">
-                  4s Inhale • 6s Exhale
+                  {tCommon.exhaleTiming}
                 </span>
               </button>
 
@@ -461,7 +462,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
                   </p>
                 </div>
                 <span className="mt-3 inline-block text-[11px] font-medium text-[#76767b] dark:text-[#7c7c82]">
-                  1–3 Guided Cycles
+                  {tCommon.guidedCycles}
                 </span>
               </button>
 
@@ -484,7 +485,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
                   </p>
                 </div>
                 <span className="mt-3 inline-block text-[11px] font-medium text-[#76767b] dark:text-[#7c7c82]">
-                  10 Minutes • Text-guided
+                  {tCommon.guidedRestDuration}
                 </span>
               </button>
             </div>

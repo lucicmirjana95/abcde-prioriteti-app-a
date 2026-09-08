@@ -7,6 +7,7 @@ import {
   serverTimestamp,
   setDoc,
   writeBatch,
+  runTransaction,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import type { ClassifiedBrainDumpItem } from "../domain/daily-reset/contracts";
@@ -16,6 +17,7 @@ import {
   isAppAInboxItem,
 } from "../domain/inbox/contracts";
 import type { AppADailyPlanDocument } from "./dailyPlanDocument";
+import { mergePlanAddition } from './planMutations';
 
 function requireUserId(userId: string): string {
   const value = userId.trim();
@@ -85,12 +87,28 @@ export function dueScheduledInboxItems(items: AppAInboxItem[], localDate: string
 }
 
 export async function loadDueScheduledInboxItems(userId: string, localDate: string): Promise<AppAInboxItem[]> {
-  return dueScheduledInboxItems(await loadInboxItems(userId), localDate);
+  const [items, plan] = await Promise.all([loadInboxItems(userId), getDoc(doc(db, 'appAUsers', requireUserId(userId), 'dailyResets', localDate))]);
+  const data = plan.data()?.plan;
+  const scheduledIds = new Set([...(data?.firstFocus || []), ...(data?.laterToday || []), ...(data?.ifCapacityRemains || [])].map(item => item.id));
+  return dueScheduledInboxItems(items, localDate).filter(item => !scheduledIds.has(`inbox_plan_${item.id}`));
 }
 
 export async function saveInboxItem(userId: string, item: AppAInboxItem): Promise<void> {
   if (!isAppAInboxItem(item)) throw new Error("invalid_inbox_item");
   await setDoc(inboxRef(userId, item.id), item, { merge: false });
+}
+
+export async function addMissingInboxDuration(userId: string, itemId: string, minutes: number): Promise<AppAInboxItem> {
+  if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440) throw new Error('invalid_duration');
+  return runTransaction(db, async transaction => {
+    const ref = inboxRef(userId, itemId);
+    const snapshot = await transaction.get(ref);
+    const current = snapshot.data();
+    if (!isAppAInboxItem(current) || current.estimatedMinutes || current.status === 'completed' || current.status === 'archived') throw new Error('inbox_item_changed');
+    const next = { ...current, estimatedMinutes: minutes, updatedAt: new Date().toISOString() };
+    transaction.set(ref, next);
+    return next;
+  });
 }
 
 export async function updateInboxItemStatus(
@@ -99,27 +117,46 @@ export async function updateInboxItemStatus(
   status: InboxItemStatus,
   extras: Pick<AppAInboxItem, "scheduledLocalDate" | "waitingOn"> = {},
 ): Promise<AppAInboxItem> {
-  const next: AppAInboxItem = {
-    ...item,
-    status,
-    ...(status === "scheduled" && extras.scheduledLocalDate ? { scheduledLocalDate: extras.scheduledLocalDate } : { scheduledLocalDate: undefined }),
-    ...(status === "waiting" && extras.waitingOn?.trim() ? { waitingOn: extras.waitingOn.trim().slice(0, 300) } : { waitingOn: undefined }),
-    updatedAt: new Date().toISOString(),
-  };
-  const safe = JSON.parse(JSON.stringify(next)) as AppAInboxItem;
-  await saveInboxItem(userId, safe);
-  return safe;
+  return runTransaction(db, async transaction => {
+    const ref = inboxRef(userId, item.id);
+    const snapshot = await transaction.get(ref);
+    const current = snapshot.data();
+    if (!isAppAInboxItem(current)) throw new Error('inbox_item_unavailable');
+    const linkedDate = current.scheduledLocalDate;
+    const planRef = linkedDate ? doc(db, 'appAUsers', requireUserId(userId), 'dailyResets', linkedDate) : null;
+    const plan = planRef ? await transaction.get(planRef) : null;
+    const taskId = `inbox_plan_${item.id}`;
+    const linked = plan?.data()?.plan;
+    const existsInPlan = [...(linked?.firstFocus || []), ...(linked?.laterToday || []), ...(linked?.ifCapacityRemains || [])].some(task => task.id === taskId);
+    // Completing or restoring a linked item changes its existing task, never a copy.
+    if (planRef && existsInPlan && (status === 'completed' || current.status === 'completed')) {
+      const ids = new Set<string>(plan!.data()?.execution?.completedItemIds || []);
+      if (status === 'completed') ids.add(taskId); else ids.delete(taskId);
+      transaction.update(planRef, { 'execution.completedItemIds': [...ids], updatedAt: serverTimestamp() });
+    }
+    const next: AppAInboxItem = {
+      ...current, status: existsInPlan && status === 'inbox' ? 'scheduled' : status,
+      scheduledLocalDate: existsInPlan ? linkedDate : status === 'scheduled' ? extras.scheduledLocalDate : undefined,
+      waitingOn: status === 'waiting' ? extras.waitingOn?.trim().slice(0, 300) : undefined,
+      updatedAt: new Date().toISOString(),
+    };
+    const safe = JSON.parse(JSON.stringify(next)) as AppAInboxItem;
+    if (!isAppAInboxItem(safe)) throw new Error('invalid_inbox_item');
+    transaction.set(ref, safe);
+    return safe;
+  });
 }
 
 export async function deleteInboxItem(userId: string, itemId: string): Promise<void> {
-  await deleteDoc(inboxRef(userId, itemId));
+  // Retain only an opaque tombstone, so import cannot resurrect deleted text.
+  await setDoc(inboxRef(userId, itemId), { id: itemId, deleted: true, updatedAt: serverTimestamp() });
 }
 
 export async function savePlanAndScheduleInboxItemAtomic(
   userId: string,
   document: AppADailyPlanDocument,
   inboxItem: AppAInboxItem,
-): Promise<AppAInboxItem> {
+): Promise<{ item: AppAInboxItem; document: AppADailyPlanDocument }> {
   const scheduled: AppAInboxItem = {
     ...inboxItem,
     status: "scheduled",
@@ -128,11 +165,49 @@ export async function savePlanAndScheduleInboxItemAtomic(
     updatedAt: new Date().toISOString(),
   };
   const safe = JSON.parse(JSON.stringify(scheduled)) as AppAInboxItem;
-  const batch = writeBatch(db);
-  batch.set(doc(db, "appAUsers", requireUserId(userId), "dailyResets", document.localDate), document, { merge: true });
-  batch.set(inboxRef(userId, inboxItem.id), safe, { merge: false });
-  await batch.commit();
-  return safe;
+  const saved = await runTransaction(db, async (transaction) => {
+    const ref = doc(db, 'appAUsers', requireUserId(userId), 'dailyResets', document.localDate);
+    const source = inboxRef(userId, inboxItem.id);
+    const latest = await transaction.get(ref);
+    const currentItem = await transaction.get(source);
+    if (!currentItem.exists() || currentItem.data().deleted) throw new Error('inbox_item_unavailable');
+    const merged = mergePlanAddition(latest.data(), document, `inbox_plan_${inboxItem.id}`);
+    transaction.set(ref, { ...merged, updatedAt: serverTimestamp() });
+    transaction.set(source, safe);
+    return merged;
+  });
+  return { item: safe, document: saved };
+}
+
+// A task created directly on Today must not briefly exist in Inbox without its
+// matching plan item (or vice versa). Both records are created in one transaction.
+export async function createInboxItemAndAddToPlanAtomic(
+  userId: string,
+  document: AppADailyPlanDocument,
+  inboxItem: AppAInboxItem,
+): Promise<{ item: AppAInboxItem; document: AppADailyPlanDocument }> {
+  if (!isAppAInboxItem(inboxItem) || inboxItem.source !== "manual" || inboxItem.status !== "inbox") {
+    throw new Error("invalid_inbox_item");
+  }
+  const scheduled: AppAInboxItem = {
+    ...inboxItem,
+    status: "scheduled",
+    scheduledLocalDate: document.localDate,
+    updatedAt: new Date().toISOString(),
+  };
+  const safe = JSON.parse(JSON.stringify(scheduled)) as AppAInboxItem;
+  const saved = await runTransaction(db, async (transaction) => {
+    const planReference = doc(db, "appAUsers", requireUserId(userId), "dailyResets", document.localDate);
+    const sourceReference = inboxRef(userId, inboxItem.id);
+    const latestPlan = await transaction.get(planReference);
+    const existingSource = await transaction.get(sourceReference);
+    if (existingSource.exists()) throw new Error("duplicate");
+    const merged = mergePlanAddition(latestPlan.data(), document, `inbox_plan_${inboxItem.id}`);
+    transaction.set(planReference, { ...merged, updatedAt: serverTimestamp() });
+    transaction.set(sourceReference, safe);
+    return merged;
+  });
+  return { item: safe, document: saved };
 }
 
 export async function saveDailyPlanCompletionAndInboxStatusAtomic(
@@ -143,23 +218,25 @@ export async function saveDailyPlanCompletionAndInboxStatusAtomic(
   completed: boolean,
 ): Promise<void> {
   const itemReference = inboxRef(userId, inboxItemId);
-  const snapshot = await getDoc(itemReference);
-  if (!snapshot.exists() || !isAppAInboxItem(snapshot.data())) throw new Error("invalid_inbox_item");
-
-  const current = snapshot.data() as AppAInboxItem;
+  await runTransaction(db, async (transaction) => {
+  const planRef = doc(db, 'appAUsers', requireUserId(userId), 'dailyResets', localDate);
+  const planSnapshot = await transaction.get(planRef);
+  if (!planSnapshot.exists()) throw new Error('daily_plan_not_found');
+  const snapshot = await transaction.get(itemReference);
+  const data = snapshot.data();
+  const current = isAppAInboxItem(data) ? data : null;
+  const latest = new Set<string>(planSnapshot.data().execution?.completedItemIds || []);
+  if (completed) latest.add(`inbox_plan_${inboxItemId}`); else latest.delete(`inbox_plan_${inboxItemId}`);
+  transaction.update(planRef, { 'execution.completedItemIds': [...latest], updatedAt: serverTimestamp() });
+  if (!current) return;
   const next: AppAInboxItem = {
     ...current,
     status: completed ? "completed" : "scheduled",
-    scheduledLocalDate: completed ? undefined : localDate,
+    scheduledLocalDate: localDate,
     waitingOn: undefined,
     updatedAt: new Date().toISOString(),
   };
   const safe = JSON.parse(JSON.stringify(next)) as AppAInboxItem;
-  const batch = writeBatch(db);
-  batch.set(doc(db, "appAUsers", requireUserId(userId), "dailyResets", localDate), {
-    execution: { completedItemIds: Array.from(new Set(completedItemIds)) },
-    updatedAt: serverTimestamp(),
-  }, { merge: true });
-  batch.set(itemReference, safe, { merge: false });
-  await batch.commit();
+  transaction.set(itemReference, safe);
+  });
 }

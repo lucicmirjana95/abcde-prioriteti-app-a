@@ -5,6 +5,7 @@ import { APP_A_TRANSLATIONS, type AppALanguage } from "../../types";
 import SafeInterventionCard from "./SafeInterventionCard";
 import { normalizeCompletedItemIds } from "../../screens/todayExecution";
 import FocusTimer from "../focus/FocusTimer";
+import QuickAddTodayTask from "./QuickAddTodayTask";
 
 interface Props {
   draft: DailyPlanDraft;
@@ -16,6 +17,8 @@ interface Props {
   onEditPlan: () => void;
   defaultFocusMinutes: 15 | 25 | 45 | 60;
   onOpenReset: () => void;
+  onQuickAddToday: (title: string, minutes: number) => Promise<"duplicate" | "capacity_unknown" | "capacity_exceeded" | "invalid_plan" | null>;
+  onQuickSaveLater: (title: string, minutes: number) => Promise<boolean>;
 }
 
 export default function TodayExecutionScreen({
@@ -28,6 +31,8 @@ export default function TodayExecutionScreen({
   onEditPlan,
   defaultFocusMinutes,
   onOpenReset,
+  onQuickAddToday,
+  onQuickSaveLater,
 }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
   const [focusItem, setFocusItem] = useState<DailyPlanItem | null>(null);
@@ -80,6 +85,11 @@ export default function TodayExecutionScreen({
           <span className="mt-2 flex items-center gap-1.5 text-[13px] font-medium text-[#6E6E73] dark:text-[#AEAEB2]">
             <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
             {item.estimatedMinutes} min
+            {item.capacityType === "fixed" && (
+              <span className="ml-1 text-[#6E6E73] dark:text-[#AEAEB2]">
+                · {language === "sr" ? "fiksna obaveza" : language === "tr" ? "sabit yükümlülük" : "fixed commitment"}
+              </span>
+            )}
             {(item.deadlineText || item.deadlineIso) && (
               <span className="ml-1 text-amber-700 dark:text-amber-400">
                 · {item.deadlineText || item.deadlineIso}
@@ -131,7 +141,10 @@ export default function TodayExecutionScreen({
             style={{ width: `${todayItems.length ? (completed.length / todayItems.length) * 100 : 0}%` }}
           />
         </div>
+        {draft.plannedFixedMinutes ? <p className="mt-2 text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]">{language === 'sr' ? `${draft.plannedFlexibleMinutes ?? 0} min fleksibilno + ${draft.plannedFixedMinutes} min fiksnih obaveza` : language === 'tr' ? `${draft.plannedFlexibleMinutes ?? 0} dk esnek + ${draft.plannedFixedMinutes} dk sabit yükümlülük` : `${draft.plannedFlexibleMinutes ?? 0} min flexible + ${draft.plannedFixedMinutes} min fixed commitments`}</p> : null}
       </section>
+
+      <QuickAddTodayTask language={language} availableMinutes={draft.availableMinutes} plannedRequiredMinutes={draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes} onAddToday={onQuickAddToday} onSaveLater={onQuickSaveLater} onAdjustPlan={onEditPlan} />
 
       {error && (
         <div role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-[14px] font-medium text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">

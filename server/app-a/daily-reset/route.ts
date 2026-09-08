@@ -208,12 +208,15 @@ export function createDailyResetRoute(
       }
       
       const parseStartTime = clock();
+      let rejectionReason = 'cross_field_validation';
+      const recordRejection = (reason: string) => { rejectionReason = reason.replace(/[^a-z_]/g, '').slice(0, 80); onRejection?.(reason); };
       let parsed = parseModelResponse(
         rawResponse,
         idFactory,
         isClarification,
         knownQuestionIds,
-        onRejection
+        recordRejection,
+        body.phase === 'initial' ? body.input : body.submission
       );
       const parseEndTime = clock();
 
@@ -226,7 +229,7 @@ export function createDailyResetRoute(
         if (remainingBudgetMs > 3000) {
           let repairTimer: any = null;
           try {
-            const repairPrompt = `${prompt}\n\nREPAIR REQUIRED\nThe previous generated object failed strict cross-field validation. Generate the answer again from the same user input. Follow the response schema exactly, use valid zero-based sourceItemIndex values, keep every subset consistent with its classifiedItems timeHorizon, use at most three firstFocus items, and keep required planned minutes within explicit availableMinutes. Return JSON only.`;
+            const repairPrompt = `${prompt}\n\nREPAIR REQUIRED\nValidation category: ${rejectionReason}. The previous generated object failed strict cross-field validation. Generate the answer again from the same user input. Follow the response schema exactly, use valid zero-based sourceItemIndex values, keep every subset consistent with its classifiedItems timeHorizon, use at most three firstFocus items, and keep flexible planned minutes within explicit availableMinutes. Preserve explicitly fixed commitments and mark them capacityType fixed. Return JSON only.`;
             const repairTimeout = new Promise((_, reject) => {
               repairTimer = setTimeout(() => reject(new Error("Timeout")), remainingBudgetMs);
             });
@@ -240,7 +243,7 @@ export function createDailyResetRoute(
               }),
               repairTimeout,
             ]);
-            parsed = parseModelResponse(repairedRaw, idFactory, isClarification, knownQuestionIds, onRejection);
+            parsed = parseModelResponse(repairedRaw, idFactory, isClarification, knownQuestionIds, onRejection, body.phase === 'initial' ? body.input : body.submission);
           } catch {
             // Preserve the original, localized invalid-response result below.
           } finally {

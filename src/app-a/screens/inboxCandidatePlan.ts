@@ -1,7 +1,7 @@
 import type { ClassifiedBrainDumpItem, DailyPlanDraft, DailyPlanItem } from "../domain/daily-reset/contracts";
 import type { AppAInboxItem } from "../domain/inbox/contracts";
 import { normalizeInboxTitle } from "../domain/inbox/contracts";
-import { validatePlanDraft } from "../domain/daily-reset/validation";
+import { recalculatePlanTotals, validatePlanDraft } from "../domain/daily-reset/validation";
 
 export type AddInboxItemResult = { draft: DailyPlanDraft } | { error: "duplicate" | "duration_required" | "capacity_unknown" | "capacity_exceeded" | "invalid_plan" };
 
@@ -16,7 +16,7 @@ export function addInboxItemToPlan(draft: DailyPlanDraft, item: AppAInboxItem): 
     return { error: "duplicate" };
   }
   if (draft.availableMinutes === undefined) return { error: "capacity_unknown" };
-  if (draft.plannedRequiredMinutes + item.estimatedMinutes > draft.availableMinutes) return { error: "capacity_exceeded" };
+  if ((draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes) + item.estimatedMinutes > draft.availableMinutes) return { error: "capacity_exceeded" };
   const priority = { explanation: "Added by the user from Inbox." };
   const classified: ClassifiedBrainDumpItem = {
     id: sourceId,
@@ -38,17 +38,17 @@ export function addInboxItemToPlan(draft: DailyPlanDraft, item: AppAInboxItem): 
     ...(item.details ? { description: item.details } : {}),
     block: "later_today",
     estimatedMinutes: item.estimatedMinutes,
+    capacityType: "flexible",
     requiredEnergy: 3,
     timeSensitivity: "none",
     priority,
     reasoning: "Added by explicit user action from Inbox.",
     needsCheck: false,
   };
-  const next: DailyPlanDraft = {
+  const next = recalculatePlanTotals({
     ...draft,
     classifiedItems: [...draft.classifiedItems, classified],
     laterToday: [...draft.laterToday, planItem],
-    plannedRequiredMinutes: draft.plannedRequiredMinutes + item.estimatedMinutes,
-  };
+  });
   return validatePlanDraft(next).valid ? { draft: next } : { error: "invalid_plan" };
 }

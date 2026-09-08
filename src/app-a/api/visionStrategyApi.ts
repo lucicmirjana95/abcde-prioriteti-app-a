@@ -1,15 +1,17 @@
 import type { VisionDecompositionResult, VisionFeasibilityResult, VisionStrategyResult } from "../../shared/domain/vision";
 import type { AppALanguage } from "../types";
+import { appAAuthHeaders } from './authHeaders';
 
 export async function createVisionStrategy(
   idea: string,
   language: AppALanguage,
   signal?: AbortSignal,
+  planningContext?: string,
 ): Promise<VisionStrategyResult> {
   const response = await fetch("/api/app-a/vision-strategy", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idea, language }),
+    headers: { "Content-Type": "application/json", ...await appAAuthHeaders() },
+    body: JSON.stringify({ idea, language, planningContext }),
     signal,
   });
   const body = await response.json().catch(() => null);
@@ -25,7 +27,7 @@ export async function assessVisionFeasibility(
 ): Promise<VisionFeasibilityResult> {
   const response = await fetch("/api/app-a/vision-strategy", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...await appAAuthHeaders() },
     body: JSON.stringify({ idea, timeframe: timeframe.trim() || undefined, language, mode: "feasibility" }),
     signal,
   });
@@ -34,10 +36,10 @@ export async function assessVisionFeasibility(
   return body.feasibility as VisionFeasibilityResult;
 }
 
-export async function decomposeVisionStep(input: { idea: string; step: string; depth: number; language: AppALanguage }, signal?: AbortSignal): Promise<VisionDecompositionResult> {
+export async function decomposeVisionStep(input: { idea: string; step: string; depth: number; language: AppALanguage; planningContext?: string }, signal?: AbortSignal): Promise<VisionDecompositionResult> {
   const response = await fetch("/api/app-a/vision-strategy", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...await appAAuthHeaders() },
     body: JSON.stringify({ ...input, mode: "decompose" }),
     signal,
   });

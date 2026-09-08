@@ -220,6 +220,7 @@ export const modelSchema = {
               description: { type: Type.STRING },
               block: { type: Type.STRING, enum: ["first_focus"] },
               estimatedMinutes: { type: Type.INTEGER, description: "Positive integer in minutes" },
+              capacityType: { type: Type.STRING, enum: ["flexible", "fixed"], description: "Use fixed only for an explicitly stated unavoidable commitment; otherwise flexible." },
               requiredEnergy: { type: Type.INTEGER, description: "Integer 1-5" },
               timeSensitivity: {
                 type: Type.STRING,
@@ -252,7 +253,7 @@ export const modelSchema = {
               reasoning: { type: Type.STRING },
               needsCheck: { type: Type.BOOLEAN }
             },
-            required: ["sourceItemIndex", "title", "block", "estimatedMinutes", "requiredEnergy", "timeSensitivity", "priority", "needsCheck"]
+            required: ["sourceItemIndex", "title", "block", "estimatedMinutes", "capacityType", "requiredEnergy", "timeSensitivity", "priority", "needsCheck"]
           }
         },
         laterToday: {
@@ -268,6 +269,7 @@ export const modelSchema = {
               description: { type: Type.STRING },
               block: { type: Type.STRING, enum: ["later_today"] },
               estimatedMinutes: { type: Type.INTEGER, description: "Positive integer in minutes" },
+              capacityType: { type: Type.STRING, enum: ["flexible", "fixed"], description: "Use fixed only for an explicitly stated unavoidable commitment; otherwise flexible." },
               requiredEnergy: { type: Type.INTEGER, description: "Integer 1-5" },
               timeSensitivity: {
                 type: Type.STRING,
@@ -300,7 +302,7 @@ export const modelSchema = {
               reasoning: { type: Type.STRING },
               needsCheck: { type: Type.BOOLEAN }
             },
-            required: ["sourceItemIndex", "title", "block", "estimatedMinutes", "requiredEnergy", "timeSensitivity", "priority", "needsCheck"]
+            required: ["sourceItemIndex", "title", "block", "estimatedMinutes", "capacityType", "requiredEnergy", "timeSensitivity", "priority", "needsCheck"]
           }
         },
         ifCapacityRemains: {
@@ -316,6 +318,7 @@ export const modelSchema = {
               description: { type: Type.STRING },
               block: { type: Type.STRING, enum: ["if_capacity_remains"] },
               estimatedMinutes: { type: Type.INTEGER, description: "Positive integer in minutes" },
+              capacityType: { type: Type.STRING, enum: ["flexible"], description: "Optional work is always flexible." },
               requiredEnergy: { type: Type.INTEGER, description: "Integer 1-5" },
               timeSensitivity: {
                 type: Type.STRING,
@@ -348,7 +351,7 @@ export const modelSchema = {
               reasoning: { type: Type.STRING },
               needsCheck: { type: Type.BOOLEAN }
             },
-            required: ["sourceItemIndex", "title", "block", "estimatedMinutes", "requiredEnergy", "timeSensitivity", "priority", "needsCheck"]
+            required: ["sourceItemIndex", "title", "block", "estimatedMinutes", "capacityType", "requiredEnergy", "timeSensitivity", "priority", "needsCheck"]
           }
         },
         deferredItems: {

@@ -5,6 +5,7 @@ import {
   PlanBlock,
   TimeHorizon,
 } from "../domain/daily-reset/contracts";
+import { recalculatePlanTotals } from "../domain/daily-reset/validation";
 
 export interface ReviewState {
   currentDraft: DailyPlanDraft;
@@ -17,22 +18,7 @@ export interface ReviewState {
  * and plannedOptionalMinutes (ifCapacityRemains).
  * Returns a new DailyPlanDraft object without mutating input.
  */
-export function recalculatePlanTotals(draft: DailyPlanDraft): DailyPlanDraft {
-  const plannedRequiredMinutes =
-    draft.firstFocus.reduce((sum, i) => sum + (i.estimatedMinutes || 0), 0) +
-    draft.laterToday.reduce((sum, i) => sum + (i.estimatedMinutes || 0), 0);
-
-  const plannedOptionalMinutes = draft.ifCapacityRemains.reduce(
-    (sum, i) => sum + (i.estimatedMinutes || 0),
-    0
-  );
-
-  return {
-    ...draft,
-    plannedRequiredMinutes,
-    plannedOptionalMinutes,
-  };
-}
+export { recalculatePlanTotals } from "../domain/daily-reset/validation";
 
 /**
  * Moves a DailyPlanItem between today's plan blocks (first_focus, later_today, if_capacity_remains).

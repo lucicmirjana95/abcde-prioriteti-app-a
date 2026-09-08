@@ -265,6 +265,13 @@ export function validatePlanDraft(draft: DailyPlanDraft, knownQuestions?: Clarif
         errors.push(`Plan item ${item.id} must have a positive integer estimated minutes.`);
       }
 
+      if (item.capacityType !== undefined && item.capacityType !== "flexible" && item.capacityType !== "fixed") {
+        errors.push(`Plan item ${item.id} has invalid capacity type.`);
+      }
+      if (expectedBlock === "if_capacity_remains" && item.capacityType === "fixed") {
+        errors.push(`Fixed commitment ${item.id} cannot be optional.`);
+      }
+
       if (!isValidEnergy(item.requiredEnergy)) {
         errors.push(`Plan item ${item.id} must have a valid required energy (1-5).`);
       }
@@ -318,10 +325,21 @@ export function validatePlanDraft(draft: DailyPlanDraft, knownQuestions?: Clarif
   // Calculated minute totals
   const calcRequired = (draft.firstFocus || []).reduce((acc, it) => acc + it.estimatedMinutes, 0) +
                        (draft.laterToday || []).reduce((acc, it) => acc + it.estimatedMinutes, 0);
+  const requiredItems = [...(draft.firstFocus || []), ...(draft.laterToday || [])];
+  const calcFixed = requiredItems.reduce((acc, it) => acc + (it.capacityType === "fixed" ? it.estimatedMinutes : 0), 0);
+  const calcFlexible = calcRequired - calcFixed;
   const calcOptional = (draft.ifCapacityRemains || []).reduce((acc, it) => acc + it.estimatedMinutes, 0);
 
   if (draft.plannedRequiredMinutes !== calcRequired) {
     errors.push(`Incorrect plannedRequiredMinutes. Expected ${calcRequired}, got ${draft.plannedRequiredMinutes}`);
+  }
+
+  if (draft.plannedFlexibleMinutes !== undefined && draft.plannedFlexibleMinutes !== calcFlexible) {
+    errors.push(`Incorrect plannedFlexibleMinutes. Expected ${calcFlexible}, got ${draft.plannedFlexibleMinutes}`);
+  }
+
+  if (draft.plannedFixedMinutes !== undefined && draft.plannedFixedMinutes !== calcFixed) {
+    errors.push(`Incorrect plannedFixedMinutes. Expected ${calcFixed}, got ${draft.plannedFixedMinutes}`);
   }
 
   if (draft.plannedOptionalMinutes !== calcOptional) {
@@ -330,8 +348,8 @@ export function validatePlanDraft(draft: DailyPlanDraft, knownQuestions?: Clarif
 
   // Capacity rule
   if (draft.availableMinutes !== undefined) {
-    if (draft.plannedRequiredMinutes > draft.availableMinutes) {
-      errors.push(`Planned required time (${draft.plannedRequiredMinutes}m) exceeds available capacity (${draft.availableMinutes}m).`);
+    if (calcFlexible > draft.availableMinutes) {
+      errors.push(`Planned flexible time (${calcFlexible}m) exceeds available capacity (${draft.availableMinutes}m).`);
     }
   }
 
@@ -346,9 +364,15 @@ export function recalculatePlanTotals(draft: DailyPlanDraft): DailyPlanDraft {
   const plannedOptionalMinutes = 
     (draft.ifCapacityRemains || []).reduce((acc, it) => acc + it.estimatedMinutes, 0);
 
+  const plannedFixedMinutes = [...(draft.firstFocus || []), ...(draft.laterToday || [])]
+    .reduce((acc, item) => acc + (item.capacityType === "fixed" ? item.estimatedMinutes : 0), 0);
+  const plannedFlexibleMinutes = plannedRequiredMinutes - plannedFixedMinutes;
+
   return {
     ...draft,
     plannedRequiredMinutes,
+    plannedFlexibleMinutes,
+    plannedFixedMinutes,
     plannedOptionalMinutes,
   };
 }

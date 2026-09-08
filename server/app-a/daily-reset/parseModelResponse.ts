@@ -20,6 +20,7 @@ import {
   RequiredEnergy
 } from "../../../src/app-a/domain/daily-reset";
 import { ModelResponseShape } from "./modelSchema";
+import { explicitAvailableMinutes } from './availableTime';
 
 function isPopulatedDraft(draft: any): boolean {
   if (!draft || typeof draft !== "object") return false;
@@ -84,7 +85,8 @@ export function parseModelResponse(
   idFactory: IdFactory,
   isClarificationPhase: boolean,
   knownQuestionIds?: string[],
-  onRejection?: (reason: string) => void
+  onRejection?: (reason: string) => void,
+  authoritativeInput?: { availableMinutes?: number; brainDump?: string },
 ): ClarificationNeededResponse | PlanReadyResponse | DailyResetErrorResponse {
   const logSanitizedRejection = (reason: string) => {
     if (onRejection) {
@@ -316,6 +318,7 @@ export function parseModelResponse(
             description: item.description !== undefined ? String(item.description) : undefined,
             block: expectedBlock,
             estimatedMinutes: Number(item.estimatedMinutes || 0),
+            capacityType: item.capacityType === "fixed" ? "fixed" : "flexible",
             requiredEnergy: Number(item.requiredEnergy || 1) as RequiredEnergy,
             timeSensitivity: item.timeSensitivity as TimeSensitivity,
             deadlineText: item.deadlineText !== undefined ? String(item.deadlineText) : undefined,
@@ -364,7 +367,7 @@ export function parseModelResponse(
         intervention,
         plannedRequiredMinutes: 0,
         plannedOptionalMinutes: 0,
-        availableMinutes: draft.availableMinutes !== undefined ? Number(draft.availableMinutes) : undefined
+        availableMinutes: authoritativeInput ? (authoritativeInput.availableMinutes ?? explicitAvailableMinutes(authoritativeInput.brainDump || '')) : draft.availableMinutes !== undefined ? Number(draft.availableMinutes) : undefined
       };
 
       planDraft = recalculatePlanTotals(planDraft);

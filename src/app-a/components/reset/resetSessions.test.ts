@@ -317,6 +317,14 @@ for (const lang of languages) {
   assert.ok(l.common.presetBox4.length > 0, `Missing presetBox4 for ${lang}`);
   assert.ok(l.common.presetBox8.length > 0, `Missing presetBox8 for ${lang}`);
   assert.ok(l.common.presetBox12.length > 0, `Missing presetBox12 for ${lang}`);
+  assert.ok(l.common.boxTiming.length > 0, `Missing boxTiming for ${lang}`);
+  assert.ok(l.common.exhaleTiming.length > 0, `Missing exhaleTiming for ${lang}`);
+  assert.ok(l.common.guidedCycles.length > 0, `Missing guidedCycles for ${lang}`);
+  assert.ok(l.common.guidedRestDuration.length > 0, `Missing guidedRestDuration for ${lang}`);
+  assert.ok(l.common.restSoundEnabled.length > 0, `Missing restSoundEnabled for ${lang}`);
+  assert.ok(l.common.restSoundDisabled.length > 0, `Missing restSoundDisabled for ${lang}`);
+  assert.ok(l.common.restSoundPlaying.length > 0, `Missing restSoundPlaying for ${lang}`);
+  assert.ok(l.common.restSoundFailed.length > 0, `Missing restSoundFailed for ${lang}`);
 
   // Experience names
   assert.ok(l.balancedBox.name.length > 0);

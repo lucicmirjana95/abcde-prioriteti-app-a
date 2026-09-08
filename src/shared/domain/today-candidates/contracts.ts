@@ -10,6 +10,7 @@ export interface TodayCandidate {
   estimatedMinutes: number;
   status: TodayCandidateStatus;
   sequenceIndex?: number;
+  stepKey?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,10 +28,11 @@ export function isTodayCandidate(value: unknown): value is TodayCandidate {
   const item = value as Record<string, unknown>;
   return typeof item.id === "string" && /^candidate_[a-z0-9_]{4,80}$/.test(item.id) &&
     item.source === "vision" && typeof item.sourceId === "string" && item.sourceId.length > 0 && item.sourceId.length <= 128 &&
-    typeof item.title === "string" && item.title.trim().length >= 3 && item.title.length <= 240 &&
-    typeof item.estimatedMinutes === "number" && Number.isInteger(item.estimatedMinutes) && item.estimatedMinutes >= 5 && item.estimatedMinutes <= 480 &&
+    typeof item.title === "string" && item.title.trim().length >= 3 && item.title.length <= 300 &&
+    typeof item.estimatedMinutes === "number" && Number.isInteger(item.estimatedMinutes) && item.estimatedMinutes >= 0 && item.estimatedMinutes <= 480 &&
     (["pending", "scheduled", "completed", "dismissed"] as unknown[]).includes(item.status) &&
-    (item.sequenceIndex === undefined || (typeof item.sequenceIndex === "number" && Number.isInteger(item.sequenceIndex) && item.sequenceIndex >= 0 && item.sequenceIndex <= 25)) &&
+    (item.sequenceIndex === undefined || (typeof item.sequenceIndex === "number" && Number.isInteger(item.sequenceIndex) && item.sequenceIndex >= 0 && item.sequenceIndex <= 650)) &&
+    (item.stepKey === undefined || (typeof item.stepKey === 'string' && /^[a-z0-9_]{1,80}$/.test(item.stepKey))) &&
     typeof item.createdAt === "string" && !Number.isNaN(Date.parse(item.createdAt)) &&
     typeof item.updatedAt === "string" && !Number.isNaN(Date.parse(item.updatedAt));
 }
@@ -43,22 +45,48 @@ export function getVisionStepSequence(document: SavedVisionStrategy): string[] {
     const key = text.toLocaleLowerCase();
     if (text.length >= 3 && !seen.has(key)) { seen.add(key); result.push(text); }
   };
-  add(document.strategy.nextStep);
-  for (const milestone of document.strategy.milestones) for (const step of milestone.steps) add(step);
-  return result.slice(0, 26);
+  const visit = (step: string, key: string, depth: number) => {
+    const children = document.stepBreakdowns[key];
+    if (children?.length && depth < 2) children.forEach((child, index) => visit(child, `${key}-d${index}`, depth + 1));
+    else add(step);
+  };
+  // nextStep must be the first executable leaf, not an additional copy of a milestone.
+  const first = document.strategy.milestones[0]?.steps[0];
+  if (first?.trim().toLowerCase() !== document.strategy.nextStep.trim().toLowerCase()) add(document.strategy.nextStep);
+  document.strategy.milestones.forEach((milestone, m) => milestone.steps.forEach((step, s) => visit(step, `m${m}-s${s}`, 0)));
+  return result.slice(0, 650);
+}
+
+export function visionStepKey(title: string): string {
+  let hash = 2166136261;
+  let second = 5381;
+  for (const character of title.normalize('NFKC').trim().toLowerCase()) {
+    const code = character.codePointAt(0)!;
+    hash = Math.imul(hash ^ code, 16777619);
+    second = Math.imul(second, 33) ^ code;
+  }
+  return `s_${(hash >>> 0).toString(16)}_${(second >>> 0).toString(16)}`;
 }
 
 export function createSequencedVisionCandidate(document: SavedVisionStrategy, sequenceIndex: number, now = new Date().toISOString()): TodayCandidate | null {
   const title = getVisionStepSequence(document)[sequenceIndex];
   if (!title) return null;
-  const identity = sequenceIndex === 0 ? document.id : `${document.id}_step_${sequenceIndex}`;
-  return { id: createTodayCandidateId(identity), source: "vision", sourceId: document.id, title, estimatedMinutes: 25, status: "pending", sequenceIndex, createdAt: now, updatedAt: now };
+  const stepKey = visionStepKey(title);
+  return { id: createTodayCandidateId(`${document.id}_${stepKey}`), source: "vision", sourceId: document.id, title, estimatedMinutes: 0, status: "pending", sequenceIndex, stepKey, createdAt: now, updatedAt: now };
 }
 
 export function getNextVisionSequenceIndex(candidates: TodayCandidate[], sourceId: string): number | null {
   const related = candidates.filter((candidate) => candidate.sourceId === sourceId);
   if (related.some((candidate) => candidate.status === "pending" || candidate.status === "scheduled")) return null;
   let index = 0;
-  while (related.some((candidate) => (candidate.sequenceIndex ?? 0) === index && candidate.status === "completed")) index += 1;
-  return related.some((candidate) => (candidate.sequenceIndex ?? 0) === index && candidate.status === "dismissed") ? null : index;
+  while (related.some((candidate) => (candidate.sequenceIndex ?? 0) === index && (candidate.status === "completed" || candidate.status === "dismissed"))) index += 1;
+  return index;
+}
+
+export function nextVisionCandidate(document: SavedVisionStrategy, related: TodayCandidate[]): TodayCandidate | null {
+  if (document.status === 'archived' || related.some((item) => item.status === 'scheduled' || item.status === 'pending')) return null;
+  const steps = getVisionStepSequence(document);
+  const done = new Set(related.filter((item) => item.status === 'completed' || item.status === 'dismissed').map((item) => visionStepKey(item.title)));
+  const index = steps.findIndex((title) => !done.has(visionStepKey(title)));
+  return index < 0 ? null : createSequencedVisionCandidate(document, index);
 }

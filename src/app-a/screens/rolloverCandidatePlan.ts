@@ -3,7 +3,7 @@ import type {
   DailyPlanDraft,
   DailyPlanItem,
 } from "../domain/daily-reset/contracts";
-import { validatePlanDraft } from "../domain/daily-reset/validation";
+import { recalculatePlanTotals, validatePlanDraft } from "../domain/daily-reset/validation";
 import type { UnfinishedRolloverCandidate } from "../domain/rollover/contracts";
 
 export type AddRolloverCandidateResult =
@@ -63,7 +63,7 @@ export function addRolloverCandidateToPlan(
 
   if (targetBlock === "later_today") {
     if (
-      draft.plannedRequiredMinutes + candidate.estimatedMinutes >
+      (draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes) + candidate.estimatedMinutes >
       draft.availableMinutes
     ) {
       return { error: "capacity_exceeded" };
@@ -98,6 +98,7 @@ export function addRolloverCandidateToPlan(
     description: candidate.description,
     block: targetBlock,
     estimatedMinutes: candidate.estimatedMinutes,
+    capacityType: "flexible",
     requiredEnergy: candidate.requiredEnergy || 3,
     timeSensitivity: candidate.timeSensitivity || "none",
     deadlineText: candidate.deadlineText,
@@ -108,7 +109,7 @@ export function addRolloverCandidateToPlan(
     needsCheck: false,
   };
 
-  const next: DailyPlanDraft = {
+  const next = recalculatePlanTotals({
     ...draft,
     classifiedItems: [...draft.classifiedItems, classified],
     firstFocus: [...draft.firstFocus], // Never auto-promoted to firstFocus!
@@ -120,15 +121,7 @@ export function addRolloverCandidateToPlan(
       targetBlock === "if_capacity_remains"
         ? [...draft.ifCapacityRemains, planItem]
         : [...draft.ifCapacityRemains],
-    plannedRequiredMinutes:
-      targetBlock === "later_today"
-        ? draft.plannedRequiredMinutes + candidate.estimatedMinutes
-        : draft.plannedRequiredMinutes,
-    plannedOptionalMinutes:
-      targetBlock === "if_capacity_remains"
-        ? draft.plannedOptionalMinutes + candidate.estimatedMinutes
-        : draft.plannedOptionalMinutes,
-  };
+  });
 
   return validatePlanDraft(next).valid
     ? { draft: next }

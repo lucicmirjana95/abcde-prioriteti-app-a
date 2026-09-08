@@ -1,3 +1,4 @@
+import { appAAuthHeaders } from './authHeaders';
 import {
   DailyResetInput,
   DailyResetClarificationSubmission,
@@ -259,6 +260,7 @@ class DailyResetApiClientImpl implements DailyResetApiClient {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...await appAAuthHeaders(),
           },
           body: JSON.stringify(payload),
           signal: controller.signal,

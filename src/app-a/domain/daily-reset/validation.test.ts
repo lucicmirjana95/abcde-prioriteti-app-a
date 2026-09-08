@@ -342,4 +342,42 @@ runTest("no mutation on recalculatePlanTotals", () => {
   assert.notStrictEqual(originalDraft, recalculated, "Should return a new object");
 });
 
+runTest("fixed commitments remain visible outside flexible capacity", () => {
+  const fixedCommitment: DailyPlanItem = {
+    ...validPlanItem,
+    id: "fixed-1",
+    estimatedMinutes: 240,
+    capacityType: "fixed",
+  };
+  const flexibleTask: DailyPlanItem = {
+    ...validPlanItem,
+    id: "flex-1",
+    block: "later_today",
+    estimatedMinutes: 30,
+    capacityType: "flexible",
+  };
+  const draft = recalculatePlanTotals({
+    ...baseDraft,
+    firstFocus: [fixedCommitment],
+    laterToday: [flexibleTask],
+    availableMinutes: 30,
+  });
+
+  assert.strictEqual(draft.plannedRequiredMinutes, 270);
+  assert.strictEqual(draft.plannedFixedMinutes, 240);
+  assert.strictEqual(draft.plannedFlexibleMinutes, 30);
+  assert.strictEqual(validatePlanDraft(draft).valid, true);
+});
+
+runTest("fixed commitments cannot be optional", () => {
+  const draft = recalculatePlanTotals({
+    ...baseDraft,
+    firstFocus: [],
+    ifCapacityRemains: [{ ...validPlanItem, block: "if_capacity_remains", capacityType: "fixed" }],
+  });
+  const result = validatePlanDraft(draft);
+  assert.strictEqual(result.valid, false);
+  assert.ok(result.errors.some((error) => error.includes("cannot be optional")));
+});
+
 console.log("\nAll tests passed successfully! 🎉");

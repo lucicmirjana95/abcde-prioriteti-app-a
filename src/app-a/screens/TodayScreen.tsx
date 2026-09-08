@@ -32,7 +32,7 @@ import DailyRoutinesSection from '../components/routines/DailyRoutinesSection';
 import ResetSessions from '../components/reset/ResetSessions';
 import TodayCandidatesSection from '../components/vision/TodayCandidatesSection';
 import type { TodayCandidate } from '../../shared/domain/today-candidates';
-import { saveCompletionAndAdvanceVision } from '../../shared/persistence/today-candidates';
+import { saveCompletionAndAdvanceVision, savePlanAndScheduleVisionAtomic } from '../../shared/persistence/today-candidates';
 import { addVisionCandidateToPlan } from './visionCandidatePlan';
 import UnfinishedTasksSection from '../components/rollover/UnfinishedTasksSection';
 import {
@@ -44,8 +44,8 @@ import {
 import { shiftLocalDate, type UnfinishedRolloverCandidate } from '../domain/rollover/contracts';
 import { addRolloverCandidateToPlan } from './rolloverCandidatePlan';
 import type { DataResetEventDetail } from '../components/settings/DataResetModal';
-import { importDailyPlanItemsToInbox, saveDailyPlanCompletionAndInboxStatusAtomic, savePlanAndScheduleInboxItemAtomic } from '../persistence/inboxRepository';
-import type { AppAInboxItem } from '../domain/inbox/contracts';
+import { createInboxItemAndAddToPlanAtomic, importDailyPlanItemsToInbox, saveDailyPlanCompletionAndInboxStatusAtomic, saveInboxItem, savePlanAndScheduleInboxItemAtomic } from '../persistence/inboxRepository';
+import { createManualInboxItemId, type AppAInboxItem } from '../domain/inbox/contracts';
 import { addInboxItemToPlan } from './inboxCandidatePlan';
 import DueInboxItemsSection from '../components/inbox/DueInboxItemsSection';
 
@@ -70,6 +70,7 @@ function readOnboardingCompleted(): boolean {
 export default function TodayScreen({ language, client, demoConfig, initialData, preferences }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
   const effectiveTimeZone = getEffectiveTimeZone(preferences);
+  const { user, authReady, signInWithGoogle } = useAppAAuth();
   const {
     state,
     submitInitial,
@@ -79,10 +80,14 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     cancel,
     backToEdit,
     loadConfirmedPlan,
-  } = useTodayFlow(language, client, initialData);
-  const { user, authReady, signInWithGoogle } = useAppAAuth();
+    reset,
+    updateInputData,
+    updateReviewDraft,
+  } = useTodayFlow(language, client, initialData, demoConfig ? undefined : `${user?.uid || 'guest'}:today:${getLocalDateKeyInTimeZone(effectiveTimeZone)}`);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [formVersion, setFormVersion] = useState(0);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [saveDiagnostic, setSaveDiagnostic] = useState<string | null>(null);
   const [isLoadingSavedPlan, setIsLoadingSavedPlan] = useState(false);
   const [viewMode, setViewMode] = useState<'review' | 'execution'>('review');
@@ -96,6 +101,34 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
   const [onboardingCompleted, setOnboardingCompleted] = useState(readOnboardingCompleted);
   const loadedForUserAndDate = useRef<string | null>(null);
   const isConfirmingRef = useRef(false);
+  const planRevision = useRef(0);
+  const liveState = useRef({ unsaved: state.unsaved, viewMode, updatingItemId });
+  liveState.current = { unsaved: state.unsaved, viewMode, updatingItemId };
+  useEffect(() => {
+    if (!user || demoConfig) return;
+    let active = true;
+    const refresh = async () => {
+      if (liveState.current.unsaved || liveState.current.viewMode !== 'execution' || liveState.current.updatingItemId || isConfirmingRef.current) return;
+      try {
+        const saved = await loadConfirmedDailyPlan(user.uid, activePlanDate);
+        if (!active || !saved || liveState.current.unsaved || liveState.current.viewMode !== 'execution' || liveState.current.updatingItemId || isConfirmingRef.current) return;
+        planRevision.current = saved.revision || 0;
+        loadConfirmedPlan(planDraftFromDocument(saved), dailyResetDataFromDocument(saved));
+        setCompletedItemIds(saved.execution?.completedItemIds || []);
+      } catch { if (active) setExecutionError(t.planLoadError); }
+    };
+    window.addEventListener('app-a-navigation', refresh);
+    window.addEventListener('app-a-plan-changed', refresh);
+    return () => { active = false; window.removeEventListener('app-a-navigation', refresh); window.removeEventListener('app-a-plan-changed', refresh); };
+  }, [user, demoConfig, activePlanDate, loadConfirmedPlan, t.planLoadError]);
+  const [calendarDate, setCalendarDate] = useState(() => getLocalDateKeyInTimeZone(effectiveTimeZone));
+  useEffect(() => {
+    const refresh = () => setCalendarDate(getLocalDateKeyInTimeZone(effectiveTimeZone));
+    refresh();
+    const timer = window.setInterval(refresh, 15_000);
+    window.addEventListener('focus', refresh);
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh); };
+  }, [effectiveTimeZone]);
 
   useEffect(() => {
     if (!resetSessionsOpen) return;
@@ -142,26 +175,36 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
         setViewMode('review');
         setRolloverCandidates([]);
         cancel();
+        reset();
+        updateInputData({ brainDump: '', stateNote: '', availableTime: undefined, energy: undefined, pleasantness: undefined });
+        planRevision.current = 0;
+        setFormVersion(version => version + 1);
       }
     };
 
     window.addEventListener('app-a-data-reset', handleDataReset);
     return () => window.removeEventListener('app-a-data-reset', handleDataReset);
-  }, [cancel]);
+  }, [cancel, reset, updateInputData]);
 
   useEffect(() => {
-    if (demoConfig || !authReady || !user || isConfirmingRef.current) return;
+    if (demoConfig || !authReady || isConfirmingRef.current) return;
+    if (!user) {
+      loadedForUserAndDate.current = null;
+      setIsLoadingSavedPlan(false);
+      return;
+    }
     const localDate = getLocalDateKeyInTimeZone(effectiveTimeZone);
     const loadKey = `${user.uid}:${localDate}`;
     if (loadedForUserAndDate.current === loadKey) return;
     loadedForUserAndDate.current = loadKey;
     setIsLoadingSavedPlan(true);
 
-    let cancelled = false;
     void loadConfirmedDailyPlan(user.uid, localDate)
       .then((saved) => {
-        if (!cancelled && saved) {
+        if (loadedForUserAndDate.current !== loadKey) return;
+        if (saved && !liveState.current.unsaved) {
           const loadedPlan = planDraftFromDocument(saved);
+          planRevision.current = saved.revision || 0;
           loadConfirmedPlan(loadedPlan, dailyResetDataFromDocument(saved));
           setCompletedItemIds(
             normalizeCompletedItemIds(loadedPlan, saved.execution?.completedItemIds || []),
@@ -169,31 +212,35 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
           setActivePlanDate(saved.localDate);
           setViewMode('execution');
           setSaveStatus('saved');
+        } else if (activePlanDate !== localDate) {
+          reset();
+          setCompletedItemIds([]);
+          setActivePlanDate(localDate);
+          setViewMode('review');
+          setSaveStatus('idle');
         }
       })
       .catch(() => {
-        if (!cancelled) {
+        if (loadedForUserAndDate.current === loadKey) {
           setSaveStatus('error');
           setSaveError(t.planLoadError);
         }
       })
       .finally(() => {
-        if (!cancelled) setIsLoadingSavedPlan(false);
+        if (loadedForUserAndDate.current === loadKey) setIsLoadingSavedPlan(false);
       });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authReady, demoConfig, effectiveTimeZone, loadConfirmedPlan, t.planLoadError, user]);
+  }, [authReady, demoConfig, effectiveTimeZone, calendarDate, loadConfirmedPlan, reset, t.planLoadError, user]);
 
   const handleConfirm = async (draft: DailyPlanDraft) => {
+    if (isConfirmingRef.current) return;
     setSaveStatus('saving');
     setSaveError(null);
     setSaveDiagnostic(null);
     isConfirmingRef.current = true;
     try {
       if (demoConfig) {
-        setCompletedItemIds([]);
+        setCompletedItemIds(normalizeCompletedItemIds(draft, completedItemIds));
+        loadConfirmedPlan(draft, state.inputData);
         setViewMode('execution');
         setSaveStatus('saved');
         return;
@@ -201,13 +248,18 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
       const activeUser = user || await signInWithGoogle();
       const localDate = getLocalDateKeyInTimeZone(effectiveTimeZone);
       const document = createDailyPlanDocument(state.inputData, draft, language, localDate, effectiveTimeZone);
-      await saveConfirmedDailyPlan(activeUser.uid, document);
+      document.revision = activePlanDate === localDate ? planRevision.current : 0;
+      document.execution = { completedItemIds: normalizeCompletedItemIds(draft, activePlanDate === localDate ? completedItemIds : []) };
+      const savedDocument = await saveConfirmedDailyPlan(activeUser.uid, document);
+      document.execution = savedDocument.execution;
+      planRevision.current = savedDocument.revision || 0;
       // Inbox ingestion is secondary: a confirmed daily plan must never be reported as
       // failed merely because deferred-item indexing is temporarily unavailable.
       void importDailyPlanItemsToInbox(activeUser.uid, document).catch(() => undefined);
       loadedForUserAndDate.current = `${activeUser.uid}:${document.localDate}`;
       setActivePlanDate(document.localDate);
-      setCompletedItemIds([]);
+      setCompletedItemIds(document.execution.completedItemIds);
+      loadConfirmedPlan(draft, state.inputData);
       setViewMode('execution');
       setSaveStatus('saved');
       setOnboardingCompleted(true);
@@ -264,11 +316,11 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
         if (inboxItemId) {
           await saveDailyPlanCompletionAndInboxStatusAtomic(user.uid, activePlanDate, next, inboxItemId, newlyCompleted);
           window.dispatchEvent(new Event('app-a-inbox-changed'));
-        } else if (newlyCompleted && visionCandidateId) {
-          await saveCompletionAndAdvanceVision(user.uid, activePlanDate, next, visionCandidateId);
+        } else if (visionCandidateId) {
+          await saveCompletionAndAdvanceVision(user.uid, activePlanDate, next, visionCandidateId, newlyCompleted);
           window.dispatchEvent(new Event('app-a-vision-candidates-changed'));
         } else {
-          await saveDailyPlanCompletion(user.uid, activePlanDate, next);
+          await saveDailyPlanCompletion(user.uid, activePlanDate, next, { itemId, completed: newlyCompleted });
         }
       }
     } catch {
@@ -276,6 +328,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
       setExecutionError(t.completionSaveError);
     } finally {
       setUpdatingItemId(null);
+      window.dispatchEvent(new Event('app-a-plan-changed'));
     }
   };
 
@@ -286,8 +339,10 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     try {
       const document = createDailyPlanDocument(state.inputData, result.draft, language, activePlanDate, effectiveTimeZone);
       document.execution = { completedItemIds };
-      await saveConfirmedDailyPlan(user.uid, document);
-      loadConfirmedPlan(result.draft, state.inputData);
+      const saved = await savePlanAndScheduleVisionAtomic(user.uid, document, candidate);
+      planRevision.current = saved.revision || 0;
+      loadConfirmedPlan(planDraftFromDocument(saved), state.inputData);
+      setCompletedItemIds(saved.execution?.completedItemIds || []);
       setViewMode('execution');
       setSaveStatus('saved');
       return null;
@@ -303,14 +358,68 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     try {
       const document = createDailyPlanDocument(state.inputData, result.draft, language, activePlanDate, effectiveTimeZone);
       document.execution = { completedItemIds };
-      await savePlanAndScheduleInboxItemAtomic(user.uid, document, item);
-      loadConfirmedPlan(result.draft, state.inputData);
+      const saved = await savePlanAndScheduleInboxItemAtomic(user.uid, document, item);
+      planRevision.current = saved.document.revision || 0;
+      setCompletedItemIds(saved.document.execution?.completedItemIds || []);
+      loadConfirmedPlan(planDraftFromDocument(saved.document), state.inputData);
       setViewMode('execution');
       setSaveStatus('saved');
       return null;
     } catch {
       return 'invalid_plan';
     }
+  };
+
+  const makeManualInboxItem = (title: string, minutes: number): AppAInboxItem => {
+    const now = new Date().toISOString();
+    return {
+      id: createManualInboxItemId(),
+      title: title.trim(),
+      estimatedMinutes: minutes,
+      kind: 'task',
+      horizon: 'later',
+      status: 'inbox',
+      source: 'manual',
+      language,
+      createdAt: now,
+      updatedAt: now,
+    };
+  };
+
+  const handleQuickAddToday = async (title: string, minutes: number): Promise<'duplicate' | 'capacity_unknown' | 'capacity_exceeded' | 'invalid_plan' | null> => {
+    if (!state.planDraft) return 'invalid_plan';
+    const item = makeManualInboxItem(title, minutes);
+    const result = addInboxItemToPlan(state.planDraft, item);
+    if ('error' in result) return result.error === 'duration_required' ? 'invalid_plan' : result.error;
+    if (demoConfig) {
+      loadConfirmedPlan(result.draft, state.inputData);
+      setViewMode('execution');
+      return null;
+    }
+    if (!user) return 'invalid_plan';
+    try {
+      const document = createDailyPlanDocument(state.inputData, result.draft, language, activePlanDate, effectiveTimeZone);
+      document.execution = { completedItemIds };
+      const saved = await createInboxItemAndAddToPlanAtomic(user.uid, document, item);
+      planRevision.current = saved.document.revision || 0;
+      setCompletedItemIds(saved.document.execution?.completedItemIds || []);
+      loadConfirmedPlan(planDraftFromDocument(saved.document), state.inputData);
+      setViewMode('execution');
+      setSaveStatus('saved');
+      window.dispatchEvent(new Event('app-a-inbox-changed'));
+      return null;
+    } catch (error) {
+      return error instanceof Error && error.message === 'duplicate' ? 'duplicate' : 'invalid_plan';
+    }
+  };
+
+  const handleQuickSaveLater = async (title: string, minutes: number): Promise<boolean> => {
+    if (!user || demoConfig) return false;
+    try {
+      await saveInboxItem(user.uid, makeManualInboxItem(title, minutes));
+      window.dispatchEvent(new Event('app-a-inbox-changed'));
+      return true;
+    } catch { return false; }
   };
 
   const handleAddRolloverCandidate = async (candidate: UnfinishedRolloverCandidate): Promise<string | null> => {
@@ -320,12 +429,14 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     try {
       const document = createDailyPlanDocument(state.inputData, result.draft, language, activePlanDate, effectiveTimeZone);
       document.execution = { completedItemIds };
-      await saveDailyPlanWithRolloverDecisionAtomic(user.uid, document, {
+      const saved = await saveDailyPlanWithRolloverDecisionAtomic(user.uid, document, {
         sourceLocalDate: candidate.sourceLocalDate,
         sourcePlanItemId: candidate.id,
         status: 'carried',
       });
-      loadConfirmedPlan(result.draft, state.inputData);
+      planRevision.current = saved.revision || 0;
+      setCompletedItemIds(saved.execution?.completedItemIds || []);
+      loadConfirmedPlan(planDraftFromDocument(saved), state.inputData);
       setRolloverCandidates((prev) =>
         prev.filter((item) => !(item.sourceLocalDate === candidate.sourceLocalDate && item.id === candidate.id)),
       );
@@ -425,9 +536,12 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
         }}
         defaultFocusMinutes={preferences.defaultFocusMinutes}
         onOpenReset={() => setResetSessionsOpen(true)}
+        onQuickAddToday={handleQuickAddToday}
+        onQuickSaveLater={handleQuickSaveLater}
       />
     ) : (
       <DailyPlanReview
+        onDraftChange={updateReviewDraft}
         initialDraft={state.planDraft}
         language={language}
         onBackToEdit={backToEdit}
@@ -452,14 +566,25 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
           <p className="max-w-[620px] text-[17px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">{t.dailyResetIntro}</p>
         </div>
         <DailyResetForm
+          key={formVersion}
+          onDraftChange={updateInputData}
           t={t}
           language={language}
           initialData={state.inputData}
-          onSubmit={(validatedData) => {
-            submitInitial(validatedData);
+          onSubmit={async (validatedData) => {
+            updateInputData(validatedData);
+            setFormError(null);
+            if (import.meta.env.PROD && !user && !demoConfig) {
+              try { await signInWithGoogle(); } catch {
+                setFormError(language === 'sr' ? 'Plan nije pokrenut jer prijava nije završena. Pokušajte ponovo kada budete spremni.' : language === 'tr' ? 'Giriş tamamlanmadığı için plan başlatılmadı. Hazır olduğunuzda tekrar deneyin.' : 'The plan was not started because sign-in was not completed. Try again when you are ready.');
+                return;
+              }
+            }
+            void submitInitial(validatedData);
           }}
           aiEnabled={preferences.aiSuggestionsEnabled}
           onboardingCompleted={onboardingCompleted}
+          submissionError={formError}
           aiDisabledMessage={language === 'sr' ? 'AI predlozi su isključeni u Podešavanjima.' : language === 'tr' ? 'AI önerileri Ayarlar bölümünde kapalı.' : 'AI suggestions are turned off in Settings.'}
         />
       </div>

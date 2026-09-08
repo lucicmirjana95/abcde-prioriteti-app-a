@@ -6,36 +6,56 @@ import { formatHistoryDate, getVisionItems } from "./planHistory";
 import { useAppAPlanHistory } from "./useAppAPlanHistory";
 import VisionStrategyBuilder from "../components/vision/VisionStrategyBuilder";
 import type { SavedVisionStrategy } from "../../shared/domain/vision";
-import { deleteVisionStrategy, loadVisionStrategies, setVisionStrategyArchived } from "../../shared/persistence/vision";
+import { deleteVisionStrategy, loadVisionLibrary, loadVisionStrategies, visionIdeaFingerprint, setVisionStrategyArchived } from "../../shared/persistence/vision";
 import type { DataResetEventDetail } from "../components/settings/DataResetModal";
+import { readSessionDraft, writeSessionDraft } from "../persistence/sessionDraft";
 
 const COPY = {
-  en: { eyebrow: "Long-term direction", title: "Vision", intro: "Ideas worth keeping, separated from what needs your attention today.", empty: "Long-term ideas from your daily plans will appear here.", captured: "Captured", placeholder: "Describe a direction or goal you want to develop…", add: "Add direction", active: "Active", archived: "Archived", archive: "Archive", restore: "Restore", delete: "Delete", confirmDelete: "Delete permanently?", cancel: "Cancel", actionError: "The strategy could not be updated. Try again.", helpTitle: "Turn a direction into an achievable next step", helpIntro: "Describe the goal in your own words. We check feasibility, suggest a more realistic version when useful, and build milestones without unnecessary detail.", helpSteps: ["Describe your goal or direction.", "Add a desired timeframe if you have one.", "Answer only the questions that materially affect the strategy.", "Review the path and send one useful next step to Today."], how: "How does Vision work?", hide: "Hide help" },
-  sr: { eyebrow: "Dugoročni pravac", title: "Vizija", intro: "Ideje koje vredi sačuvati, odvojene od onoga što traži pažnju danas.", empty: "Dugoročne ideje iz dnevnih planova pojaviće se ovde.", captured: "Zabeleženo", placeholder: "Opišite pravac ili cilj koji želite da razradite…", add: "Dodaj pravac", active: "Aktivno", archived: "Arhivirano", archive: "Arhiviraj", restore: "Vrati", delete: "Obriši", confirmDelete: "Trajno obrisati?", cancel: "Otkaži", actionError: "Strategija nije mogla da se izmeni. Pokušajte ponovo.", helpTitle: "Pretvorite pravac u ostvariv sledeći korak", helpIntro: "Opišite cilj svojim rečima. Proveravamo izvodljivost, predlažemo realniju verziju kada je korisna i pravimo etape bez nepotrebnog usitnjavanja.", helpSteps: ["Opišite cilj ili pravac.", "Dodajte željeni rok ako ga imate.", "Odgovorite samo na pitanja koja bitno menjaju strategiju.", "Pregledajte put i pošaljite jedan koristan sledeći korak u Danas."], how: "Kako Vizija radi?", hide: "Sakrij objašnjenja" },
-  tr: { eyebrow: "Uzun vadeli yön", title: "Vizyon", intro: "Saklanmaya değer fikirler, bugün dikkatinizi isteyenlerden ayrı tutulur.", empty: "Günlük planlarınızdaki uzun vadeli fikirler burada görünür.", captured: "Kaydedildi", placeholder: "Geliştirmek istediğiniz yönü veya hedefi açıklayın…", add: "Yön ekle", active: "Aktif", archived: "Arşivlenmiş", archive: "Arşivle", restore: "Geri yükle", delete: "Sil", confirmDelete: "Kalıcı olarak silinsin mi?", cancel: "İptal", actionError: "Strateji güncellenemedi. Tekrar deneyin.", helpTitle: "Bir yönü ulaşılabilir sonraki adıma dönüştürün", helpIntro: "Hedefinizi kendi sözlerinizle anlatın. Uygulanabilirliği kontrol eder, yararlıysa daha gerçekçi bir sürüm önerir ve gereksiz ayrıntı olmadan aşamalar oluştururuz.", helpSteps: ["Hedefinizi veya yönünüzü açıklayın.", "Varsa istediğiniz süreyi ekleyin.", "Yalnızca stratejiyi önemli ölçüde etkileyen soruları yanıtlayın.", "Yolu gözden geçirin ve Bugün'e bir yararlı sonraki adım gönderin."], how: "Vizyon nasıl çalışır?", hide: "Yardımı gizle" },
+  en: { eyebrow: "Long-term direction", title: "Vision", intro: "Ideas worth keeping, separated from what needs your attention today.", empty: "Long-term ideas from your daily plans will appear here.", captured: "Captured", placeholder: "Describe a direction or goal you want to develop…", add: "Add direction", active: "Active", archived: "Archived", archive: "Archive", restore: "Restore", delete: "Delete", confirmDelete: "Delete permanently?", cancel: "Cancel", actionError: "The strategy could not be updated. Try again.", helpTitle: "Turn a direction into an achievable next step", helpIntro: "Describe the goal in your own words. We check feasibility, suggest a more realistic version when useful, and build milestones without unnecessary detail.", helpSteps: ["Describe your goal or direction.", "Add a desired timeframe if you have one.", "Answer only the questions that materially affect the strategy.", "Review the path. Today suggests a next step; you choose whether to add it."], how: "How does Vision work?", hide: "Hide help" },
+  sr: { eyebrow: "Dugoročni pravac", title: "Vizija", intro: "Ideje koje vredi sačuvati, odvojene od onoga što traži pažnju danas.", empty: "Dugoročne ideje iz dnevnih planova pojaviće se ovde.", captured: "Zabeleženo", placeholder: "Opišite pravac ili cilj koji želite da razradite…", add: "Dodaj pravac", active: "Aktivno", archived: "Arhivirano", archive: "Arhiviraj", restore: "Vrati", delete: "Obriši", confirmDelete: "Trajno obrisati?", cancel: "Otkaži", actionError: "Strategija nije mogla da se izmeni. Pokušajte ponovo.", helpTitle: "Pretvorite pravac u ostvariv sledeći korak", helpIntro: "Opišite cilj svojim rečima. Proveravamo izvodljivost, predlažemo realniju verziju kada je korisna i pravimo etape bez nepotrebnog usitnjavanja.", helpSteps: ["Opišite cilj ili pravac.", "Dodajte željeni rok ako ga imate.", "Odgovorite samo na pitanja koja bitno menjaju strategiju.", "Pregledajte put. Danas predlaže sledeći korak; vi birate da li ćete ga dodati."], how: "Kako Vizija radi?", hide: "Sakrij objašnjenja" },
+  tr: { eyebrow: "Uzun vadeli yön", title: "Vizyon", intro: "Saklanmaya değer fikirler, bugün dikkatinizi isteyenlerden ayrı tutulur.", empty: "Günlük planlarınızdaki uzun vadeli fikirler burada görünür.", captured: "Kaydedildi", placeholder: "Geliştirmek istediğiniz yönü veya hedefi açıklayın…", add: "Yön ekle", active: "Aktif", archived: "Arşivlenmiş", archive: "Arşivle", restore: "Geri yükle", delete: "Sil", confirmDelete: "Kalıcı olarak silinsin mi?", cancel: "İptal", actionError: "Strateji güncellenemedi. Tekrar deneyin.", helpTitle: "Bir yönü ulaşılabilir sonraki adıma dönüştürün", helpIntro: "Hedefinizi kendi sözlerinizle anlatın. Uygulanabilirliği kontrol eder, yararlıysa daha gerçekçi bir sürüm önerir ve gereksiz ayrıntı olmadan aşamalar oluştururuz.", helpSteps: ["Hedefinizi veya yönünüzü açıklayın.", "Varsa istediğiniz süreyi ekleyin.", "Yalnızca stratejiyi önemli ölçüde etkileyen soruları yanıtlayın.", "Yolu gözden geçirin. Bugün bir sonraki adımı önerir; ekleyip eklememeye siz karar verirsiniz."], how: "Vizyon nasıl çalışır?", hide: "Yardımı gizle" },
 } as const;
 
 const VISION_ONBOARDING_KEY = "app_a_vision_onboarding_v1";
 function readVisionOnboarding(): boolean { try { return localStorage.getItem(VISION_ONBOARDING_KEY) === "completed"; } catch { return false; } }
+function isVisionScreenDraft(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const draft = value as { draftIdea?: unknown; manualIdeas?: unknown };
+  return typeof draft.draftIdea === "string" && draft.draftIdea.length <= 4000 && Array.isArray(draft.manualIdeas) && draft.manualIdeas.length <= 100 && draft.manualIdeas.every((idea: unknown) => typeof idea === "string" && idea.length <= 4000);
+}
 
 export default function VisionScreen({ language }: { language: AppALanguage }) {
-  const [draftIdea, setDraftIdea] = useState("");
-  const [manualIdeas, setManualIdeas] = useState<string[]>([]);
+  const history = useAppAPlanHistory();
+  const draftKey = `${history.user?.uid || "guest"}:vision:screen`;
+  const [working] = useState(() => readSessionDraft(draftKey, { draftIdea: "", manualIdeas: [] as string[] }, isVisionScreenDraft));
+  const [draftIdea, setDraftIdea] = useState(working.draftIdea);
+  const [manualIdeas, setManualIdeas] = useState<string[]>(working.manualIdeas);
   const [savedStrategies, setSavedStrategies] = useState<SavedVisionStrategy[]>([]);
+  const [deletedFingerprints, setDeletedFingerprints] = useState<string[]>([]);
+  const [suppressedIdeas, setSuppressedIdeas] = useState<string[]>([]);
   const [strategyView, setStrategyView] = useState<"active" | "archived">("active");
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [onboardingCompleted, setOnboardingCompleted] = useState(readVisionOnboarding);
   const [showHelp, setShowHelp] = useState(() => !readVisionOnboarding());
-  const history = useAppAPlanHistory();
+  useEffect(() => { writeSessionDraft(draftKey, { draftIdea, manualIdeas }); }, [draftKey, draftIdea, manualIdeas]);
   const t = COPY[language];
   useEffect(() => {
     if (!history.user) return;
     let active = true;
-    void loadVisionStrategies(history.user.uid).then((items) => { if (active) setSavedStrategies(items); }).catch(() => undefined);
+    void loadVisionLibrary(history.user.uid).then((library) => { if (active) { setSavedStrategies(library.strategies); setDeletedFingerprints(library.deletedFingerprints); } }).catch(() => { if (active) setActionError(t.actionError); });
     return () => { active = false; };
   }, [history.user]);
+
+  useEffect(() => {
+    let active = true;
+    const ideas = getVisionItems(history.plans).map(({ item }) => item.suggestedAction || item.originalText);
+    void Promise.all(ideas.map(async idea => ({ idea, fingerprint: await visionIdeaFingerprint(idea) }))).then(items => {
+      if (active) setSuppressedIdeas(items.filter(item => deletedFingerprints.includes(item.fingerprint)).map(item => item.idea));
+    }).catch(() => { if (active) setActionError(t.actionError); });
+    return () => { active = false; };
+  }, [history.plans, deletedFingerprints]);
 
   useEffect(() => {
     if (savedStrategies.length === 0 || onboardingCompleted) return;
@@ -51,6 +71,9 @@ export default function VisionScreen({ language }: { language: AppALanguage }) {
       if (!completed || completed.includes("vision_shared")) {
         setSavedStrategies([]);
         setManualIdeas([]);
+        setDraftIdea("");
+        setDeletedFingerprints([]);
+        setSuppressedIdeas([]);
         if (history.user) {
           void loadVisionStrategies(history.user.uid).then(setSavedStrategies).catch(() => undefined);
         }
@@ -62,7 +85,7 @@ export default function VisionScreen({ language }: { language: AppALanguage }) {
   if (!history.authReady || history.loading) return <PlanHistoryState language={language} state="loading" />;
   if (history.error) return <PlanHistoryState language={language} state="error" onSignIn={history.user ? history.retry : () => void history.signIn()} />;
   if (!history.user) return <PlanHistoryState language={language} state="sign_in" onSignIn={() => void history.signIn()} />;
-  const entries = getVisionItems(history.plans);
+  const entries = getVisionItems(history.plans).filter(({ item }) => !suppressedIdeas.includes(item.suggestedAction || item.originalText));
   const visibleStrategies = savedStrategies.filter((strategy) =>
     strategyView === "archived" ? strategy.status === "archived" : strategy.status !== "archived"
   );
@@ -83,6 +106,13 @@ export default function VisionScreen({ language }: { language: AppALanguage }) {
     setProcessingId(strategyId); setActionError(null);
     try {
       await deleteVisionStrategy(history.user.uid, strategyId);
+      const removed = savedStrategies.find(item => item.id === strategyId);
+      if (removed) {
+        setSuppressedIdeas(items => [...items, removed.idea]);
+        setManualIdeas(items => items.filter(idea => idea !== removed.idea));
+        const fingerprint = await visionIdeaFingerprint(removed.idea);
+        setDeletedFingerprints(items => [...items, fingerprint]);
+      }
       setSavedStrategies((items) => items.filter((item) => item.id !== strategyId));
       setDeleteConfirmId(null);
     } catch { setActionError(t.actionError); }

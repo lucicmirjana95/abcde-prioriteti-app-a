@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { readSessionDraft, writeSessionDraft } from '../../persistence/sessionDraft';
+import { visionStepKey } from '../../../shared/domain/today-candidates';
+import { isVisionStrategyResult, isVisionFeasibilityResult } from '../../../shared/domain/vision';
 import {
   ChevronDown,
   ChevronRight,
@@ -20,6 +23,27 @@ import { getVisionSaveDiagnostic, saveVisionStrategy } from "../../../shared/per
 
 const SHOW_DEV_DIAGNOSTICS = typeof window !== "undefined" &&
   (window.location.hostname === "localhost" || window.location.hostname.startsWith("ais-"));
+
+interface VisionWorkingDraft {
+  documentId: string;
+  strategy: VisionStrategyResult | null;
+  breakdowns: Record<string, string[]>;
+  timeframe: string;
+  acceptedGoal: string;
+  feasibility: VisionFeasibilityResult | null;
+  feasibilityDetails: string;
+  questionAnswers: Record<string, string>;
+  saved: boolean;
+}
+function validWorkingDraft(value: unknown): boolean {
+  const draft = value as VisionWorkingDraft | null;
+  return !!draft && draft.saved === false && /^vision_[a-z0-9_]{4,80}$/.test(draft.documentId) &&
+    (!draft.strategy || isVisionStrategyResult(draft.strategy)) && (!draft.feasibility || isVisionFeasibilityResult(draft.feasibility)) &&
+    typeof draft.timeframe === 'string' && draft.timeframe.length <= 200 && typeof draft.acceptedGoal === 'string' &&
+    typeof draft.feasibilityDetails === 'string' && draft.feasibilityDetails.length <= 4000 &&
+    !!draft.questionAnswers && Object.values(draft.questionAnswers).every(answer => typeof answer === 'string' && answer.length <= 500) &&
+    !!draft.breakdowns && Object.values(draft.breakdowns).every(steps => Array.isArray(steps) && steps.every(step => typeof step === 'string'));
+}
 
 const COPY = {
   en: {
@@ -126,25 +150,33 @@ export default function VisionStrategyBuilder({
   const t = COPY[language];
   const ft = FEASIBILITY_COPY[language];
   const { user, authReady, signInWithGoogle } = useAppAAuth();
-  const [strategy, setStrategy] = useState<VisionStrategyResult | null>(initialDocument?.strategy || null);
-  const [documentId] = useState(initialDocument?.id || createVisionStrategyId);
-  const [breakdowns, setBreakdowns] = useState<Record<string, string[]>>(initialDocument?.stepBreakdowns || {});
+  const workingKey = `${userId}:vision:${visionStepKey(idea)}`;
+  const [working] = useState(() => readSessionDraft<VisionWorkingDraft | null>(workingKey, null, validWorkingDraft));
+  const [strategy, setStrategy] = useState<VisionStrategyResult | null>(working?.strategy || initialDocument?.strategy || null);
+  const [documentId] = useState(working?.documentId || initialDocument?.id || createVisionStrategyId);
+  const [breakdowns, setBreakdowns] = useState<Record<string, string[]>>(working?.breakdowns || initialDocument?.stepBreakdowns || {});
   const [collapsedKeys, setCollapsedKeys] = useState<Record<string, boolean>>({});
   const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
   const [checkingStep, setCheckingStep] = useState<string | null>(null);
   const [concreteStep, setConcreteStep] = useState<string | null>(null);
-  const [saved, setSaved] = useState(Boolean(initialDocument));
+  const [saved, setSaved] = useState(Boolean(initialDocument) && !working);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
   const [expanded, setExpanded] = useState(true);
   const [expandedMilestone, setExpandedMilestone] = useState(0);
-  const [timeframe, setTimeframe] = useState(initialDocument?.planningContext?.timeframe || "");
-  const [feasibility, setFeasibility] = useState<VisionFeasibilityResult | null>(null);
-  const [feasibilityDetails, setFeasibilityDetails] = useState(initialDocument?.planningContext?.clarificationDetails || "");
+  const [timeframe, setTimeframe] = useState(working?.timeframe || initialDocument?.planningContext?.timeframe || "");
+  const [feasibility, setFeasibility] = useState<VisionFeasibilityResult | null>(working?.feasibility || null);
+  const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>(working?.questionAnswers || {});
+  const [feasibilityDetails, setFeasibilityDetails] = useState(working?.feasibilityDetails || initialDocument?.planningContext?.clarificationDetails || "");
   const [saveDiagnostic, setSaveDiagnostic] = useState<string | null>(null);
+  const [acceptedGoal, setAcceptedGoal] = useState(working?.acceptedGoal || initialDocument?.planningContext?.acceptedGoal || idea);
+  useEffect(() => {
+    writeSessionDraft(workingKey, { documentId, strategy, breakdowns, timeframe, acceptedGoal, feasibility, feasibilityDetails, questionAnswers, saved });
+  }, [workingKey, documentId, strategy, breakdowns, timeframe, acceptedGoal, feasibility, feasibilityDetails, questionAnswers, saved]);
+  const context = (goal = acceptedGoal, target = timeframe, details = feasibilityDetails) => JSON.stringify({ originalGoal: idea, acceptedGoal: goal, timeframe: target || null, userClarifications: details || null });
 
-  async function persistStrategy(currentStrategy: VisionStrategyResult, currentBreakdowns: Record<string, string[]>) {
+  async function persistStrategy(currentStrategy: VisionStrategyResult, currentBreakdowns: Record<string, string[]>, goal = acceptedGoal, target = timeframe, details = feasibilityDetails) {
     const now = new Date().toISOString();
     const document: SavedVisionStrategy = {
       id: documentId,
@@ -155,10 +187,7 @@ export default function VisionStrategyBuilder({
       createdAt: initialDocument?.createdAt || now,
       updatedAt: now,
       status: initialDocument?.status || "active",
-      ...(timeframe.trim() || feasibilityDetails.trim() ? { planningContext: {
-        ...(timeframe.trim() ? { timeframe: timeframe.trim() } : {}),
-        ...(feasibilityDetails.trim() ? { clarificationDetails: feasibilityDetails.trim() } : {}),
-      } } : {}),
+      planningContext: { acceptedGoal: goal, ...(target.trim() ? { timeframe: target.trim() } : {}), ...(details.trim() ? { clarificationDetails: details.trim() } : {}) },
       ...(initialDocument?.archivedAt ? { archivedAt: initialDocument.archivedAt } : {}),
     };
     try {
@@ -188,17 +217,21 @@ export default function VisionStrategyBuilder({
     await persistStrategy(strategy, breakdowns);
   }
 
-  async function generateStrategy(goal: string) {
+  async function generateStrategy(goal: string, target = timeframe, details = feasibilityDetails) {
+    setSaved(false);
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 42_000);
     setLoading(true);
     setError(false);
     setAuthRequired(false);
     try {
-      const generated = await createVisionStrategy(goal, language, controller.signal);
+      const generated = await createVisionStrategy(goal, language, controller.signal, context(goal, target, details));
+      setAcceptedGoal(goal);
+      setTimeframe(target);
+      setBreakdowns({});
       setStrategy(generated);
       setExpanded(true);
-      await persistStrategy(generated, {});
+      await persistStrategy(generated, {}, goal, target, details);
     } catch {
       setError(true);
     } finally {
@@ -207,7 +240,8 @@ export default function VisionStrategyBuilder({
     }
   }
 
-  async function generate(additionalDetails = "") {
+  async function generate(additionalDetails = feasibilityDetails) {
+    setSaved(false);
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 42_000);
     setLoading(true);
@@ -221,9 +255,11 @@ export default function VisionStrategyBuilder({
       if (result.status === "feasible") {
         window.clearTimeout(timeout);
         setLoading(false);
-        await generateStrategy(result.normalizedGoal);
+        await generateStrategy(result.normalizedGoal, timeframe, additionalDetails || feasibilityDetails);
         return;
       }
+      setFeasibilityDetails(additionalDetails);
+      setQuestionAnswers({});
       setFeasibility(result);
     } catch {
       setError(true);
@@ -241,7 +277,7 @@ export default function VisionStrategyBuilder({
     setError(false);
     setAuthRequired(false);
     try {
-      const result = await decomposeVisionStep({ idea, step, depth, language });
+      const result = await decomposeVisionStep({ idea: acceptedGoal, step, depth, language, planningContext: JSON.stringify({ context: JSON.parse(context()), milestones: strategy.milestones, existingBreakdowns: breakdowns }) });
       if (!result.shouldDecompose || result.reason === "already_actionable") {
         setConcreteStep(key);
         return;
@@ -265,7 +301,7 @@ export default function VisionStrategyBuilder({
           <input
             value={timeframe}
             maxLength={200}
-            onChange={(event) => setTimeframe(event.target.value)}
+            onChange={(event) => { setTimeframe(event.target.value); setSaved(false); }}
             placeholder={ft.timeframePlaceholder}
             className="app-a-field app-a-focus-ring mt-2 w-full p-3"
           />
@@ -301,26 +337,26 @@ export default function VisionStrategyBuilder({
             ) : null}
             {feasibility.questions.length ? (
               <>
-                <ul className="mt-2 list-disc pl-5 text-[12px] text-[#6E6E73] dark:text-[#AEAEB2]">
-                  {feasibility.questions.map((value) => (
-                    <li key={value}>{value}</li>
-                  ))}
-                </ul>
-                <p className="mt-2 text-[12px] font-medium">{ft.needsInfo}</p>
-                <label className="mt-3 block text-left text-[12px] font-semibold">
-                  {ft.detailsLabel}
+                <p className="mt-2 text-[14px]">{ft.needsInfo}</p>
+                {feasibility.questions.map((question, index) => <label key={question} className="mt-4 block text-left text-[15px] font-medium">
+                  {index + 1}. {question}
                   <textarea
-                    value={feasibilityDetails}
-                    onChange={(event) => setFeasibilityDetails(event.target.value)}
-                    placeholder={ft.detailsPlaceholder}
-                    rows={4}
-                    className="app-a-field app-a-focus-ring mt-2 w-full resize-y p-3 text-[13px] font-normal"
+                    value={questionAnswers[question] || ""}
+                    onChange={event => setQuestionAnswers(answers => ({ ...answers, [question]: event.target.value }))}
+                    rows={2}
+                    maxLength={500}
+                    className="app-a-field app-a-focus-ring mt-2 w-full resize-y p-3 text-[16px] font-normal"
                   />
-                </label>
+                </label>)}
                 <button
                   type="button"
-                  disabled={!feasibilityDetails.trim() || loading}
-                  onClick={() => void generate(feasibilityDetails)}
+                  disabled={!feasibility.questions.every(question => questionAnswers[question]?.trim()) || loading}
+                  onClick={() => {
+                    const details = [feasibilityDetails, ...feasibility.questions.map(question => `Question: ${question}\nAnswer: ${questionAnswers[question].trim()}`)].filter(Boolean).join("\n\n");
+                    if (details.length > 4000) { setError(true); return; }
+                    setFeasibilityDetails(details);
+                    void generate(details);
+                  }}
                   className="app-a-primary-button app-a-focus-ring mt-3 w-full px-4 disabled:opacity-50"
                 >
                   {ft.recheck}
@@ -330,7 +366,7 @@ export default function VisionStrategyBuilder({
             {feasibility.adjustedGoal ? (
               <button
                 type="button"
-                onClick={() => void generateStrategy(feasibility.adjustedGoal!)}
+                onClick={() => void generateStrategy(feasibility.adjustedGoal || feasibility.normalizedGoal, feasibility.adjustedTimeframe || timeframe)}
                 className="app-a-primary-button app-a-focus-ring mt-3 w-full px-4"
               >
                 {ft.useAdjusted}: {feasibility.adjustedGoal}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   RoutineCompletion,
   RoutineExecutionStatus,
@@ -7,24 +7,34 @@ import type {
 import { isRoutineScheduledOnDate } from "../../shared/domain/routines";
 import {
   clearRoutineCompletion,
-  loadActiveRoutines,
+  loadRoutines,
   loadRoutineCompletions,
   recordRoutineCompletion,
 } from "../../shared/persistence/routines";
 import { getLocalDateInTimeZone, getPastLocalDates } from "./date";
-
-const DEFAULT_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+import { getEffectiveTimeZone, loadAppAPreferences } from '../settings/preferences';
 
 export function useDailyRoutines(userId?: string | null) {
+  const requestVersion = useRef(0);
+  const writing = useRef(false);
   const [routines, setRoutines] = useState<SharedRoutine[]>([]);
   const [completions, setCompletions] = useState<RoutineCompletion[]>([]);
   const [loading, setLoading] = useState(Boolean(userId));
   const [error, setError] = useState<string | null>(null);
   const [updatingRoutineId, setUpdatingRoutineId] = useState<string | null>(null);
-  const localDate = getLocalDateInTimeZone(new Date(), DEFAULT_TIME_ZONE);
+  const [localDate, setLocalDate] = useState(() => getLocalDateInTimeZone(new Date(), getEffectiveTimeZone(loadAppAPreferences())));
+  useEffect(() => {
+    const refreshDate = () => setLocalDate(getLocalDateInTimeZone(new Date(), getEffectiveTimeZone(loadAppAPreferences())));
+    const timer = window.setInterval(refreshDate, 15_000);
+    window.addEventListener('focus', refreshDate);
+    window.addEventListener('app-a-navigation', refreshDate);
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', refreshDate); window.removeEventListener('app-a-navigation', refreshDate); };
+  }, []);
   const dates = useMemo(() => getPastLocalDates(localDate, 7), [localDate]);
 
   const refresh = useCallback(async () => {
+    if (writing.current) return;
+    const version = ++requestVersion.current;
     if (!userId) {
       setRoutines([]);
       setCompletions([]);
@@ -35,20 +45,31 @@ export function useDailyRoutines(userId?: string | null) {
     setError(null);
     try {
       const [nextRoutines, nextCompletions] = await Promise.all([
-        loadActiveRoutines(userId),
+        loadRoutines(userId),
         loadRoutineCompletions(userId, dates[0], dates[dates.length - 1]),
       ]);
+      if (version !== requestVersion.current) return;
       setRoutines(nextRoutines);
       setCompletions(nextCompletions);
     } catch {
-      setError("routine_load_failed");
+      if (version === requestVersion.current) setError("routine_load_failed");
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) setLoading(false);
     }
   }, [dates, userId]);
 
   useEffect(() => {
     void refresh();
+    const reload = () => { void refresh(); };
+    window.addEventListener('app-a-routines-changed', reload);
+    window.addEventListener('app-a-navigation', reload);
+    window.addEventListener('focus', reload);
+    return () => {
+      requestVersion.current++;
+      window.removeEventListener('app-a-routines-changed', reload);
+      window.removeEventListener('app-a-navigation', reload);
+      window.removeEventListener('focus', reload);
+    };
   }, [refresh]);
 
   useEffect(() => {
@@ -65,18 +86,20 @@ export function useDailyRoutines(userId?: string | null) {
 
   const todayRoutines = useMemo(
     () => routines.filter((routine) => {
-      const routineLocalDate = getLocalDateInTimeZone(new Date(), routine.timeZone);
-      return isRoutineScheduledOnDate(routine, routineLocalDate);
+      return routine.status === 'active' && isRoutineScheduledOnDate(routine, localDate);
     }),
-    [routines],
+    [routines, localDate],
   );
 
   const record = useCallback(
     async (routineId: string, status: RoutineExecutionStatus | "not_recorded") => {
-      if (!userId || updatingRoutineId) return;
+      if (!userId || writing.current) return;
       const routine = routines.find((item) => item.id === routineId);
       if (!routine) return;
-      const completionDate = getLocalDateInTimeZone(new Date(), routine.timeZone);
+      writing.current = true;
+      requestVersion.current++;
+      setLoading(false);
+      const completionDate = getLocalDateInTimeZone(new Date(), getEffectiveTimeZone(loadAppAPreferences()));
       const previous = completions;
       const now = new Date().toISOString();
       setUpdatingRoutineId(routineId);
@@ -108,7 +131,9 @@ export function useDailyRoutines(userId?: string | null) {
         setCompletions(previous);
         setError("routine_save_failed");
       } finally {
+        writing.current = false;
         setUpdatingRoutineId(null);
+        window.dispatchEvent(new Event('app-a-routines-changed'));
       }
     },
     [completions, routines, updatingRoutineId, userId],

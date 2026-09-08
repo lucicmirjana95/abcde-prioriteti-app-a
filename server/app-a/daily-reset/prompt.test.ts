@@ -252,4 +252,16 @@ runTest("resolution prompt embeds question ID, original question, question conte
   assert.ok(prompt.includes("Separate commitments MUST remain separate"), "Prompt must mandate separate commitments");
 });
 
+runTest("capacity policy separates flexible time from explicit fixed commitments", () => {
+  const prompt = buildDailyResetPrompt({
+    brainDump: "I have a fixed four-hour care commitment and 30 minutes for other tasks.",
+    language: "en",
+    availableMinutes: 30,
+  });
+  assert.ok(prompt.includes('Set capacityType to "fixed" only when the user explicitly identifies an unavoidable commitment'));
+  assert.ok(prompt.includes("Never infer that a preferred task is fixed"));
+  assert.ok(prompt.includes('Flexible items in "first_focus" plus "later_today" must not exceed availableMinutes'));
+  assert.ok(prompt.includes("Fixed commitments remain visible outside that flexible budget"));
+});
+
 console.log("\nAll prompt invariant tests passed successfully! 🎉");

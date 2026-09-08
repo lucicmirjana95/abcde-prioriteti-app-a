@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createSequencedVisionCandidate, createTodayCandidateId, getNextVisionSequenceIndex, getVisionStepSequence, isTodayCandidate, type TodayCandidate } from "./contracts";
+import { createSequencedVisionCandidate, createTodayCandidateId, getNextVisionSequenceIndex, getVisionStepSequence, isTodayCandidate, nextVisionCandidate, visionStepKey, type TodayCandidate } from "./contracts";
 import type { SavedVisionStrategy } from "../vision";
 
 const candidate: TodayCandidate = {
@@ -14,7 +14,7 @@ const candidate: TodayCandidate = {
 };
 
 assert.equal(isTodayCandidate(candidate), true);
-assert.equal(isTodayCandidate({ ...candidate, estimatedMinutes: 0 }), false);
+assert.equal(isTodayCandidate({ ...candidate, estimatedMinutes: 0 }), true, 'A suggestion may have unknown duration; scheduling must require a positive duration');
 assert.equal(isTodayCandidate({ ...candidate, estimatedMinutes: 25.5 }), false);
 assert.equal(isTodayCandidate({ ...candidate, estimatedMinutes: 481 }), false);
 assert.equal(isTodayCandidate({ ...candidate, title: "  " }), false);
@@ -31,13 +31,21 @@ const strategy: SavedVisionStrategy = {
   strategy: { outcome: "Book completed", importance: "Creative goal", nextStep: "Create the outline", risks: [], assumptions: [], milestones: [{ title: "Draft", result: "Draft exists", steps: ["Create the outline", "Write chapter one"] }] },
 };
 assert.deepEqual(getVisionStepSequence(strategy), ["Create the outline", "Write chapter one"]);
-assert.equal(createSequencedVisionCandidate(strategy, 0)?.id, createTodayCandidateId(strategy.id));
+assert.equal(createSequencedVisionCandidate(strategy, 0)?.id, createTodayCandidateId(`${strategy.id}_${visionStepKey('Create the outline')}`));
+assert.equal(createSequencedVisionCandidate(strategy, 0)?.estimatedMinutes, 0);
 assert.equal(createSequencedVisionCandidate(strategy, 1)?.title, "Write chapter one");
 assert.equal(createSequencedVisionCandidate(strategy, 2), null);
 assert.equal(getNextVisionSequenceIndex([], strategy.id), 0);
 assert.equal(getNextVisionSequenceIndex([{ ...candidate, sourceId: strategy.id, status: "pending", sequenceIndex: 0 }], strategy.id), null);
 assert.equal(getNextVisionSequenceIndex([{ ...candidate, sourceId: strategy.id, status: "scheduled", sequenceIndex: 0 }], strategy.id), null);
 assert.equal(getNextVisionSequenceIndex([{ ...candidate, sourceId: strategy.id, status: "completed", sequenceIndex: 0 }], strategy.id), 1);
-assert.equal(getNextVisionSequenceIndex([{ ...candidate, sourceId: strategy.id, status: "dismissed", sequenceIndex: 0 }], strategy.id), null);
+assert.equal(getNextVisionSequenceIndex([{ ...candidate, sourceId: strategy.id, status: "dismissed", sequenceIndex: 0 }], strategy.id), 1);
+
+const brokenDown = { ...strategy, stepBreakdowns: { 'm0-s0': ['List the chapters', 'Write a summary for each chapter'], 'm0-s0-d0': ['Identify the main topics', 'Order the chapter topics'] } };
+assert.deepEqual(getVisionStepSequence(brokenDown), ['Identify the main topics', 'Order the chapter topics', 'Write a summary for each chapter', 'Write chapter one']);
+const first = nextVisionCandidate(brokenDown, [])!;
+assert.equal(nextVisionCandidate(brokenDown, [first]), null);
+assert.equal(nextVisionCandidate(brokenDown, [{ ...first, status: 'dismissed' }])?.title, 'Order the chapter topics');
+assert.equal(nextVisionCandidate({ ...brokenDown, status: 'archived' }, []), null);
 
 console.log("Today candidate contract tests passed.");

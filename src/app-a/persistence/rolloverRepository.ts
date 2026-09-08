@@ -8,7 +8,10 @@ import {
   setDoc,
   where,
   writeBatch,
+  runTransaction,
+  arrayUnion,
 } from "firebase/firestore";
+import { mergePlanAddition } from "./planMutations";
 import { db } from "../../lib/firebase";
 import {
   AppADailyPlanDocument,
@@ -75,42 +78,23 @@ export async function saveDailyPlanWithRolloverDecisionAtomic(
   userId: string,
   document: AppADailyPlanDocument,
   decision: AppARolloverDecision,
-): Promise<void> {
-  if (!userId || !document.localDate || !decision.sourceLocalDate || !decision.sourcePlanItemId) {
-    throw new Error("invalid_atomic_write_params");
-  }
-
-  const batch = writeBatch(db);
-
-  // 1. Today's daily plan document
-  const planRef = doc(db, "appAUsers", userId, "dailyResets", document.localDate);
-  batch.set(
-    planRef,
-    {
-      ...document,
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
-
-  // 2. Carried rollover decision document
-  const decisionRef_ = rolloverDecisionRef(
-    userId,
-    decision.sourceLocalDate,
-    decision.sourcePlanItemId,
-  );
-  const decisionPayload: Record<string, unknown> = {
-    sourceLocalDate: decision.sourceLocalDate,
-    sourcePlanItemId: decision.sourcePlanItemId,
-    status: decision.status,
-    updatedAt: serverTimestamp(),
-  };
-  if (decision.status === "snoozed" && decision.snoozedUntilLocalDate) {
-    decisionPayload.snoozedUntilLocalDate = decision.snoozedUntilLocalDate;
-  }
-  batch.set(decisionRef_, decisionPayload, { merge: true });
-
-  await batch.commit();
+): Promise<AppADailyPlanDocument> {
+  if (!userId || !document.localDate || !decision.sourceLocalDate || !decision.sourcePlanItemId) throw new Error("invalid_atomic_write_params");
+  return runTransaction(db, async transaction => {
+    const planRef = doc(db, "appAUsers", userId, "dailyResets", document.localDate);
+    const decisionRef_ = rolloverDecisionRef(userId, decision.sourceLocalDate, decision.sourcePlanItemId);
+    const snapshot = await transaction.get(planRef);
+    const existingDecision = await transaction.get(decisionRef_);
+    const itemId = `rollover_plan_${decision.sourceLocalDate}_${decision.sourcePlanItemId}`;
+    const current = snapshot.data();
+    const alreadyAdded = [...(current?.plan?.firstFocus || []), ...(current?.plan?.laterToday || [])].some(item => item.id === itemId);
+    if (existingDecision.data()?.status === 'carried' && !alreadyAdded) throw new Error('rollover_already_carried');
+    const saved = mergePlanAddition(current, document, itemId);
+    transaction.set(planRef, JSON.parse(JSON.stringify(saved)));
+    transaction.update(planRef, { updatedAt: serverTimestamp() });
+    transaction.set(decisionRef_, { sourceLocalDate: decision.sourceLocalDate, sourcePlanItemId: decision.sourcePlanItemId, status: 'carried', updatedAt: serverTimestamp() });
+    return saved;
+  });
 }
 
 export async function loadRolloverDecisions(
@@ -292,11 +276,9 @@ export async function markHistoricalTaskComplete(
   const batch = writeBatch(db);
 
   if (sourcePlan) {
-    const existing = sourcePlan.execution?.completedItemIds || [];
-    const nextCompleted = Array.from(new Set([...existing, sourcePlanItemId]));
     const planRef = doc(db, "appAUsers", userId, "dailyResets", sourceLocalDate);
     batch.update(planRef, {
-      "execution.completedItemIds": nextCompleted,
+      "execution.completedItemIds": arrayUnion(sourcePlanItemId),
       updatedAt: serverTimestamp(),
     });
   }

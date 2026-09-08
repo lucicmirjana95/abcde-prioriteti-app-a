@@ -122,14 +122,14 @@ export default function DeferredItemsSection({
                 <span className="font-medium" style={{ color: "var(--app-a-text)" }}>
                   {item.estimatedMinutes} min
                 </span>
-              ) : (
+              ) : item.kind === 'task' ? (
                 <span
                   className="font-medium"
                   style={{ color: "var(--app-a-warning-text)" }}
                 >
                   {t.missingDataExplanation}
                 </span>
-              )}
+              ) : null}
 
               {(item.deadlineText || item.deadlineIso) && (
                 <>

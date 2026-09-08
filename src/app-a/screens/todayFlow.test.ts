@@ -477,10 +477,10 @@ async function runTests() {
     assert.strictEqual(input.availableMinutes, 240);
   }
 
-  // 24. Available time conversion most_day -> 480 minutes
+  // 24. Legacy qualitative selection must not invent eight hours.
   {
     const input = convertDataToInput({ ...validData, availableTime: { type: "most_day" } }, "en");
-    assert.strictEqual(input.availableMinutes, 480);
+    assert.strictEqual(input.availableMinutes, undefined);
   }
 
   // 25. Available time conversion custom -> hours * 60 + minutes

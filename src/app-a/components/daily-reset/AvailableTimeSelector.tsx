@@ -6,15 +6,15 @@ interface Props {
   onChange: (val: AvailableTimeValue | undefined) => void;
   t: any;
   error?: string;
+  unknownLabel?: string;
 }
 
-export default function AvailableTimeSelector({ value, onChange, t, error }: Props) {
+export default function AvailableTimeSelector({ value, onChange, t, error, unknownLabel = "I'm not sure yet" }: Props) {
   const options: { type: AvailableTimeType, label: string }[] = [
     { type: '30m', label: t.time30m },
     { type: '1h', label: t.time1h },
     { type: '2h', label: t.time2h },
     { type: '4h', label: t.time4h },
-    { type: 'most_day', label: t.timeMost },
     { type: 'custom', label: t.timeCustom },
   ];
 
@@ -77,6 +77,7 @@ export default function AvailableTimeSelector({ value, onChange, t, error }: Pro
             </label>
           );
         })}
+        <button type="button" aria-pressed={value === undefined} onClick={() => onChange(undefined)} className="app-a-secondary-button app-a-focus-ring min-h-12 px-3 text-[16px]">{unknownLabel}</button>
       </div>
 
       {value?.type === 'custom' && (

@@ -116,7 +116,7 @@ export default function AppAShell({ currentDestination, onNavigate, language, th
       {/* Mobile Bottom Navigation Bar */}
       <nav
         aria-label={`${t.today}, ${t.inbox}, ${t.vision}, ${t.progress}`}
-        className="fixed bottom-0 left-0 right-0 z-50 border-t pb-[env(safe-area-inset-bottom,10px)] pt-1.5 backdrop-blur-2xl md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-30 border-t pb-[env(safe-area-inset-bottom,10px)] pt-1.5 backdrop-blur-2xl md:hidden"
         style={{
           backgroundColor: "var(--app-a-surface)",
           borderColor: "var(--app-a-border)",

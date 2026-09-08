@@ -41,7 +41,7 @@ export async function saveRoutine(userId: string, routine: SharedRoutine): Promi
   requireUserId(userId);
   const validation = validateSharedRoutine(routine);
   if (!validation.valid) throw new Error(`invalid_routine:${validation.errors.join(",")}`);
-  await setDoc(routineRef(userId, routine.id), routine, { merge: false });
+  await setDoc(routineRef(userId, routine.id), JSON.parse(JSON.stringify(routine)), { merge: false });
 }
 
 export async function loadRoutines(userId: string): Promise<SharedRoutine[]> {
@@ -67,7 +67,7 @@ export async function recordRoutineCompletion(
   if (!validation.valid) throw new Error(`invalid_completion:${validation.errors.join(",")}`);
   await setDoc(
     completionRef(userId, completion.routineId, completion.localDate),
-    completion,
+    JSON.parse(JSON.stringify(completion)),
     { merge: false },
   );
 }
@@ -115,4 +115,3 @@ export async function updateRoutineStatus(
   await saveRoutine(userId, updated);
   return updated;
 }
-

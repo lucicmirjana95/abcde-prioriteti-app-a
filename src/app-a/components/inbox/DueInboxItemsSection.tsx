@@ -3,6 +3,7 @@ import { CalendarCheck2, CalendarPlus, Clock3, Loader2 } from "lucide-react";
 import type { AppAInboxItem } from "../../domain/inbox/contracts";
 import { loadDueScheduledInboxItems } from "../../persistence/inboxRepository";
 import type { AppALanguage } from "../../types";
+import { useDataRefresh } from '../../persistence/useDataRefresh';
 
 const COPY = {
   en: { title: "Scheduled for today", intro: "Inbox items whose scheduled date has arrived.", add: "Add to plan", error: "Scheduled Inbox items could not be loaded.", noPlan: "Create today's plan before adding this item.", duration_required: "Add an estimated duration in Inbox first.", duplicate: "This item is already in today's plan.", capacity_unknown: "Set today's available time first.", capacity_exceeded: "This item does not fit in today's remaining time.", invalid_plan: "This item could not be added safely." },
@@ -16,6 +17,7 @@ export default function DueInboxItemsSection({ userId, localDate, language, canA
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const t = COPY[language];
+  const refreshVersion = useDataRefresh();
 
   useEffect(() => {
     if (!userId) { setItems([]); return; }
@@ -27,7 +29,7 @@ export default function DueInboxItemsSection({ userId, localDate, language, canA
       .catch(() => { if (active) setError("error"); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [localDate, userId]);
+  }, [localDate, userId, refreshVersion]);
 
   async function add(item: AppAInboxItem) {
     setBusyId(item.id);

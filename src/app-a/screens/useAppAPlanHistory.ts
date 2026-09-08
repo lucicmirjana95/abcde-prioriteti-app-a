@@ -1,18 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAppAAuth } from "../auth/useAppAAuth";
 import type { AppADailyPlanDocument } from "../persistence/dailyPlanDocument";
 import { loadRecentDailyPlans } from "../persistence/dailyPlanRepository";
+import { useDataRefresh } from '../persistence/useDataRefresh';
 
 export function useAppAPlanHistory(maximum = 30) {
+  const refreshVersion = useDataRefresh();
   const { user, authReady, signInWithGoogle } = useAppAAuth();
   const [plans, setPlans] = useState<AppADailyPlanDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const loadedUser = useRef<string | null>(null);
 
   useEffect(() => {
     if (!authReady) return;
     if (!user) {
+      loadedUser.current = null;
       setPlans([]);
       setLoading(false);
       setError(false);
@@ -20,14 +24,15 @@ export function useAppAPlanHistory(maximum = 30) {
     }
 
     let cancelled = false;
-    setLoading(true);
+    if (loadedUser.current !== user.uid) setLoading(true);
     setError(false);
     void loadRecentDailyPlans(user.uid, maximum)
       .then((nextPlans) => {
-        if (!cancelled) setPlans(nextPlans);
+        if (!cancelled) { loadedUser.current = user.uid; setPlans(nextPlans); }
       })
       .catch(() => {
-        if (!cancelled) setError(true);
+        // Keep already loaded history usable when only a background refresh fails.
+        if (!cancelled && loadedUser.current !== user.uid) setError(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -36,7 +41,7 @@ export function useAppAPlanHistory(maximum = 30) {
     return () => {
       cancelled = true;
     };
-  }, [authReady, maximum, reloadKey, user]);
+  }, [authReady, maximum, reloadKey, user, refreshVersion]);
 
   useEffect(() => {
     const handleReset = (event: Event) => {

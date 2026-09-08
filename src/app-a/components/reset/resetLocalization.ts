@@ -47,6 +47,14 @@ export interface ResetCommonCopy {
   infoLabel: string;
   whyTitle: string;
   beginnerBadge: string;
+  boxTiming: string;
+  exhaleTiming: string;
+  guidedCycles: string;
+  guidedRestDuration: string;
+  restSoundEnabled: string;
+  restSoundDisabled: string;
+  restSoundPlaying: string;
+  restSoundFailed: string;
 }
 
 export const RESET_LOCALIZATION: Record<
@@ -90,6 +98,14 @@ export const RESET_LOCALIZATION: Record<
       infoLabel: "About this session",
       whyTitle: "Why this may help",
       beginnerBadge: "Easiest to start",
+      boxTiming: "4–12 cycles (1:04–3:12) • 4-4-4-4",
+      exhaleTiming: "4 sec inhale • 6 sec exhale",
+      guidedCycles: "1–3 guided cycles",
+      guidedRestDuration: "10 minutes • Text-guided",
+      restSoundEnabled: "4 Hz sound enabled",
+      restSoundDisabled: "4 Hz sound disabled",
+      restSoundPlaying: "4 Hz stereo sound is playing. Best with headphones.",
+      restSoundFailed: "Sound did not start. Check browser audio permission and try again.",
     },
     balancedBox: {
       name: "Slow down and steady",
@@ -191,6 +207,14 @@ export const RESET_LOCALIZATION: Record<
       infoLabel: "O ovoj sesiji",
       whyTitle: "Zašto ovo može pomoći",
       beginnerBadge: "Najlakše za početak",
+      boxTiming: "4–12 ciklusa (1:04–3:12) • 4-4-4-4",
+      exhaleTiming: "Udah 4 sek • izdah 6 sek",
+      guidedCycles: "1–3 vođena ciklusa",
+      guidedRestDuration: "10 minuta • Tekstualno vođenje",
+      restSoundEnabled: "4 Hz zvuk omogućen",
+      restSoundDisabled: "4 Hz zvuk isključen",
+      restSoundPlaying: "4 Hz stereo zvuk se reprodukuje. Najbolje uz slušalice.",
+      restSoundFailed: "Zvuk nije pokrenut. Proverite dozvolu za zvuk u pregledaču i pokušajte ponovo.",
     },
     balancedBox: {
       name: "Usporite i umirite ritam",
@@ -292,6 +316,14 @@ export const RESET_LOCALIZATION: Record<
       infoLabel: "Bu oturum hakkında",
       whyTitle: "Bu neden yardımcı olabilir",
       beginnerBadge: "Başlamak için en kolay",
+      boxTiming: "4–12 döngü (1:04–3:12) • 4-4-4-4",
+      exhaleTiming: "4 sn nefes al • 6 sn nefes ver",
+      guidedCycles: "1–3 yönlendirmeli döngü",
+      guidedRestDuration: "10 dakika • Metinle yönlendirme",
+      restSoundEnabled: "4 Hz ses etkin",
+      restSoundDisabled: "4 Hz ses kapalı",
+      restSoundPlaying: "4 Hz stereo ses çalıyor. Kulaklıkla en iyi sonucu verir.",
+      restSoundFailed: "Ses başlatılamadı. Tarayıcı ses iznini kontrol edip tekrar deneyin.",
     },
     balancedBox: {
       name: "Yavaşla ve dengelen",

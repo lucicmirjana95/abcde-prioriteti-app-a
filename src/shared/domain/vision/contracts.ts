@@ -14,6 +14,7 @@ export interface SavedVisionStrategy {
   planningContext?: {
     timeframe?: string;
     clarificationDetails?: string;
+    acceptedGoal?: string;
   };
 }
 
@@ -39,7 +40,8 @@ export function isSavedVisionStrategy(value: unknown): value is SavedVisionStrat
 function isPlanningContext(value: unknown): boolean {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const item = value as Record<string, unknown>;
-  return (item.timeframe === undefined || (typeof item.timeframe === "string" && item.timeframe.length <= 200)) &&
+  return (item.acceptedGoal === undefined || (typeof item.acceptedGoal === 'string' && item.acceptedGoal.length <= 4000)) &&
+    (item.timeframe === undefined || (typeof item.timeframe === "string" && item.timeframe.length <= 200)) &&
     (item.clarificationDetails === undefined || (typeof item.clarificationDetails === "string" && item.clarificationDetails.length <= 4000));
 }
 

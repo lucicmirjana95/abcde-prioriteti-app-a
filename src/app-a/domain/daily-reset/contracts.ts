@@ -91,6 +91,9 @@ export interface DailyPlanItem {
   description?: string;
   block: PlanBlock;
   estimatedMinutes: number;
+  /** Fixed commitments are shown in the day's total load but do not consume the
+   * flexible task budget selected during check-in. Legacy items default to flexible. */
+  capacityType?: "flexible" | "fixed";
   requiredEnergy: RequiredEnergy;
   timeSensitivity: TimeSensitivity;
   deadlineText?: string;
@@ -121,6 +124,8 @@ export interface DailyPlanDraft {
   intervention?: SafeIntervention;
   availableMinutes?: number;
   plannedRequiredMinutes: number; // Sum of firstFocus + laterToday
+  plannedFlexibleMinutes?: number; // Required work competing for selected flexible capacity
+  plannedFixedMinutes?: number; // Explicitly unavoidable commitments kept visible separately
   plannedOptionalMinutes: number; // Sum of ifCapacityRemains
 }
 

@@ -134,7 +134,7 @@ Do not diagnose relationships, assume abuse, or use clinical/therapy jargon.
 
 USER-FACING VOCABULARY & PRESENTATION RULES:
 - Do NOT expose ABCDE letters or letter ranks anywhere in user-facing text.
-- Do NOT expose "80/20", "Pareto", "Disney", "WOOP", "Pomodoro", "Huberman", "NSDR Protocol", "Cialdini", or any other third-party branded method names in user-facing copy, schema keys, analytics, or UI.
+- Do NOT expose internal prioritization labels or third-party branded method names in user-facing copy, schema keys, analytics, or UI.
 - Do NOT output leverage scores, numerical ranks, or composite life/productivity scores.
 - Use existing rationale and priority-factor structures.
 - At most one concise explanation may identify the highest-impact next step when evidence supports it.

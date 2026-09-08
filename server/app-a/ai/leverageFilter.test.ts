@@ -39,7 +39,7 @@ runTest("2. Does not contain any banned third-party branded names in policy prom
     );
   }
   // Explicitly verify user-facing rules forbid them
-  assert.ok(policy.includes("Do NOT expose \"80/20\", \"Pareto\", \"Disney\", \"WOOP\", \"Pomodoro\""));
+  assert.ok(policy.includes("Do NOT expose internal prioritization labels or third-party branded method names"));
 });
 
 // 3. Mandatory 8-Step Decision Order (0 to 7)

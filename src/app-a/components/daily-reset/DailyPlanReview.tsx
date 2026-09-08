@@ -25,6 +25,7 @@ interface Props {
   saveError?: string | null;
   saveDiagnostic?: string | null;
   onDirty?: () => void;
+  onDraftChange?: (draft: DailyPlanDraft) => void;
 }
 
 export default function DailyPlanReview({
@@ -36,6 +37,7 @@ export default function DailyPlanReview({
   saveError,
   saveDiagnostic,
   onDirty,
+  onDraftChange,
 }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
 
@@ -48,15 +50,27 @@ export default function DailyPlanReview({
   const draft = reviewState.currentDraft;
 
   useEffect(() => {
-    setReviewState({ currentDraft: initialDraft, undoDraft: null, error: null });
+    if (initialDraft !== reviewState.currentDraft) setReviewState({ currentDraft: initialDraft, undoDraft: null, error: null });
   }, [initialDraft]);
+
+  useEffect(() => {
+    if (draft !== initialDraft) onDraftChange?.(draft);
+  }, [draft, onDraftChange]);
 
   const markDirty = () => onDirty?.();
 
   // Planned time calculations
   const plannedRequired = draft.plannedRequiredMinutes ?? 0;
+  const plannedFlexible = draft.plannedFlexibleMinutes ?? plannedRequired;
+  const needsCapacity = draft.availableMinutes === undefined && draft.firstFocus.length + draft.laterToday.length > 1;
 
-  const summaryText = draft.availableMinutes
+  const summaryText = draft.plannedFixedMinutes
+    ? (language === 'sr'
+        ? `${plannedFlexible} min fleksibilnih zadataka od ${draft.availableMinutes ?? '—'} min; ${draft.plannedFixedMinutes} min fiksnih obaveza.`
+        : language === 'tr'
+          ? `${draft.availableMinutes ?? '—'} dk içinde ${plannedFlexible} dk esnek görev; ayrıca ${draft.plannedFixedMinutes} dk sabit yükümlülük.`
+          : `${plannedFlexible} min of flexible tasks within ${draft.availableMinutes ?? '—'} min; plus ${draft.plannedFixedMinutes} min of fixed commitments.`)
+    : draft.availableMinutes
     ? t.plannedWithAvailableText
         .replace("{planned}", String(plannedRequired))
         .replace("{available}", String(draft.availableMinutes))
@@ -179,6 +193,25 @@ export default function DailyPlanReview({
           {t.reviewIntro}
         </p>
       </header>
+      <label className="app-a-surface mb-5 flex flex-wrap items-center justify-between gap-3 p-4 text-[15px]">
+        <span>{language === 'sr' ? 'Vreme za ceo današnji plan (min)' : language === 'tr' ? 'Bugünkü planın tamamı için süre (dk)' : 'Time for your whole plan today (min)'}</span>
+        <input type="number" min="1" max="1440" value={draft.availableMinutes ?? ''} placeholder="—" className="app-a-field min-h-11 w-28 px-3 text-[16px]" onChange={(event) => {
+          const minutes = event.target.value === '' ? undefined : Number(event.target.value);
+          if (minutes !== undefined && (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440)) return;
+          setReviewState((current) => ({ ...current, undoDraft: current.currentDraft, currentDraft: { ...current.currentDraft, availableMinutes: minutes } }));
+          markDirty();
+        }} />
+      </label>
+      {needsCapacity ? <div className="mb-4 rounded-xl border p-4" style={{ borderColor: 'var(--app-a-border)', background: 'var(--app-a-surface-secondary)' }}>
+        <p className="text-[15px]">{language === 'sr' ? 'Za više zadataka izaberi raspoloživo vreme iznad. Ako još ne znaš, možeš da počneš jednim korakom; ostali ostaju sačuvani za kasnije.' : language === 'tr' ? 'Birden fazla görev için yukarıdan süre seç. Henüz bilmiyorsan tek adımla başlayabilirsin; diğerleri daha sonrası için saklanır.' : 'For several tasks, choose your available time above. If you are unsure, start with one step; the others stay saved for later.'}</p>
+        <button type="button" className="app-a-secondary-button app-a-focus-ring mt-3 px-4" onClick={() => {
+          let next = draft;
+          for (const item of [...draft.firstFocus, ...draft.laterToday].slice(1)) next = movePlanItemOutside(next, item.id, 'later').draft;
+          markDirty();
+          setReviewState({ currentDraft: next, undoDraft: draft, error: null });
+        }}>{language === 'sr' ? 'Za sada samo prvi korak' : language === 'tr' ? 'Şimdilik yalnızca ilk adım' : 'Start with the first step'}</button>
+      </div> : null}
+      {draft.availableMinutes !== undefined && plannedFlexible > draft.availableMinutes ? <p role="status" className="app-a-panel-danger mb-4">{language === 'sr' ? 'Fleksibilni zadaci prelaze izabrano vreme. Pomeri neki za kasnije ili povećaj vreme.' : language === 'tr' ? 'Esnek görevler seçilen süreyi aşıyor. Bazılarını sonraya taşı veya süreyi artır.' : 'Flexible tasks exceed your selected time. Move one to later or increase the time.'}</p> : null}
       {/* Undo Header Banner */}
       {reviewState.undoDraft && (
         <div
@@ -190,7 +223,7 @@ export default function DailyPlanReview({
           }}
         >
           <span className="text-[13px] font-medium">
-            Draft modified
+            {language === 'sr' ? 'Plan je izmenjen' : language === 'tr' ? 'Plan değiştirildi' : 'Draft modified'}
           </span>
           <button
             type="button"
@@ -344,7 +377,7 @@ export default function DailyPlanReview({
         <button
           type="button"
           onClick={() => void onConfirm(draft)}
-          disabled={saveStatus === "saving"}
+          disabled={saveStatus === "saving" || needsCapacity || (draft.availableMinutes !== undefined && plannedFlexible > draft.availableMinutes)}
           className="app-a-primary-button app-a-focus-ring w-full px-8 transition-colors sm:order-2 sm:w-auto"
         >
           {saveStatus === "saving" ? t.savingPlan : t.reviewCompleteBtn}

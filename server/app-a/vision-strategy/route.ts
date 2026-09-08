@@ -3,12 +3,14 @@ import { isVisionDecompositionResult, isVisionFeasibilityResult, isVisionStrateg
 export { isVisionDecompositionResult, isVisionFeasibilityResult, isVisionStrategyResult } from "../../../src/shared/domain/vision";
 
 export interface VisionStrategyRequest {
+  planningContext?: string;
   language: "en" | "sr" | "tr";
   idea: string;
   mode?: "strategy";
 }
 
 export interface VisionDecompositionRequest {
+  planningContext?: string;
   language: "en" | "sr" | "tr";
   idea: string;
   mode: "decompose";
@@ -16,6 +18,7 @@ export interface VisionDecompositionRequest {
   depth: number;
 }
 export interface VisionFeasibilityRequest {
+  planningContext?: string;
   language: "en" | "sr" | "tr";
   idea: string;
   mode: "feasibility";
@@ -27,6 +30,8 @@ export type VisionStrategyGenerator = (input: VisionStrategyRequest | VisionDeco
 export function createVisionStrategyRoute(generate: VisionStrategyGenerator) {
   return async (req: Request, res: Response) => {
     const language = req.body?.language;
+    const planningContext = req.body?.planningContext;
+    if (planningContext !== undefined && (typeof planningContext !== 'string' || planningContext.length > 16000)) return res.status(400).json({ success: false, code: 'INVALID_CONTEXT' });
     const idea = typeof req.body?.idea === "string" ? req.body.idea.trim() : "";
     const mode = req.body?.mode === "decompose" ? "decompose" : req.body?.mode === "feasibility" ? "feasibility" : "strategy";
     if (!(["en", "sr", "tr"] as const).includes(language) || idea.length < 3 || idea.length > 4000) {
@@ -39,7 +44,7 @@ export function createVisionStrategyRoute(generate: VisionStrategyGenerator) {
         return res.status(400).json({ success: false, code: "INVALID_DECOMPOSITION" });
       }
       try {
-        const result = await generate({ language, idea, mode, step, depth });
+        const result = await generate({ language, idea, mode, step, depth, ...(planningContext ? { planningContext } : {}) });
         if (!isVisionDecompositionResult(result)) return res.status(502).json({ success: false, code: "INVALID_AI_RESPONSE" });
         return res.status(200).json({ success: true, decomposition: result });
       } catch {
@@ -58,7 +63,7 @@ export function createVisionStrategyRoute(generate: VisionStrategyGenerator) {
       }
     }
     try {
-      const result = await generate({ language, idea, mode: "strategy" });
+      const result = await generate({ language, idea, mode: "strategy", ...(planningContext ? { planningContext } : {}) });
       if (!isVisionStrategyResult(result)) {
         return res.status(502).json({ success: false, code: "INVALID_AI_RESPONSE" });
       }

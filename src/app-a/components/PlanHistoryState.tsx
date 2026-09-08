@@ -32,9 +32,11 @@ interface Props {
   language: AppALanguage;
   state: "sign_in" | "loading" | "error";
   onSignIn?: () => void;
+  errorText?: string;
+  retryLabel?: string;
 }
 
-export default function PlanHistoryState({ language, state, onSignIn }: Props) {
+export default function PlanHistoryState({ language, state, onSignIn, errorText, retryLabel }: Props) {
   const t = COPY[language] || COPY.en;
   if (state === "loading") {
     return (
@@ -54,8 +56,8 @@ export default function PlanHistoryState({ language, state, onSignIn }: Props) {
         className="app-a-surface mx-5 flex min-h-[180px] flex-col items-center justify-center gap-3 p-6 text-center sm:mx-6 md:mx-auto md:max-w-[760px]"
       >
         <AlertCircle className="h-6 w-6" style={{ color: "var(--app-a-danger)" }} aria-hidden="true" />
-        <p className="max-w-sm text-[15px]" style={{ color: "var(--app-a-text-secondary)" }}>{t.error}</p>
-        {onSignIn ? <button type="button" onClick={onSignIn} className="app-a-secondary-button app-a-focus-ring mt-2 px-5">{t.retry}</button> : null}
+        <p className="max-w-sm text-[15px]" style={{ color: "var(--app-a-text-secondary)" }}>{errorText || t.error}</p>
+        {onSignIn ? <button type="button" onClick={onSignIn} className="app-a-secondary-button app-a-focus-ring mt-2 px-5">{retryLabel || t.retry}</button> : null}
       </div>
     );
   }

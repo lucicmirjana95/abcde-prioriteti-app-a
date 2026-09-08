@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDocs, setDoc } from "firebase/firestore";
+import { collection, doc, getDocs, runTransaction } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { auth } from "../../../lib/firebase";
 import { isSavedVisionStrategy, type SavedVisionStrategy } from "../../domain/vision";
@@ -40,7 +40,12 @@ export async function saveVisionStrategy(userId: string, strategy: SavedVisionSt
   try {
     await requireUser(userId);
     if (!isSavedVisionStrategy(strategy)) throw Object.assign(new Error("invalid_vision_strategy"), { code: "invalid-data" });
-    await setDoc(doc(db, "users", userId, "visionStrategies", strategy.id), strategy, { merge: false });
+    const reference = doc(db, "users", userId, "visionStrategies", strategy.id);
+    await runTransaction(db, async transaction => {
+      const existing = await transaction.get(reference);
+      if (existing.data()?.deleted === true) throw Object.assign(new Error('vision_deleted'), { code: 'failed-precondition' });
+      transaction.set(reference, JSON.parse(JSON.stringify(strategy)));
+    });
   } catch (error) {
     if (error instanceof VisionPersistenceError) throw error;
     throw new VisionPersistenceError(getVisionSaveDiagnostic(error), error);
@@ -48,10 +53,23 @@ export async function saveVisionStrategy(userId: string, strategy: SavedVisionSt
 }
 
 export async function loadVisionStrategies(userId: string): Promise<SavedVisionStrategy[]> {
+  return (await loadVisionLibrary(userId)).strategies;
+}
+
+export async function visionIdeaFingerprint(idea: string): Promise<string> {
+  const bytes = new TextEncoder().encode(idea.normalize('NFKC').trim().toLowerCase().replace(/\s+/g, ' '));
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+export async function loadVisionLibrary(userId: string): Promise<{ strategies: SavedVisionStrategy[]; deletedFingerprints: string[] }> {
   await requireUser(userId);
   const snapshot = await getDocs(collection(db, "users", userId, "visionStrategies"));
-  return snapshot.docs.map((entry) => entry.data()).filter(isSavedVisionStrategy)
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const documents = snapshot.docs.map(entry => entry.data());
+  return {
+    strategies: documents.filter(isSavedVisionStrategy).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+    deletedFingerprints: documents.filter(entry => entry.deleted === true && typeof entry.ideaFingerprint === 'string' && /^[a-f0-9]{64}$/.test(entry.ideaFingerprint)).map(entry => entry.ideaFingerprint),
+  };
 }
 
 export async function setVisionStrategyArchived(
@@ -74,5 +92,14 @@ export async function setVisionStrategyArchived(
 export async function deleteVisionStrategy(userId: string, strategyId: string): Promise<void> {
   await requireUser(userId);
   if (!/^vision_[a-z0-9_]{4,80}$/.test(strategyId)) throw new Error("invalid_vision_strategy_id");
-  await deleteDoc(doc(db, "users", userId, "visionStrategies", strategyId));
+  const reference = doc(db, "users", userId, "visionStrategies", strategyId);
+  await runTransaction(db, async transaction => {
+    const snapshot = await transaction.get(reference);
+    const current = snapshot.data();
+    if (!snapshot.exists() || current?.deleted === true) return;
+    if (!isSavedVisionStrategy(current)) throw new Error('invalid_vision_strategy');
+    const ideaFingerprint = await visionIdeaFingerprint(current.idea);
+    // Retain no goal, strategy, answers or breakdown text in the deletion marker.
+    transaction.set(reference, { id: strategyId, deleted: true, ideaFingerprint });
+  });
 }

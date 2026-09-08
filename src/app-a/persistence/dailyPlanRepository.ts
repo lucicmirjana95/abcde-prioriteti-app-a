@@ -9,8 +9,13 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  runTransaction,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import { normalizeCompletedItemIds } from '../screens/todayExecution';
+import { validatePlanDraft } from '../domain/daily-reset/validation';
 import {
   AppADailyPlanDocument,
   isAppADailyPlanDocument,
@@ -128,7 +133,7 @@ function dailyPlanRef(userId: string, localDate: string) {
 export async function saveConfirmedDailyPlan(
   userId: string,
   document: AppADailyPlanDocument,
-): Promise<void> {
+): Promise<AppADailyPlanDocument> {
   if (!userId) {
     const diag: PersistenceSaveDiagnostic = {
       stage: "set_doc",
@@ -140,14 +145,17 @@ export async function saveConfirmedDailyPlan(
 
   const reference = dailyPlanRef(userId, document.localDate);
   try {
-    await setDoc(
-      reference,
-      {
-        ...document,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true },
-    );
+    if (!isAppADailyPlanDocument(document) || !validatePlanDraft(document.plan).valid) throw new Error('invalid_plan');
+    return await runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(reference);
+      const current = snapshot.data();
+      if (snapshot.exists() && (current?.revision || 0) !== (document.revision || 0)) throw new Error('plan_changed_elsewhere');
+      // A stale review must not resurrect a completion undone on another screen/device.
+      const completionIds = snapshot.exists() ? current?.execution?.completedItemIds || [] : document.execution?.completedItemIds || [];
+      const saved: AppADailyPlanDocument = { ...document, revision: (current?.revision || 0) + 1, execution: { completedItemIds: normalizeCompletedItemIds(document.plan, completionIds) } };
+      transaction.set(reference, { ...saved, updatedAt: serverTimestamp() });
+      return saved;
+    });
   } catch (rawError: unknown) {
     const diagnostic = extractDiagnosticFromSaveError(rawError);
     throw new AppAPersistenceError(diagnostic, rawError);
@@ -169,10 +177,11 @@ export async function saveDailyPlanCompletion(
   userId: string,
   localDate: string,
   completedItemIds: string[],
+  change?: { itemId: string; completed: boolean },
 ): Promise<void> {
   if (!userId) throw new Error("authentication_required");
   await updateDoc(dailyPlanRef(userId, localDate), {
-    "execution.completedItemIds": Array.from(new Set(completedItemIds)),
+    "execution.completedItemIds": change ? (change.completed ? arrayUnion(change.itemId) : arrayRemove(change.itemId)) : Array.from(new Set(completedItemIds)),
     updatedAt: serverTimestamp(),
   });
 }

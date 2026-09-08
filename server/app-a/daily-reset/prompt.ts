@@ -6,6 +6,7 @@ import {
 import {
   buildContextualResponseCalibrationPrompt,
   buildLeverageFilterPrompt,
+  BANNED_TERMS,
 } from "../ai";
 
 function isClarificationSubmission(
@@ -174,10 +175,16 @@ INDEX AND REFERENCING RULES:
 - When asking clarification questions (phase: "clarification_needed"), set relatedItemIds to an empty array [].
 
 Capacity and Duration Rules:
-- "first_focus" plus "later_today" must not exceed availableMinutes when the user supplied available time.
+- availableMinutes represents the user's FLEXIBLE planning capacity for tasks from this entry. It does not erase, shorten, or include fixed/inevitable commitments unless the user explicitly says it does.
+- Preserve fixed commitments (appointments, essential care, caregiving, animal care, required travel, or other unavoidable obligations) with their stated duration even when they exceed flexible availableMinutes.
+- Set capacityType to "fixed" only when the user explicitly identifies an unavoidable commitment or fixed appointment. Otherwise set capacityType to "flexible". Never infer that a preferred task is fixed.
+- plannedRequiredMinutes represents the complete visible load; only flexible first_focus and later_today minutes compete with availableMinutes.
+- If a stated fixed commitment conflicts with the selected flexible capacity, ask one short material clarification in the initial phase about whether the selected time excludes that commitment. Never silently shorten the commitment, pretend it fits, or discard it as low leverage.
+- When the user clearly distinguishes fixed commitments from flexible time, plan the fixed commitment honestly and use availableMinutes only to choose among flexible tasks. Explain the distinction briefly in the rationale without exposing internal taxonomy.
+- Flexible items in "first_focus" plus "later_today" must not exceed availableMinutes when the user supplied available time. Fixed commitments remain visible outside that flexible budget.
 - If the dedicated time selector is empty, inspect the user's own text for an explicit availability statement (for example, "I have two hours" or "until 14:00"). Treat it as authoritative only when unambiguous; otherwise leave availableMinutes unknown.
 - Never invent a hidden default capacity and never interpret an empty time selector as "most of the day".
-- When capacity remains unknown, still create a useful, conservative plan: choose at most 1–3 high-value or necessary actions, keep additional work outside the committed plan, and state plainly in the rationale that adding available time would improve capacity checking.
+- When capacity remains unknown, offer one useful next action, not an invented full-day budget. Keep other obligations visible for review, especially essential care and deadlines; never silently discard them. State that the user can choose more after confirming available time. Do not call this a failed or temporary plan.
 - Ask one short clarification about available time only when the answer would materially change which actions belong today. Do not delay a useful plan merely because total capacity is unknown.
 - "if_capacity_remains" is explicitly optional.
 - Do not overload the day to make every task fit.
@@ -201,8 +208,11 @@ SAFEGUARDS & CONSTRAINTS FOR ABCDE REASONING:
 3. NEVER add an "abcde", "letter", "rank", or similar field to the JSON response or schema.
 4. Do not create or expose an unexplained composite priority score.
 5. Do not mechanically place every internally A-like item into first_focus. first_focus remains strictly capped at a maximum of 3 items.
-6. Available time is a hard constraint: the sum of first_focus plus later_today durations must remain within availableMinutes when specified.
-7. Energy and pleasantness are essential constraints:
+6. Available time is a hard constraint for flexible work: flexible first_focus plus flexible later_today durations must remain within availableMinutes when specified. Explicit fixed commitments are preserved and reported separately.
+7. Energy and pleasantness are optional context, never prerequisites:
+   - Missing values mean unknown. Never invent a default score, mood, fatigue, or diagnosis.
+   - Do not ask clarification questions solely to obtain these ratings. Use explicit descriptions such as "tired" qualitatively, without assigning a numerical score.
+   - Pleasantness is not energy or work capacity. Do not infer incapacity from unpleasant feelings.
    - When energy is low, a consequential task should be broken down into a smaller executable step or scaled down rather than discarded.
    - Low energy must never erase a genuinely critical task.
    - High energy must never justify overbooking capacity.
@@ -258,6 +268,7 @@ SAFE INTERVENTION:
 - NEVER recommend: medication, supplements, fasting, extreme cold or heat, medical treatment, diagnosis, therapy, unsafe biohacking protocols, or claims of curing or treating a condition.
 
 ${buildLeverageFilterPrompt({ language: input.language })}
+Do NOT expose "80/20", "Pareto", or these internal/third-party method labels in user-facing explanations: ${BANNED_TERMS.join(', ')}.
 
 ${buildContextualResponseCalibrationPrompt({ language: input.language })}
 
@@ -279,4 +290,3 @@ CRITICAL RULE: If the intended clarification questions list is empty or zero que
 
   return prompt;
 }
-

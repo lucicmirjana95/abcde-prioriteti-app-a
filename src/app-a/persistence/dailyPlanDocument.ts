@@ -10,6 +10,7 @@ function toFirestoreSafeValue<T>(value: T): T {
 }
 
 export interface AppADailyPlanDocument {
+  revision?: number;
   schemaVersion: typeof APP_A_DAILY_PLAN_SCHEMA_VERSION;
   localDate: string;
   timezone: string;
@@ -82,8 +83,8 @@ export function createDailyPlanDocument(
       ...(normalized.pleasantness !== undefined
         ? { pleasantness: normalized.pleasantness }
         : {}),
-      ...(normalized.availableMinutes !== undefined
-        ? { availableMinutes: normalized.availableMinutes }
+      ...(plan.availableMinutes !== undefined
+        ? { availableMinutes: plan.availableMinutes }
         : {}),
       ...(stateNote ? { stateNote } : {}),
     },

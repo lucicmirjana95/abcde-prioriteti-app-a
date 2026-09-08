@@ -10,6 +10,8 @@ import {
 import { DailyResetApiClient, createDailyResetApiClient } from "../api";
 import { DailyResetData } from "../types";
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { readSessionDraft, writeSessionDraft } from '../persistence/sessionDraft';
+import { validatePlanDraft } from '../domain/daily-reset/validation';
 
 export type TodayFlowPhase =
   | "editing"
@@ -35,6 +37,7 @@ export interface TodayFlowState {
   planDraft: DailyPlanDraft | null;
   error: TodayFlowError | null;
   failedPhase: "initial" | "resolve" | null;
+  unsaved?: boolean;
 }
 
 export function convertDataToInput(
@@ -48,7 +51,8 @@ export function convertDataToInput(
     else if (type === "1h") availableMinutes = 60;
     else if (type === "2h") availableMinutes = 120;
     else if (type === "4h") availableMinutes = 240;
-    else if (type === "most_day") availableMinutes = 480;
+    // A broad description is not an exact, user-confirmed time budget.
+    else if (type === "most_day") availableMinutes = undefined;
     else if (type === "custom") {
       const mins = (customHours || 0) * 60 + (customMinutes || 0);
       if (mins > 0) availableMinutes = mins;
@@ -108,6 +112,11 @@ export class TodayFlowController {
     return this.state;
   }
 
+  restoreDraft(value: TodayFlowState) {
+    if (!value.unsaved) return;
+    this.state = { ...value, language: this.state.language, phase: value.phase === 'submitting' ? 'editing' : value.phase === 'resolving' ? 'clarification_needed' : value.phase };
+  }
+
   subscribe(listener: (state: TodayFlowState) => void): () => void {
     this.listeners.push(listener);
     return () => {
@@ -126,6 +135,7 @@ export class TodayFlowController {
 
   updateInputData(data: Partial<DailyResetData>) {
     this.updateState({
+      unsaved: true,
       inputData: { ...this.state.inputData, ...data },
     });
   }
@@ -320,7 +330,9 @@ export class TodayFlowController {
   }
 
   reset() {
+    this.cancel();
     this.updateState({
+      unsaved: false,
       phase: "editing",
       questions: [],
       answers: {},
@@ -330,8 +342,13 @@ export class TodayFlowController {
     });
   }
 
+  updateReviewDraft(planDraft: DailyPlanDraft) {
+    this.updateState({ planDraft, unsaved: true });
+  }
+
   loadConfirmedPlan(planDraft: DailyPlanDraft, inputData?: DailyResetData) {
     this.updateState({
+      unsaved: false,
       phase: "plan_ready",
       planDraft,
       ...(inputData ? { inputData } : {}),
@@ -376,6 +393,7 @@ export class TodayFlowController {
     } else if (response.phase === "plan_ready") {
       this.updateState({
         phase: "plan_ready",
+        unsaved: true,
         planDraft: response.draft,
         error: null,
         failedPhase: null,
@@ -387,10 +405,21 @@ export class TodayFlowController {
 export function useTodayFlow(
   language: SupportedLanguage,
   client?: DailyResetApiClient,
-  initialData?: Partial<DailyResetData>
+  initialData?: Partial<DailyResetData>,
+  draftKey?: string,
 ) {
   const controller = useMemo(
-    () => new TodayFlowController(language, client, initialData),
+    () => {
+      const instance = new TodayFlowController(language, client, initialData);
+      if (draftKey) {
+        const draft = readSessionDraft<TodayFlowState | null>(draftKey, null, (value) => {
+          const saved = value as TodayFlowState | null;
+          return !!saved && ['editing', 'submitting', 'resolving', 'clarification_needed', 'plan_ready', 'error'].includes(saved.phase) && typeof saved.inputData?.brainDump === 'string' && Array.isArray(saved.questions) && !!saved.answers && typeof saved.answers === 'object' && (!saved.planDraft || validatePlanDraft(saved.planDraft).valid);
+        });
+        if (draft) instance.restoreDraft(draft);
+      }
+      return instance;
+    },
     [client]
   );
   const [state, setState] = useState<TodayFlowState>(controller.getState());
@@ -402,9 +431,10 @@ export function useTodayFlow(
   useEffect(() => {
     const unsubscribe = controller.subscribe((newState) => {
       setState(newState);
+      if (draftKey) writeSessionDraft(draftKey, newState);
     });
     return unsubscribe;
-  }, [controller]);
+  }, [controller, draftKey]);
 
   const submitInitial = useCallback(
     (data?: DailyResetData) => controller.submitInitial(data),
@@ -422,6 +452,7 @@ export function useTodayFlow(
   const cancel = useCallback(() => controller.cancel(), [controller]);
   const backToEdit = useCallback(() => controller.backToEdit(), [controller]);
   const reset = useCallback(() => controller.reset(), [controller]);
+  const updateReviewDraft = useCallback((draft: DailyPlanDraft) => controller.updateReviewDraft(draft), [controller]);
   const updateInputData = useCallback(
     (data: Partial<DailyResetData>) => controller.updateInputData(data),
     [controller]
@@ -443,6 +474,7 @@ export function useTodayFlow(
     backToEdit,
     reset,
     updateInputData,
+    updateReviewDraft,
     loadConfirmedPlan,
   };
 }

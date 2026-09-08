@@ -281,7 +281,7 @@ runTest("17. Forbids exposing ABCDE, Pareto, 80/20, or numerical leverage scores
     "Prompt must forbid visible ABCDE letters"
   );
   assert.ok(
-    resolvePrompt.includes("Do NOT expose \"80/20\", \"Pareto\""),
+    resolvePrompt.includes("Do NOT expose internal prioritization labels or third-party branded method names"),
     "Prompt must forbid exposing 80/20 or Pareto"
   );
   assert.ok(
