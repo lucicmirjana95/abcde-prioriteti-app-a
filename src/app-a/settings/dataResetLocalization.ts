@@ -82,9 +82,9 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
     scopePreferencesTitle: "Also reset App A preferences",
     scopePreferencesDescription:
       "Resets App A interface and planning preferences to defaults (app_a_preferences_v1). Preserves language.",
-    scopeVisionTitle: "Vision strategies & actions for Today",
+    scopeVisionTitle: "Vision strategies & candidates",
     scopeVisionDescription:
-      "Deletes long-term vision strategies (users/{uid}/visionStrategies/*) and actions sent to Today.",
+      "Deletes long-term vision strategies (users/{uid}/visionStrategies/*) and today candidates.",
     scopeVisionWarning:
       "Warning: These records may be used by future or shared App B/C features.",
     scopeRoutinesTitle: "Daily routines & history",
@@ -104,7 +104,7 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
 
     summaryItemDaily: "• App A daily plans, Inbox items, rollover decisions, and execution state",
     summaryItemPreferences: "• App A local preferences (rebuilt with clean defaults)",
-    summaryItemVision: "• Shared vision strategies and actions for Today",
+    summaryItemVision: "• Shared vision strategies and candidate items",
     summaryItemRoutines: "• Shared daily routines and completion logs",
 
     progressTitle: "Resetting data…",
@@ -145,9 +145,9 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
     scopePreferencesTitle: "Takođe resetuj podešavanja App A",
     scopePreferencesDescription:
       "Vraća podešavanja prikaza i planiranja na podrazumevane vrednosti (app_a_preferences_v1). Čuva jezik.",
-    scopeVisionTitle: "Strategije vizije i akcije za Danas",
+    scopeVisionTitle: "Strategije vizije i kandidati",
     scopeVisionDescription:
-      "Briše dugoročne strategije (users/{uid}/visionStrategies/*) i akcije poslate u Danas.",
+      "Briše dugoročne strategije (users/{uid}/visionStrategies/*) i stavke kandidata za danas.",
     scopeVisionWarning:
       "Upozorenje: Ovi zapisi mogu biti korišćeni u budućim ili deljenim funkcijama App B/C.",
     scopeRoutinesTitle: "Dnevne rutine i istorija",
@@ -167,7 +167,7 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
 
     summaryItemDaily: "• Dnevni planovi, stavke iz Inboksa, odluke o prenosu i radno stanje",
     summaryItemPreferences: "• Lokalna podešavanja App A (ponovo kreirana sa podrazumevanim vrednostima)",
-    summaryItemVision: "• Deljene strategije vizije i akcije za Danas",
+    summaryItemVision: "• Deljene strategije vizije i kandidati za danas",
     summaryItemRoutines: "• Deljene dnevne rutine i evidencija završetaka",
 
     progressTitle: "Resetovanje podataka u toku…",
@@ -208,9 +208,9 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
     scopePreferencesTitle: "App A tercihlerini de sıfırla",
     scopePreferencesDescription:
       "App A görünüm ve planlama ayarlarını varsayılanlara sıfırlar (app_a_preferences_v1). Dili korur.",
-    scopeVisionTitle: "Vizyon stratejileri ve Bugün eylemleri",
+    scopeVisionTitle: "Vizyon stratejileri ve adayları",
     scopeVisionDescription:
-      "Uzun vadeli vizyon stratejilerini (users/{uid}/visionStrategies/*) ve Bugün'e gönderilen eylemleri siler.",
+      "Uzun vadeli vizyon stratejilerini (users/{uid}/visionStrategies/*) ve bugünün aday maddelerini siler.",
     scopeVisionWarning:
       "Uyarı: Bu kayıtlar gelecekteki veya paylaşılan App B/C özellikleri tarafından kullanılabilir.",
     scopeRoutinesTitle: "Günlük rutinler ve geçmiş",
@@ -230,7 +230,7 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
 
     summaryItemDaily: "• Günlük planlar, Gelen Kutusu öğeleri, devir kararları ve yürütme durumu",
     summaryItemPreferences: "• App A yerel tercihleri (varsayılanlarla yeniden oluşturulur)",
-    summaryItemVision: "• Paylaşılan vizyon stratejileri ve Bugün eylemleri",
+    summaryItemVision: "• Paylaşılan vizyon stratejileri ve aday maddeler",
     summaryItemRoutines: "• Paylaşılan günlük rutinler ve tamamlama kayıtları",
 
     progressTitle: "Veriler sıfırlanıyor…",

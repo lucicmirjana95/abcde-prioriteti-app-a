@@ -18,25 +18,6 @@ export interface ResetExperienceCopy {
   stageGradualReturn: string;
 }
 
-export interface GuidedRestAudioCopy {
-  title: string;
-  enableSwitch: string;
-  soundOn: string;
-  soundOff: string;
-  testSound: string;
-  stopTest: string;
-  volumeLabel: string;
-  statusLabel: string;
-  statusReady: string;
-  statusPlaying: string;
-  statusPaused: string;
-  statusBlocked: string;
-  statusUnavailable: string;
-  stereoExplanation: string;
-  headphonesNote: string;
-  errorMessage: string;
-}
-
 export interface ResetCommonCopy {
   sectionTitle: string;
   sectionSubtitle: string;
@@ -84,7 +65,6 @@ export const RESET_LOCALIZATION: Record<
     longerExhale: ResetExperienceCopy;
     doubleInhale: ResetExperienceCopy;
     guidedRest: ResetExperienceCopy;
-    guidedRestAudio: GuidedRestAudioCopy;
   }
 > = {
   en: {
@@ -195,24 +175,6 @@ export const RESET_LOCALIZATION: Record<
       stageQuietRest: "Rest quietly. Let thoughts and sounds come and go without following them.",
       stageGradualReturn: "Notice the room around you and return gently whenever you are ready.",
     },
-    guidedRestAudio: {
-      title: "4 Hz stereo sound",
-      enableSwitch: "Enable 4 Hz stereo sound",
-      soundOn: "Sound on",
-      soundOff: "Sound off",
-      testSound: "Test sound",
-      stopTest: "Stop test",
-      volumeLabel: "Volume",
-      statusLabel: "Status",
-      statusReady: "Ready",
-      statusPlaying: "Playing",
-      statusPaused: "Paused",
-      statusBlocked: "Blocked",
-      statusUnavailable: "Unavailable",
-      stereoExplanation: "4 Hz is the difference between the 95 Hz and 99 Hz stereo channels, not an independently audible 4 Hz tone.",
-      headphonesNote: "Use stereo headphones for the channel separation effect. Adjust to a gentle volume and stop if uncomfortable.",
-      errorMessage: "Audio playback could not be started. Tap the test button or check your browser audio settings.",
-    },
   },
   sr: {
     common: {
@@ -322,24 +284,6 @@ export const RESET_LOCALIZATION: Record<
       stageQuietRest: "Odmarajte u tišini. Pustite misli i zvuke da dođu i prođu bez praćenja.",
       stageGradualReturn: "Ponovo primetite prostor oko sebe i vratite se polako kada budete spremni.",
     },
-    guidedRestAudio: {
-      title: "4 Hz stereo zvuk",
-      enableSwitch: "Uključi 4 Hz stereo zvuk",
-      soundOn: "Zvuk uključen",
-      soundOff: "Zvuk isključen",
-      testSound: "Testiraj zvuk",
-      stopTest: "Zaustavi test",
-      volumeLabel: "Jačina zvuka",
-      statusLabel: "Status",
-      statusReady: "Spremno",
-      statusPlaying: "Reprodukcija",
-      statusPaused: "Pauzirano",
-      statusBlocked: "Blokirano",
-      statusUnavailable: "Nedostupno",
-      stereoExplanation: "4 Hz je razlika između 95 Hz i 99 Hz stereo kanala, a ne samostalno čujan ton od 4 Hz.",
-      headphonesNote: "Koristite stereo slušalice za efekat razdvajanja kanala. Podesite blag nivo zvuka i prekinite ako vam ne prija.",
-      errorMessage: "Zvuk se ne može pokrenuti. Dodirnite dugme za test ili proverite dozvole za zvuk u pregledaču.",
-    },
   },
   tr: {
     common: {
@@ -448,24 +392,6 @@ export const RESET_LOCALIZATION: Record<
       stageBodyAttention: "Alnınızı, çenenizi, omuzlarınızı, ellerinizi ve bacaklarınızı fark edip gevşetin.",
       stageQuietRest: "Sessizce dinlenin. Düşüncelerin ve seslerin peşinden gitmeden gelip geçmesine izin verin.",
       stageGradualReturn: "Çevrenizdeki odayı yeniden fark edin ve hazır olduğunuzda yavaşça geri dönün.",
-    },
-    guidedRestAudio: {
-      title: "4 Hz stereo ses",
-      enableSwitch: "4 Hz stereo sesi etkinleştir",
-      soundOn: "Ses açık",
-      soundOff: "Ses kapalı",
-      testSound: "Sesi test et",
-      stopTest: "Testi durdur",
-      volumeLabel: "Ses seviyesi",
-      statusLabel: "Durum",
-      statusReady: "Hazır",
-      statusPlaying: "Çalıyor",
-      statusPaused: "Duraklatıldı",
-      statusBlocked: "Engellendi",
-      statusUnavailable: "Kullanılamıyor",
-      stereoExplanation: "4 Hz, bağımsız duyulabilir bir ton değil; 95 Hz ve 99 Hz stereo kanalları arasındaki frekans farkıdır.",
-      headphonesNote: "Kanal ayrımı etkisi için stereo kulaklık kullanın. Sesi hafif bir seviyede tutun ve rahatsız ederse kapatın.",
-      errorMessage: "Ses oynatılamadı. Test düğmesine dokunun veya tarayıcı ses izinlerini kontrol edin.",
     },
   },
 };

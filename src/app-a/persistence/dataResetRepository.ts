@@ -9,7 +9,7 @@ import {
   type DocumentReference,
   type QuerySnapshot,
 } from "firebase/firestore";
-import { auth, db } from "../../lib/firebase";
+import { db } from "../../lib/firebase";
 
 export type DataResetScopeKey =
   | "app_a_daily"
@@ -198,7 +198,6 @@ export function mapFirebaseErrorCodeToCategory(code: string): string {
  */
 export const defaultFirestoreAdapter: FirestoreAdapter = {
   async getDocsBatch(rootCol: string, userId: string, subCol: string, limitCount = MAX_RESET_BATCH_SIZE) {
-    await auth.authStateReady();
     const colRef = collection(db, rootCol, userId, subCol);
     const q = query(colRef, limit(Math.min(limitCount, MAX_RESET_BATCH_SIZE)));
     const snap = await getDocs(q);
