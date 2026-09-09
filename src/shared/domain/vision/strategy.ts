@@ -66,3 +66,148 @@ export function isVisionFeasibilityResult(value: unknown): value is VisionFeasib
   if (item.status === "insufficient_information" && (item.adjustedGoal || item.adjustedTimeframe)) return false;
   return true;
 }
+
+export function normalizeVisionFeasibilityResult(value: unknown): VisionFeasibilityResult | null {
+  if (!value || typeof value !== "object") return null;
+  const item = value as Record<string, unknown>;
+
+  const allowedStatuses = ["feasible", "feasible_with_assumptions", "unrealistic_for_timeframe", "insufficient_information"] as const;
+  if (!allowedStatuses.includes(item.status as any)) return null;
+  let status = item.status as VisionFeasibilityResult["status"];
+
+  const normalizedGoal = typeof item.normalizedGoal === "string" ? item.normalizedGoal.trim() : "";
+  if (normalizedGoal.length === 0 || normalizedGoal.length > 4000) return null;
+
+  const reason = typeof item.reason === "string" ? item.reason.trim() : "";
+  if (reason.length === 0 || reason.length > 500) return null;
+
+  const assumptions = Array.isArray(item.assumptions)
+    ? item.assumptions
+        .filter((a): a is string => typeof a === "string" && a.trim().length > 0)
+        .map((a) => a.trim().slice(0, 240))
+        .slice(0, 5)
+    : [];
+
+  let rawQuestions = Array.isArray(item.questions)
+    ? item.questions
+        .filter((q): q is string => typeof q === "string" && q.trim().length > 0)
+        .map((q) => q.trim().slice(0, 240))
+        .slice(0, 3)
+    : [];
+
+  let adjustedGoal = typeof item.adjustedGoal === "string" && item.adjustedGoal.trim().length > 0
+    ? item.adjustedGoal.trim().slice(0, 4000)
+    : undefined;
+
+  let adjustedTimeframe = typeof item.adjustedTimeframe === "string" && item.adjustedTimeframe.trim().length > 0
+    ? item.adjustedTimeframe.trim().slice(0, 200)
+    : undefined;
+
+  // Requirement: A response containing material questions and an adjusted goal must normalize to:
+  // - status: insufficient_information
+  // - retain no more than 3 questions
+  // - omit adjustedGoal and adjustedTimeframe
+  if (rawQuestions.length > 0 && (adjustedGoal !== undefined || adjustedTimeframe !== undefined)) {
+    status = "insufficient_information";
+    adjustedGoal = undefined;
+    adjustedTimeframe = undefined;
+  }
+
+  // Requirement: A response with unrealistic_for_timeframe and questions must not pass validation.
+  if (status === "unrealistic_for_timeframe" && rawQuestions.length > 0) {
+    return null;
+  }
+
+  if (status === "insufficient_information") {
+    adjustedGoal = undefined;
+    adjustedTimeframe = undefined;
+    if (rawQuestions.length === 0) {
+      return null;
+    }
+  }
+
+  if (status === "unrealistic_for_timeframe") {
+    if (!adjustedGoal && !adjustedTimeframe) {
+      return null;
+    }
+    rawQuestions = [];
+  }
+
+  if (status === "feasible" || status === "feasible_with_assumptions") {
+    adjustedGoal = undefined;
+    adjustedTimeframe = undefined;
+  }
+
+  const candidate: VisionFeasibilityResult = {
+    status,
+    normalizedGoal,
+    reason,
+    assumptions,
+    questions: rawQuestions,
+    ...(adjustedGoal ? { adjustedGoal } : {}),
+    ...(adjustedTimeframe ? { adjustedTimeframe } : {}),
+  };
+
+  return isVisionFeasibilityResult(candidate) ? candidate : null;
+}
+
+export function normalizeVisionStrategyResult(value: unknown): VisionStrategyResult | null {
+  if (!value || typeof value !== "object") return null;
+  const item = value as Record<string, unknown>;
+
+  const outcome = typeof item.outcome === "string" ? item.outcome.trim() : "";
+  const importance = typeof item.importance === "string" ? item.importance.trim() : "";
+  const nextStep = typeof item.nextStep === "string" ? item.nextStep.trim() : "";
+
+  if (!outcome || outcome.length > 500 || !importance || importance.length > 500 || !nextStep || nextStep.length > 300) {
+    return null;
+  }
+
+  if (!Array.isArray(item.milestones) || item.milestones.length === 0) return null;
+
+  const milestones = item.milestones
+    .slice(0, 5)
+    .map((m) => {
+      if (!m || typeof m !== "object") return null;
+      const row = m as Record<string, unknown>;
+      const title = typeof row.title === "string" ? row.title.trim().slice(0, 200) : "";
+      const result = typeof row.result === "string" ? row.result.trim().slice(0, 500) : "";
+      const steps = Array.isArray(row.steps)
+        ? row.steps
+            .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+            .map((s) => s.trim().slice(0, 300))
+            .slice(0, 5)
+        : [];
+      if (!title || !result || steps.length === 0) return null;
+      return { title, result, steps };
+    })
+    .filter((m): m is { title: string; result: string; steps: string[] } => m !== null);
+
+  if (milestones.length === 0) return null;
+
+  const risks = Array.isArray(item.risks)
+    ? item.risks
+        .filter((r): r is string => typeof r === "string" && r.trim().length > 0)
+        .map((r) => r.trim().slice(0, 300))
+        .slice(0, 5)
+    : [];
+
+  const assumptions = Array.isArray(item.assumptions)
+    ? item.assumptions
+        .filter((a): a is string => typeof a === "string" && a.trim().length > 0)
+        .map((a) => a.trim().slice(0, 300))
+        .slice(0, 5)
+    : [];
+
+  const candidate: VisionStrategyResult = {
+    outcome,
+    importance,
+    milestones,
+    risks,
+    assumptions,
+    nextStep,
+  };
+
+  return isVisionStrategyResult(candidate) ? candidate : null;
+}
+

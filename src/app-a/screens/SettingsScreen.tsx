@@ -12,6 +12,7 @@ import {
 import { useAppAAuth } from "../auth/useAppAAuth";
 import { DATA_RESET_LOCALIZATION } from "../settings/dataResetLocalization";
 import DataResetModal from "../components/settings/DataResetModal";
+import ShareAppCard from "../components/settings/ShareAppCard";
 
 const COPY = {
   en: {
@@ -407,6 +408,9 @@ export default function SettingsScreen({
           </div>
         </section>
       </div>
+
+      {/* Share App Section */}
+      <ShareAppCard language={language} />
 
       {/* Danger Zone Section */}
       <section

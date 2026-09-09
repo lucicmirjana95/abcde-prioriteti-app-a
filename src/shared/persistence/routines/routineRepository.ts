@@ -7,7 +7,7 @@ import {
   setDoc,
   where,
 } from "firebase/firestore";
-import { db } from "../../../lib/firebase";
+import { auth, db } from "../../../lib/firebase";
 import type { RoutineCompletion, SharedRoutine } from "../../domain/routines";
 import {
   getRoutineCompletionDocumentId,
@@ -19,8 +19,13 @@ import {
   isRoutineDocument,
 } from "./routineDocument";
 
-function requireUserId(userId: string): void {
-  if (!userId.trim()) throw new Error("authentication_required");
+async function requireUserId(userId: string): Promise<void> {
+  const value = (userId || "").trim();
+  if (!value) throw new Error("authentication_required");
+  await auth.authStateReady();
+  if (!auth.currentUser || auth.currentUser.uid !== value) {
+    throw new Error("authentication_required");
+  }
 }
 
 function routineRef(userId: string, routineId: string) {
@@ -38,14 +43,18 @@ function completionRef(userId: string, routineId: string, localDate: string) {
 }
 
 export async function saveRoutine(userId: string, routine: SharedRoutine): Promise<void> {
-  requireUserId(userId);
+  await requireUserId(userId);
   const validation = validateSharedRoutine(routine);
   if (!validation.valid) throw new Error(`invalid_routine:${validation.errors.join(",")}`);
   await setDoc(routineRef(userId, routine.id), JSON.parse(JSON.stringify(routine)), { merge: false });
 }
 
 export async function loadRoutines(userId: string): Promise<SharedRoutine[]> {
-  requireUserId(userId);
+  try {
+    await requireUserId(userId);
+  } catch {
+    return [];
+  }
   const snapshot = await getDocs(collection(db, "users", userId, "routines"));
   return snapshot.docs
     .map((entry) => entry.data())
@@ -62,7 +71,7 @@ export async function recordRoutineCompletion(
   userId: string,
   completion: RoutineCompletion,
 ): Promise<void> {
-  requireUserId(userId);
+  await requireUserId(userId);
   const validation = validateRoutineCompletion(completion);
   if (!validation.valid) throw new Error(`invalid_completion:${validation.errors.join(",")}`);
   await setDoc(
@@ -77,7 +86,7 @@ export async function clearRoutineCompletion(
   routineId: string,
   localDate: string,
 ): Promise<void> {
-  requireUserId(userId);
+  await requireUserId(userId);
   await deleteDoc(completionRef(userId, routineId, localDate));
 }
 
@@ -86,7 +95,11 @@ export async function loadRoutineCompletions(
   startLocalDate: string,
   endLocalDate: string,
 ): Promise<RoutineCompletion[]> {
-  requireUserId(userId);
+  try {
+    await requireUserId(userId);
+  } catch {
+    return [];
+  }
   const completionQuery = query(
     collection(db, "users", userId, "routineCompletions"),
     where("localDate", ">=", startLocalDate),

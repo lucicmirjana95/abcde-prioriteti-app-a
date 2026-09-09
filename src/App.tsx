@@ -291,6 +291,7 @@ export default function App() {
   const handleResetUserData = async () => {
     if (!currentUser) return;
     try {
+      await auth.authStateReady();
       const tasksCol = collection(db, "users", currentUser.uid, "tasks");
       const tasksSnapshot = await getDocs(tasksCol);
       const batch = writeBatch(db);
