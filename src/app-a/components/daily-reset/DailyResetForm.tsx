@@ -109,11 +109,19 @@ export default function DailyResetForm({
         {showHowItWorks ? (
           <div className="mt-2 border-t pt-3 text-[13px] leading-relaxed" style={{ borderColor: "var(--app-a-border)", color: "var(--app-a-text-secondary)" }}>
             <p className="font-medium" style={{ color: "var(--app-a-text)" }}>{t.onboardingTitle}</p>
-            <ol className="mt-2 list-decimal space-y-1.5 pl-5">
-              <li>{t.onboardingMindHelp}</li>
-              <li>{t.onboardingStateHelp}</li>
-              <li>{language === 'sr' ? 'Pregledajte AI predlog i potvrdite ga tek kada vam redosled odgovara.' : language === 'tr' ? 'Yapay zekâ önerisini gözden geçirin ve yalnızca sıralama size uyduğunda onaylayın.' : 'Review the AI suggestion and confirm it only when the order works for you.'}</li>
-            </ol>
+            <p className="mt-1">{t.onboardingIntro}</p>
+            <div className="mt-3 grid gap-2 md:grid-cols-3">
+              {[
+                [t.onboardingSortTitle, t.onboardingSortText],
+                [t.onboardingPrioritizeTitle, t.onboardingPrioritizeText],
+                [t.onboardingControlTitle, t.onboardingControlText],
+              ].map(([title, text]) => (
+                <div key={title} className="rounded-lg border p-3" style={{ borderColor: "var(--app-a-border)", background: "var(--app-a-surface)" }}>
+                  <h3 className="text-[13px] font-semibold" style={{ color: "var(--app-a-text)" }}>{title}</h3>
+                  <p className="mt-1 text-[12px] leading-relaxed">{text}</p>
+                </div>
+              ))}
+            </div>
           </div>
         ) : null}
       </section>
