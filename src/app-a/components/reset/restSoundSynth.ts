@@ -1,4 +1,6 @@
-export const REST_SOUND_CARRIER_HZ = 95;
+// The 4 Hz value is the stereo difference, not an audible 4 Hz tone.
+// A softer mid-low carrier avoids the rumble produced by the previous 95 Hz bed.
+export const REST_SOUND_CARRIER_HZ = 180;
 export const REST_SOUND_DIFFERENCE_HZ = 4;
 export type RestSoundStartResult = "playing" | "blocked" | "unsupported";
 
@@ -23,7 +25,7 @@ class RestSoundSynthesizer {
       if (this.oscillators.length) return "playing";
       const master = this.ctx.createGain();
       master.gain.setValueAtTime(0.0001, this.ctx.currentTime);
-      master.gain.exponentialRampToValueAtTime(0.035, this.ctx.currentTime + 1.5);
+      master.gain.exponentialRampToValueAtTime(0.018, this.ctx.currentTime + 2.5);
       master.connect(this.ctx.destination);
       this.nodes.push(master);
 

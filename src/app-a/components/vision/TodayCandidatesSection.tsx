@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowUp, CalendarPlus, Check, Clock3, Compass, Pencil, X } from "lucide-react";
+import { ArrowUp, CalendarPlus, Check, ChevronDown, Clock3, Compass, Pencil, X } from "lucide-react";
 import type { AppALanguage } from "../../types";
 import { estimateVisionStepMinutes, type TodayCandidate } from "../../../shared/domain/today-candidates";
 import { dismissTodayCandidate, ensurePendingVisionCandidates, loadPendingTodayCandidates } from "../../../shared/persistence/today-candidates";
@@ -25,6 +25,8 @@ const COPY = {
     editDuration: "Edit duration",
     saveDuration: "Save",
     cancelDuration: "Cancel",
+    currentFocus: "Current focus",
+    otherVisions: "Other active visions",
   },
   sr: {
     title: "Akcije iz Vizije",
@@ -44,6 +46,8 @@ const COPY = {
     editDuration: "Izmeni trajanje",
     saveDuration: "Sačuvaj",
     cancelDuration: "Otkaži",
+    currentFocus: "Trenutni fokus",
+    otherVisions: "Druge aktivne vizije",
   },
   tr: {
     title: "Vizyondan eylemler",
@@ -63,6 +67,8 @@ const COPY = {
     editDuration: "Süreyi düzenle",
     saveDuration: "Kaydet",
     cancelDuration: "İptal",
+    currentFocus: "Mevcut odak",
+    otherVisions: "Diğer aktif vizyonlar",
   },
 } as const;
 
@@ -88,6 +94,7 @@ export default function TodayCandidatesSection({ userId, language, planState, on
   const [customDurations, setCustomDurations] = useState<Record<string, number>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editMinutesInput, setEditMinutesInput] = useState<string>("");
+  const [showOthers, setShowOthers] = useState(false);
 
   const t = COPY[language];
 
@@ -150,6 +157,21 @@ export default function TodayCandidatesSection({ userId, language, planState, on
   const guidance = planState === "none" ? t.noPlan : planState === "draft" ? t.draftPlan : error === "capacity_unknown" ? t.capacity_unknown : error === "capacity_exceeded" ? t.capacity_exceeded : null;
   const planAction = planState === "none" ? t.createPlan : t.reviewPlan;
 
+  const primary = items.find(item => item.isCurrentFocus);
+  const others = items.filter(item => item.id !== primary?.id);
+  const renderCandidate = (item: TodayCandidate, isPrimary = false) => {
+    const minutes = getEffectiveMinutes(item);
+    const isEditingThis = editingId === item.id;
+    return (
+      <article key={item.id} className="app-a-surface flex items-start gap-3.5 rounded-xl border p-4 shadow-sm" style={{ borderColor: isPrimary ? "var(--app-a-accent)" : "var(--app-a-border)" }}>
+        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#AF52DE]/10 text-[#AF52DE]"><Compass className="h-5 w-5" /></span>
+        <div className="min-w-0 flex-1">{isPrimary ? <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--app-a-accent)" }}>{t.currentFocus}</p> : null}<h3 className="text-[15px] font-semibold leading-snug">{item.title}</h3>
+          {isEditingThis ? <div className="mt-2 flex flex-wrap items-center gap-2"><input type="number" min="1" max="480" value={editMinutesInput} onChange={e=>setEditMinutesInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")commitEditedDuration(item.id);if(e.key==="Escape")setEditingId(null)}} autoFocus className="app-a-field min-h-9 w-20 px-2"/><button onClick={()=>commitEditedDuration(item.id)} className="text-[13px] font-semibold" style={{color:"var(--app-a-accent)"}}>{t.saveDuration}</button><button onClick={()=>setEditingId(null)} className="text-[13px]">{t.cancelDuration}</button></div> : <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px]"><span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5"/>{formatEstimatedDuration(minutes,language)}</span><button onClick={()=>startEditingDuration(item)} className="inline-flex items-center gap-1 text-[12px]"><Pencil className="h-3 w-3"/>{t.editDuration}</button></div>}
+          {planState==="confirmed"?<button disabled={busyId!==null} onClick={()=>void add(item)} className="app-a-primary-button mt-3 gap-2 px-3.5 text-[13px]"><CalendarPlus className="h-4 w-4"/>{t.add}</button>:null}
+        </div><button disabled={busyId!==null} onClick={()=>void dismiss(item)} className="h-9 w-9 shrink-0 rounded-full" aria-label={t.dismiss}><X className="mx-auto h-4 w-4"/></button>
+      </article>
+    );
+  };
   return (
     <section className="mx-auto mt-7 w-full max-w-[760px] px-5 pb-2 sm:px-6" aria-labelledby="today-vision-heading">
       <h2 id="today-vision-heading" className="text-[19px] font-semibold">{t.title}</h2>
@@ -174,7 +196,9 @@ export default function TodayCandidatesSection({ userId, language, planState, on
         </div>
       ) : null}
       <div className="mt-3 space-y-2.5">
-        {items.map((item) => {
+        {primary ? renderCandidate(primary, true) : null}
+        {others.length ? <><button type="button" onClick={()=>setShowOthers(value=>!value)} className="app-a-secondary-button w-full justify-between px-4"><span>{t.otherVisions} ({others.length})</span><ChevronDown className={`h-4 w-4 transition-transform ${showOthers?"rotate-180":""}`}/></button>{showOthers ? others.map(item=>renderCandidate(item)) : null}</> : null}
+        {false && items.map((item) => {
           const minutes = getEffectiveMinutes(item);
           const isEditingThis = editingId === item.id;
 

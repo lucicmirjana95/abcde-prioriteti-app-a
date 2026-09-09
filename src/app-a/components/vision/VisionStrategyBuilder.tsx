@@ -248,6 +248,14 @@ export default function VisionStrategyBuilder({
     setError(false);
     setFeasibility(null);
     try {
+      // A deadline is useful context, never a prerequisite for forming a plan.
+      // Without one, generate a conservative sequence and keep unknowns as assumptions.
+      if (!timeframe.trim()) {
+        window.clearTimeout(timeout);
+        setLoading(false);
+        await generateStrategy(idea, "", additionalDetails);
+        return;
+      }
       const enrichedIdea = additionalDetails.trim()
         ? `${idea}\n\nUser-provided clarifying details:\n${additionalDetails.trim()}`
         : idea;

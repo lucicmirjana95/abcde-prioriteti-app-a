@@ -13,6 +13,8 @@ export interface TodayCandidate {
   stepKey?: string;
   createdAt: string;
   updatedAt: string;
+  /** Read-time UI hint; it is not required in persisted candidate documents. */
+  isCurrentFocus?: boolean;
 }
 
 export function createTodayCandidateId(sourceId?: string): string {

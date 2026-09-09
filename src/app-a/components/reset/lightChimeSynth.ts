@@ -26,48 +26,48 @@ export interface BreathingPhaseProfile {
 
 export const BREATHING_SOUND_PROFILES: Readonly<Record<BreathingSoundPhase, BreathingPhaseProfile>> = Object.freeze({
   inhale: {
-    startFreq: 220, // A3 warm starting anchor
-    endFreq: 349.23, // F4 gentle upward progression
-    peakGain: 0.055,
+    startFreq: 196,
+    endFreq: 293.66,
+    peakGain: 0.038,
     type: "sine",
   },
   exhale: {
-    startFreq: 349.23, // F4 distinct release anchor
-    endFreq: 196, // G3 smooth descending resolution
-    peakGain: 0.05,
+    startFreq: 293.66,
+    endFreq: 174.61,
+    peakGain: 0.034,
     type: "sine",
   },
   hold: {
     startFreq: 246.94, // B3 subtle, very quiet steady tone
     endFreq: 246.94,
-    peakGain: 0.012,
+    peakGain: 0.007,
     type: "sine",
     steady: true,
   },
   hold_full: {
     startFreq: 246.94,
     endFreq: 246.94,
-    peakGain: 0.012,
+    peakGain: 0.007,
     type: "sine",
     steady: true,
   },
   hold_empty: {
     startFreq: 220,
     endFreq: 220,
-    peakGain: 0.01,
+    peakGain: 0.006,
     type: "sine",
     steady: true,
   },
   first_inhale: {
-    startFreq: 220, // A3
-    endFreq: 293.66, // D4
-    peakGain: 0.05,
+    startFreq: 196,
+    endFreq: 261.63,
+    peakGain: 0.036,
     type: "sine",
   },
   topup_inhale: {
-    startFreq: 293.66, // D4
-    endFreq: 392, // G4 distinct brisk secondary upward inflection
-    peakGain: 0.055,
+    startFreq: 261.63,
+    endFreq: 329.63,
+    peakGain: 0.04,
     type: "sine",
   },
   complete: {
@@ -290,4 +290,3 @@ export class LightChimeSynthesizer {
 }
 
 export const lightChimeSynth = new LightChimeSynthesizer();
-

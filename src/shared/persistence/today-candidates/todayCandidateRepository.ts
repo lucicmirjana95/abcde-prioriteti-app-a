@@ -20,11 +20,13 @@ export async function saveTodayCandidate(userId: string, candidate: TodayCandida
 
 export async function loadPendingTodayCandidates(userId: string): Promise<TodayCandidate[]> {
   await requireUser(userId);
-  const [snapshot, strategies] = await Promise.all([getDocs(collection(db, "users", userId, "todayCandidates")), getDocs(collection(db, "users", userId, "visionStrategies"))]);
+  const [snapshot, strategies, userSnapshot] = await Promise.all([getDocs(collection(db, "users", userId, "todayCandidates")), getDocs(collection(db, "users", userId, "visionStrategies")), getDoc(doc(db, "users", userId))]);
   const active = new Set(strategies.docs.map(entry => entry.data()).filter(isSavedVisionStrategy).filter(item => item.status !== 'archived').map(item => item.id));
+  const focusId = typeof userSnapshot.data()?.currentVisionId === "string" ? userSnapshot.data()!.currentVisionId : null;
   return snapshot.docs.map((entry) => entry.data()).filter(isTodayCandidate)
     .filter((item) => item.status === "pending" && active.has(item.sourceId))
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    .map((item) => ({ ...item, isCurrentFocus: item.sourceId === focusId }))
+    .sort((a, b) => Number(b.sourceId === focusId) - Number(a.sourceId === focusId) || b.updatedAt.localeCompare(a.updatedAt));
 }
 
 export async function dismissTodayCandidate(userId: string, candidate: TodayCandidate): Promise<void> {

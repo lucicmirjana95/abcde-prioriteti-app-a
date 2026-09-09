@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, runTransaction } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, runTransaction, setDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { auth } from "../../../lib/firebase";
 import { isSavedVisionStrategy, type SavedVisionStrategy } from "../../domain/vision";
@@ -54,6 +54,19 @@ export async function saveVisionStrategy(userId: string, strategy: SavedVisionSt
 
 export async function loadVisionStrategies(userId: string): Promise<SavedVisionStrategy[]> {
   return (await loadVisionLibrary(userId)).strategies;
+}
+
+export async function loadCurrentVisionId(userId: string): Promise<string | null> {
+  await requireUser(userId);
+  const snapshot = await getDoc(doc(db, "users", userId));
+  const value = snapshot.data()?.currentVisionId;
+  return typeof value === "string" && /^vision_[a-z0-9_]{4,80}$/.test(value) ? value : null;
+}
+
+export async function setCurrentVisionId(userId: string, strategyId: string | null): Promise<void> {
+  await requireUser(userId);
+  if (strategyId !== null && !/^vision_[a-z0-9_]{4,80}$/.test(strategyId)) throw new Error("invalid_vision_strategy_id");
+  await setDoc(doc(db, "users", userId), { currentVisionId: strategyId }, { merge: true });
 }
 
 export async function visionIdeaFingerprint(idea: string): Promise<string> {

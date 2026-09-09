@@ -155,7 +155,9 @@ export async function addMissingInboxDuration(userId: string, itemId: string, mi
   });
 }
 
-export async function convertInboxNoteToTask(userId: string, itemId: string): Promise<AppAInboxItem> {
+export async function convertInboxNoteToTask(userId: string, itemId: string, actionTitle: string): Promise<AppAInboxItem> {
+  const title = actionTitle.trim();
+  if (title.length < 3 || title.length > 500) throw new Error("invalid_task_title");
   return runTransaction(db, async transaction => {
     const ref = inboxRef(userId, itemId);
     const snapshot = await transaction.get(ref);
@@ -165,6 +167,8 @@ export async function convertInboxNoteToTask(userId: string, itemId: string): Pr
     }
     const next: AppAInboxItem = {
       ...current,
+      title,
+      details: current.details ? `${current.details}\n\nOriginal note: ${current.title}` : `Original note: ${current.title}`,
       kind: "task",
       horizon: "later",
       updatedAt: new Date().toISOString(),

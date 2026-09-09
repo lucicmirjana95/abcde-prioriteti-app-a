@@ -18,7 +18,7 @@ console.log("Running Reset Sessions & Timing Engine Tests...");
 
 // -------------------------------------------------------------
 // 1. Balanced Box (4-4-4-4) Exact Timing Transitions & Cycle Presets
-assert.equal(REST_SOUND_CARRIER_HZ, 95);
+assert.equal(REST_SOUND_CARRIER_HZ, 180);
 assert.equal(REST_SOUND_DIFFERENCE_HZ, 4, "guided rest stereo frequencies must remain exactly 4 Hz apart");
 // -------------------------------------------------------------
 // Total cycle = 16 seconds (16,000ms)

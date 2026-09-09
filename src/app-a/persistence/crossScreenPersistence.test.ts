@@ -142,7 +142,7 @@ assert.equal(repo.read(importedPath).title, 'Send the draft');
 assert.equal(repo.read(importedPath).horizon, 'this_week'); scenarios++;
 assert.equal(repo.read(notePath).title, 'I am not speaking with my spouse');
 assert.equal(repo.read(notePath).estimatedMinutes, undefined);
-const convertedNote = await repo.convertInboxNoteToTask('user-1', note.id);
+const convertedNote = await repo.convertInboxNoteToTask('user-1', note.id, 'Ask whether we can talk this evening');
 assert.equal(convertedNote.kind, 'task');
 assert.equal(repo.read(notePath).kind, 'task'); scenarios++;
 
