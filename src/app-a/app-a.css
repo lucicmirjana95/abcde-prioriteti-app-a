@@ -95,6 +95,20 @@
   color: var(--app-a-text);
 }
 
+@keyframes app-a-rest-orb-float {
+  0%, 100% { transform: scale(.82) rotate(-2deg); border-radius: 44% 56% 52% 48% / 47% 43% 57% 53%; }
+  50% { transform: scale(1) rotate(3deg); border-radius: 53% 47% 44% 56% / 43% 56% 44% 57%; }
+}
+
+.app-a-rest-orb {
+  animation: app-a-rest-orb-float 8s ease-in-out infinite;
+  will-change: transform, border-radius;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-a-rest-orb { animation: none; }
+}
+
 /* Form Fields */
 .app-a-field {
   border: 1px solid var(--app-a-border);

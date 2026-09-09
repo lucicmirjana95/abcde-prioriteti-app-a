@@ -310,6 +310,8 @@ interface GuidedRestVisualizerProps {
   stageRemainingMs: number;
   totalRemainingMs: number;
   stageDescription: string;
+  stageLabels: readonly string[];
+  prefersReducedMotion: boolean;
 }
 
 /**
@@ -318,8 +320,11 @@ interface GuidedRestVisualizerProps {
  */
 export function GuidedRestVisualizer({
   stageIndex,
+  stageRemainingMs,
   totalRemainingMs,
   stageDescription,
+  stageLabels,
+  prefersReducedMotion,
 }: GuidedRestVisualizerProps) {
   const totalDurationMs = 600000;
   const progressPercent = Math.min(100, Math.max(0, ((totalDurationMs - totalRemainingMs) / totalDurationMs) * 100));
@@ -328,24 +333,27 @@ export function GuidedRestVisualizer({
   const totalSec = Math.floor((totalRemainingMs % 60000) / 1000);
   const formattedTime = `${totalMin}:${String(totalSec).padStart(2, "0")}`;
 
-  const stages = ["Settle", "Body Attention", "Quiet Rest", "Return"];
+  const stageDurations = [60_000, 180_000, 300_000, 60_000];
+  const stageProgress = Math.min(1, Math.max(0, 1 - stageRemainingMs / stageDurations[stageIndex]));
 
   return (
     <div className="mx-auto max-w-md text-center">
-      {/* Large readable remaining time */}
-      <p className="text-[48px] font-bold tabular-nums tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
-        {formattedTime}
-      </p>
+      <div className="relative mx-auto flex h-[190px] w-[190px] items-center justify-center" aria-hidden="true">
+        <div className="absolute inset-2 rounded-full border border-[#64D2FF]/25" />
+        <div className={`absolute h-32 w-32 rounded-[44%_56%_52%_48%/47%_43%_57%_53%] bg-gradient-to-br from-[#64D2FF]/30 via-[#5E5CE6]/20 to-[#AF52DE]/20 shadow-[0_0_48px_rgba(94,92,230,.18)] ${prefersReducedMotion ? "" : "app-a-rest-orb"}`} style={{ transform: prefersReducedMotion ? "scale(.88)" : undefined }} />
+        <div className="relative text-center"><p className="text-[38px] font-semibold tabular-nums tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">{formattedTime}</p><p className="mt-1 text-[11px] font-semibold uppercase tracking-[.12em] text-[#6E6E73] dark:text-[#AEAEB2]">{stageLabels[stageIndex]}</p></div>
+      </div>
 
       {/* Stage Timeline */}
       <div className="mt-4 flex items-center justify-between gap-1.5 px-2">
-        {stages.map((stg, idx) => {
+        {stageLabels.map((stg, idx) => {
           const isCurrent = idx === stageIndex;
           const isDone = idx < stageIndex;
 
           return (
             <div key={stg} className="flex-1">
-              <div
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+                <div
                 className={`h-1.5 w-full rounded-full transition-colors duration-300 ${
                   isDone
                     ? "bg-[#0071e3] dark:bg-[#2997ff]"
@@ -353,7 +361,9 @@ export function GuidedRestVisualizer({
                     ? "bg-[#0071e3] dark:bg-[#2997ff] ring-2 ring-[#0071e3]/30"
                     : "bg-black/10 dark:bg-white/10"
                 }`}
-              />
+                style={{ transformOrigin: "left", transform: `scaleX(${isDone ? 1 : isCurrent ? stageProgress : 0})` }}
+                />
+              </div>
               <p
                 className={`mt-1.5 text-[11px] font-medium tracking-tight truncate ${
                   isCurrent

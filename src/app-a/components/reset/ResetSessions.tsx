@@ -450,7 +450,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
         </div>
 
         {/* Global Sound & Motion Badges */}
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
           {prefersReducedMotion && (
             <span className="inline-flex items-center rounded-full bg-black/5 px-2.5 py-1 text-[11px] font-medium text-[#555558] dark:bg-white/10 dark:text-[#a1a1a6]">
               {tCommon.reducedMotionBadge}
@@ -614,7 +614,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
             <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-[#555558] dark:text-[#a1a1a6]">
               {tCommon.completedSubtitle}
             </p>
-            <div className="mt-6 flex justify-center gap-3">
+            <div className="mt-6 flex flex-col justify-center gap-2 min-[380px]:flex-row">
               <button
                 type="button"
                 id="reset-completed-restart-btn"
@@ -800,6 +800,8 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
                     stageRemainingMs={(timingState as ReturnType<typeof calculateGuidedRestTiming>).stageRemainingMs}
                     totalRemainingMs={totalDurationMs - elapsedMs}
                     stageDescription={currentPhaseDescription}
+                    stageLabels={language === "sr" ? ["Smirivanje", "Pažnja na telo", "Tihi odmor", "Povratak"] : language === "tr" ? ["Yerleşme", "Beden farkındalığı", "Sessiz dinlenme", "Dönüş"] : ["Settle", "Body attention", "Quiet rest", "Return"]}
+                    prefersReducedMotion={prefersReducedMotion}
                   />
                   <p className="mx-auto mt-3 max-w-md text-[12px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
                     {language === "sr" ? "Opcioni 4 Hz stereo zvuk radi samo kada ga uključite. Za stereo efekat koristite slušalice; prekinite ako vam ne prija." : language === "tr" ? "İsteğe bağlı 4 Hz stereo ses yalnızca siz açtığınızda çalışır. Stereo etki için kulaklık kullanın; rahatsız ederse kapatın." : "Optional 4 Hz stereo sound plays only when you turn it on. Use headphones for the stereo effect; stop if it feels uncomfortable."}
@@ -844,13 +846,13 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
             )}
 
             {/* Interaction Buttons */}
-            <div className="mt-6 grid grid-cols-2 gap-2.5">
+            <div className="mt-6 grid min-w-0 grid-cols-2 gap-2.5">
               {sessionStatus === "idle" && (
                 <button
                   type="button"
                   id="reset-start-btn"
                   onClick={() => void handleStart()}
-                  className="app-a-primary-button app-a-focus-ring w-full justify-center gap-2 px-4 py-2.5 text-[15px] font-semibold"
+                  className="app-a-primary-button app-a-focus-ring col-span-2 w-full min-w-0 justify-center gap-2 px-4 py-2.5 text-[15px] font-semibold min-[380px]:col-span-1"
                 >
                   <Play className="h-4 w-4" />
                   {tCommon.start}
