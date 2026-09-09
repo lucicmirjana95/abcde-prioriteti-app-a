@@ -37,19 +37,24 @@ function isEligible(item: ClassifiedBrainDumpItem): boolean {
   return item.kind === "task" && (item.timeHorizon === "this_week" || item.timeHorizon === "later");
 }
 
+function isNote(item: ClassifiedBrainDumpItem): boolean {
+  return Boolean(item.id && item.originalText.trim() && item.timeHorizon === "no_action");
+}
+
 export function inboxItemsFromDailyPlan(document: AppADailyPlanDocument): AppAInboxItem[] {
   const candidates = [
     ...document.plan.deferredItems,
+    ...document.plan.nonActionItems,
     ...document.plan.classifiedItems.filter((item) => item.kind === "waiting_for"),
   ];
   const unique = new Map<string, ClassifiedBrainDumpItem>();
-  for (const item of candidates) if (isEligible(item)) unique.set(item.id, item);
+  for (const item of candidates) if (isEligible(item) || isNote(item)) unique.set(item.id, item);
   const now = new Date().toISOString();
   return [...unique.values()].map((item) => ({
     id: createImportedInboxItemId(document.localDate, item.id),
-    title: (item.suggestedAction || item.originalText).trim(),
+    title: (isNote(item) ? item.originalText : item.suggestedAction || item.originalText).trim(),
     ...(item.suggestedAction && item.originalText !== item.suggestedAction ? { details: item.originalText.trim() } : {}),
-    kind: item.kind === "waiting_for" ? "waiting_for" : "task",
+    kind: isNote(item) ? "note" : item.kind === "waiting_for" ? "waiting_for" : "task",
     horizon: item.timeHorizon === "this_week" ? "this_week" : "later",
     status: item.kind === "waiting_for" ? "waiting" : "inbox",
     ...(item.estimatedMinutes ? { estimatedMinutes: item.estimatedMinutes } : {}),
@@ -76,8 +81,8 @@ export async function importDailyPlanItemsToInbox(userId: string, document: AppA
   return missing.length;
 }
 
-/** Confirms a reviewed plan and persists every actionable deferred item together.
- * A failed Inbox write must never leave the plan saved while its deferred tasks vanish. */
+/** Confirms a reviewed plan and persists deferred tasks and non-action notes together.
+ * A failed Inbox write must never leave the plan saved while related items vanish. */
 export async function saveConfirmedPlanAndInboxAtomic(
   userId: string,
   document: AppADailyPlanDocument,
@@ -145,6 +150,25 @@ export async function addMissingInboxDuration(userId: string, itemId: string, mi
     const current = snapshot.data();
     if (!isAppAInboxItem(current) || current.estimatedMinutes || current.status === 'completed' || current.status === 'archived') throw new Error('inbox_item_changed');
     const next = { ...current, estimatedMinutes: minutes, updatedAt: new Date().toISOString() };
+    transaction.set(ref, next);
+    return next;
+  });
+}
+
+export async function convertInboxNoteToTask(userId: string, itemId: string): Promise<AppAInboxItem> {
+  return runTransaction(db, async transaction => {
+    const ref = inboxRef(userId, itemId);
+    const snapshot = await transaction.get(ref);
+    const current = snapshot.data();
+    if (!isAppAInboxItem(current) || current.kind !== "note" || current.status !== "inbox") {
+      throw new Error("note_unavailable");
+    }
+    const next: AppAInboxItem = {
+      ...current,
+      kind: "task",
+      horizon: "later",
+      updatedAt: new Date().toISOString(),
+    };
     transaction.set(ref, next);
     return next;
   });

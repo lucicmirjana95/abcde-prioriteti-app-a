@@ -129,17 +129,27 @@ assert.equal(repo.read(inboxPath).status, 'scheduled');
 assert.equal(repo.read(path).plan.ifCapacityRemains[0].title, inbox.title); scenarios++;
 
 const deferredTask = { id: 's2', originalText: 'Send the draft this week', kind: 'task', timeHorizon: 'this_week', suggestedAction: 'Send the draft', estimatedMinutes: 15, timeSensitivity: 'soft', isAmbiguous: false, needsCheck: false, priority: { explanation: 'Explicit next action' } };
-const deferredDocument = { ...document, plan: { ...plan, classifiedItems: [...plan.classifiedItems, deferredTask], deferredItems: [deferredTask] } };
+const nonActionNote = { id: 's3', originalText: 'I am not speaking with my spouse', kind: 'fact', timeHorizon: 'no_action', timeSensitivity: 'none', isAmbiguous: false, needsCheck: false, priority: { explanation: 'Context, not an explicit action' } };
+const deferredDocument = { ...document, plan: { ...plan, classifiedItems: [...plan.classifiedItems, deferredTask, nonActionNote], deferredItems: [deferredTask], nonActionItems: [nonActionNote] } };
 const importedId = repo.inboxItemsFromDailyPlan(deferredDocument)[0].id;
 const importedPath = `appAUsers/user-1/inboxItems/${importedId}`;
+const note = repo.inboxItemsFromDailyPlan(deferredDocument).find(item => item.kind === 'note');
+assert.ok(note);
+const notePath = `appAUsers/user-1/inboxItems/${note.id}`;
 start();
 await repo.saveConfirmedPlanAndInboxAtomic('user-1', deferredDocument);
 assert.equal(repo.read(importedPath).title, 'Send the draft');
 assert.equal(repo.read(importedPath).horizon, 'this_week'); scenarios++;
+assert.equal(repo.read(notePath).title, 'I am not speaking with my spouse');
+assert.equal(repo.read(notePath).estimatedMinutes, undefined);
+const convertedNote = await repo.convertInboxNoteToTask('user-1', note.id);
+assert.equal(convertedNote.kind, 'task');
+assert.equal(repo.read(notePath).kind, 'task'); scenarios++;
 
 start(); repo.failNext();
 await assert.rejects(repo.saveConfirmedPlanAndInboxAtomic('user-1', deferredDocument));
 assert.equal(repo.read(importedPath), undefined);
+assert.equal(repo.read(notePath), undefined);
 assert.deepEqual(repo.read(path).plan.deferredItems, []); scenarios++;
 
 start();

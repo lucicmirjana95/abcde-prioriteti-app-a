@@ -1,7 +1,7 @@
 import type { AppALanguage } from "../../types";
 import { computeDeterministicDigest128 } from "../rollover/contracts";
 
-export type InboxItemKind = "task" | "waiting_for";
+export type InboxItemKind = "task" | "waiting_for" | "note";
 export type InboxItemHorizon = "this_week" | "later";
 export type InboxItemStatus = "inbox" | "scheduled" | "waiting" | "completed" | "archived";
 export type InboxItemSource = "manual" | "daily_reset" | "rollover";
@@ -46,7 +46,7 @@ export function isAppAInboxItem(value: unknown): value is AppAInboxItem {
   const item = value as Partial<AppAInboxItem>;
   return typeof item.id === "string" && item.id.length > 0 && item.id.length <= 128
     && typeof item.title === "string" && item.title.trim().length >= 1 && item.title.length <= 500
-    && (item.kind === "task" || item.kind === "waiting_for")
+    && (item.kind === "task" || item.kind === "waiting_for" || item.kind === "note")
     && (item.horizon === "this_week" || item.horizon === "later")
     && ["inbox", "scheduled", "waiting", "completed", "archived"].includes(item.status || "")
     && ["manual", "daily_reset", "rollover"].includes(item.source || "")
