@@ -68,11 +68,62 @@ export function visionStepKey(title: string): string {
   return `s_${(hash >>> 0).toString(16)}_${(second >>> 0).toString(16)}`;
 }
 
-export function createSequencedVisionCandidate(document: SavedVisionStrategy, sequenceIndex: number, now = new Date().toISOString()): TodayCandidate | null {
+export interface EstimateVisionStepMinutesInput {
+  title?: string;
+  existingMinutes?: number | null;
+  aiEstimatedMinutes?: number | null;
+}
+
+function isValidMinuteEstimate(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 && value <= 480;
+}
+
+export function estimateVisionStepMinutes(
+  input?: EstimateVisionStepMinutesInput | string | number | null,
+  aiEstimatedMinutes?: number | null,
+): number {
+  let existing: number | null | undefined;
+  let ai: number | null | undefined;
+
+  if (typeof input === "object" && input !== null) {
+    existing = input.existingMinutes;
+    ai = input.aiEstimatedMinutes;
+  } else if (typeof input === "number") {
+    existing = input;
+    ai = aiEstimatedMinutes;
+  } else {
+    ai = aiEstimatedMinutes;
+  }
+
+  // 1. Koristi postojeći validan estimatedMinutes kada postoji
+  if (isValidMinuteEstimate(existing)) {
+    return existing;
+  }
+
+  // 2. Za novu Vision akciju koristi procenu koju je proizveo AI, ako je dostupna u postojećem toku
+  if (isValidMinuteEstimate(ai)) {
+    return ai;
+  }
+
+  // 3. Ako procena ne postoji, koristi neutralni fallback od 20 minuta
+  // 4. Ne uvodi nepouzdane kategorije ili heuristike na osnovu teksta naslova
+  return 20;
+}
+
+export function createSequencedVisionCandidate(
+  document: SavedVisionStrategy,
+  sequenceIndex: number,
+  now = new Date().toISOString(),
+  existingOrAiMinutes?: number | null,
+): TodayCandidate | null {
   const title = getVisionStepSequence(document)[sequenceIndex];
   if (!title) return null;
   const stepKey = visionStepKey(title);
-  return { id: createTodayCandidateId(`${document.id}_${stepKey}`), source: "vision", sourceId: document.id, title, estimatedMinutes: 0, status: "pending", sequenceIndex, stepKey, createdAt: now, updatedAt: now };
+  const estimatedMinutes = estimateVisionStepMinutes({
+    title,
+    existingMinutes: existingOrAiMinutes,
+  });
+  return { id: createTodayCandidateId(`${document.id}_${stepKey}`), source: "vision", sourceId: document.id, title, estimatedMinutes, status: "pending", sequenceIndex, stepKey, createdAt: now, updatedAt: now };
 }
 
 export function getNextVisionSequenceIndex(candidates: TodayCandidate[], sourceId: string): number | null {

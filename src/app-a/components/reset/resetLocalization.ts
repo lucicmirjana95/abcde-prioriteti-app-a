@@ -30,6 +30,9 @@ export interface ResetCommonCopy {
   stop: string;
   soundOn: string;
   soundOff: string;
+  muteSound: string;
+  unmuteSound: string;
+  audioBlockedNotice: string;
   reducedMotionBadge: string;
   completedTitle: string;
   completedSubtitle: string;
@@ -81,6 +84,9 @@ export const RESET_LOCALIZATION: Record<
       stop: "Stop session",
       soundOn: "Sound on",
       soundOff: "Sound off",
+      muteSound: "Mute sound",
+      unmuteSound: "Unmute sound",
+      audioBlockedNotice: "Tap the sound button to enable breathing audio.",
       reducedMotionBadge: "Reduced motion enabled",
       completedTitle: "Session finished",
       completedSubtitle: "You have completed this reset. Take a moment before returning to your day.",
@@ -190,6 +196,9 @@ export const RESET_LOCALIZATION: Record<
       stop: "Završi sesiju",
       soundOn: "Zvuk uključen",
       soundOff: "Zvuk isključen",
+      muteSound: "Isključi zvuk",
+      unmuteSound: "Uključi zvuk",
+      audioBlockedNotice: "Dodirnite dugme za zvuk da biste omogućili audio vođenje.",
       reducedMotionBadge: "Smanjene animacije uključene",
       completedTitle: "Sesija završena",
       completedSubtitle: "Završili ste ovaj predah. Odvojite trenutak pre nego što nastavite sa danom.",
@@ -299,6 +308,9 @@ export const RESET_LOCALIZATION: Record<
       stop: "Oturumu sonlandır",
       soundOn: "Ses açık",
       soundOff: "Ses kapalı",
+      muteSound: "Sesi kapat",
+      unmuteSound: "Sesi aç",
+      audioBlockedNotice: "Sesli rehberliği etkinleştirmek için ses düğmesine dokunun.",
       reducedMotionBadge: "Azaltılmış hareket etkin",
       completedTitle: "Oturum tamamlandı",
       completedSubtitle: "Bu molayı tamamladınız. Gününüze dönmeden önce biraz dinlenin.",

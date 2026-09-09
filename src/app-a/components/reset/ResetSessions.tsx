@@ -23,7 +23,7 @@ import {
   calculateGuidedRestTiming,
 } from "./resetTimingEngine";
 import { RESET_LOCALIZATION } from "./resetLocalization";
-import { lightChimeSynth } from "./lightChimeSynth";
+import { lightChimeSynth, type BreathingSoundPhase } from "./lightChimeSynth";
 import { restSoundSynth } from "./restSoundSynth";
 import {
   BoxVisualizer,
@@ -112,8 +112,9 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
       animationFrameIdRef.current = null;
     }
     restSoundSynth.stop();
+    lightChimeSynth.stop(0.01);
     if (soundEnabled) {
-      lightChimeSynth.playPhaseChime("complete");
+      void lightChimeSynth.playPhaseChime("complete");
     }
   }, [soundEnabled]);
 
@@ -172,40 +173,73 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
     return calculateBoxTiming(0, 180000);
   }, [selectedExperience, elapsedMs, totalDurationMs, doubleInhaleTargetCycles]);
 
-  // Trigger phase chimes upon phase boundary crossing
-  useEffect(() => {
-    if (sessionStatus !== "running" || !soundEnabled) return;
-
-    let currentPhaseKey = "";
-    let chimeType: "inhale" | "hold" | "exhale" | "stage" = "inhale";
+  // Determine active breathing phase audio data
+  const getCurrentPhaseAudioParams = useCallback(() => {
+    if (!selectedExperience || selectedExperience === "guided_rest") return null;
 
     if (selectedExperience === "balanced_box") {
       const box = timingState as ReturnType<typeof calculateBoxTiming>;
-      currentPhaseKey = `${box.cycle}_${box.phase}`;
-      if (box.phase === "inhale") chimeType = "inhale";
-      else if (box.phase === "hold_full" || box.phase === "hold_empty") chimeType = "hold";
-      else chimeType = "exhale";
-    } else if (selectedExperience === "longer_exhale") {
+      return {
+        key: `${box.cycle}_${box.phase}`,
+        phase: box.phase as BreathingSoundPhase,
+        phaseDurationMs: box.phaseDurationMs,
+        phaseRemainingMs: box.phaseRemainingMs,
+        phaseElapsedMs: box.phaseElapsedMs,
+      };
+    }
+    if (selectedExperience === "longer_exhale") {
       const exh = timingState as ReturnType<typeof calculateLongerExhaleTiming>;
-      currentPhaseKey = `${exh.cycle}_${exh.phase}`;
-      chimeType = exh.phase === "inhale" ? "inhale" : "exhale";
-    } else if (selectedExperience === "double_inhale") {
+      return {
+        key: `${exh.cycle}_${exh.phase}`,
+        phase: exh.phase as BreathingSoundPhase,
+        phaseDurationMs: exh.phaseDurationMs,
+        phaseRemainingMs: exh.phaseRemainingMs,
+        phaseElapsedMs: exh.phaseElapsedMs,
+      };
+    }
+    if (selectedExperience === "double_inhale") {
       const dbl = timingState as ReturnType<typeof calculateDoubleInhaleTiming>;
-      currentPhaseKey = `${dbl.cycle}_${dbl.phase}`;
-      chimeType = dbl.phase === "exhale" ? "exhale" : "inhale";
-    } else if (selectedExperience === "guided_rest") {
-      return;
+      return {
+        key: `${dbl.cycle}_${dbl.phase}`,
+        phase: dbl.phase as BreathingSoundPhase,
+        phaseDurationMs: dbl.phaseDurationMs,
+        phaseRemainingMs: dbl.phaseRemainingMs,
+        phaseElapsedMs: dbl.phaseElapsedMs,
+      };
     }
+    return null;
+  }, [selectedExperience, timingState]);
 
-    if (lastPhaseIdRef.current !== currentPhaseKey) {
-      void lightChimeSynth.playPhaseChime(chimeType);
-      lastPhaseIdRef.current = currentPhaseKey;
+  // Continuous audio guidance tracking actual phase transitions and timing
+  useEffect(() => {
+    if (sessionStatus !== "running" || !soundEnabled || selectedExperience === "guided_rest") return;
+
+    const current = getCurrentPhaseAudioParams();
+    if (!current) return;
+
+    if (lastPhaseIdRef.current !== current.key) {
+      lastPhaseIdRef.current = current.key;
+      void lightChimeSynth
+        .playBreathingPhase({
+          phase: current.phase,
+          durationMs: current.phaseRemainingMs,
+          totalPhaseDurationMs: current.phaseDurationMs,
+          elapsedMs: current.phaseElapsedMs,
+        })
+        .then((played) => {
+          if (!played && lightChimeSynth.isSupported()) {
+            setSoundStatus("blocked");
+          } else if (played) {
+            setSoundStatus("playing");
+          }
+        });
     }
-  }, [selectedExperience, timingState, sessionStatus, soundEnabled]);
+  }, [sessionStatus, soundEnabled, selectedExperience, getCurrentPhaseAudioParams]);
 
   // User control handlers
   const handleSelectExperience = (id: ResetExperienceId) => {
     restSoundSynth.stop();
+    lightChimeSynth.stop(0.02);
     setSelectedExperience(id);
     setSessionStatus("idle");
     setElapsedMs(0);
@@ -215,6 +249,18 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
     hasCompletedRef.current = false;
     setShowExplanation(false);
     setSoundStatus("idle");
+
+    // Breathing exercises have sound enabled by default; guided rest requires explicit opting in.
+    if (id !== "guided_rest") {
+      setSoundEnabled(true);
+      void lightChimeSynth.init().then((ready) => {
+        if (!ready && lightChimeSynth.isSupported()) {
+          setSoundStatus("blocked");
+        }
+      });
+    } else {
+      setSoundEnabled(false);
+    }
 
     if (id === "balanced_box") setBoxTargetCycles(12);
     if (id === "longer_exhale") setDurationPresetMs(180000);
@@ -228,36 +274,68 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
   };
 
   const handleStart = async () => {
-    if (soundEnabled) {
-      if (selectedExperience === "guided_rest") await startGuidedRestSound();
-      else setSoundStatus(await lightChimeSynth.init() ? "playing" : "blocked");
-    }
     hasCompletedRef.current = false;
     lastPhaseIdRef.current = null;
     accumulatedMsRef.current = elapsedMs;
     startTimestampRef.current = null;
+
+    if (soundEnabled) {
+      if (selectedExperience === "guided_rest") {
+        await startGuidedRestSound();
+      } else {
+        const ready = await lightChimeSynth.init();
+        if (!ready) {
+          setSoundStatus(lightChimeSynth.isSupported() ? "blocked" : "unsupported");
+        } else {
+          setSoundStatus("playing");
+        }
+      }
+    }
+
     setSessionStatus("running");
   };
 
   const handlePause = () => {
     restSoundSynth.stop();
+    lightChimeSynth.stop(0.04);
     setSessionStatus("paused");
     accumulatedMsRef.current = elapsedMs;
     startTimestampRef.current = null;
   };
 
   const handleResume = async () => {
-    if (soundEnabled) {
-      if (selectedExperience === "guided_rest") await startGuidedRestSound();
-      else setSoundStatus(await lightChimeSynth.init() ? "playing" : "blocked");
-    }
     accumulatedMsRef.current = elapsedMs;
     startTimestampRef.current = null;
+
+    if (soundEnabled) {
+      if (selectedExperience === "guided_rest") {
+        await startGuidedRestSound();
+      } else {
+        const ready = await lightChimeSynth.init();
+        if (!ready) {
+          setSoundStatus(lightChimeSynth.isSupported() ? "blocked" : "unsupported");
+        } else {
+          setSoundStatus("playing");
+          // Resume active phase audio immediately for the remaining duration
+          const current = getCurrentPhaseAudioParams();
+          if (current) {
+            void lightChimeSynth.playBreathingPhase({
+              phase: current.phase,
+              durationMs: current.phaseRemainingMs,
+              totalPhaseDurationMs: current.phaseDurationMs,
+              elapsedMs: current.phaseElapsedMs,
+            });
+          }
+        }
+      }
+    }
+
     setSessionStatus("running");
   };
 
   const handleRestart = () => {
     restSoundSynth.stop();
+    lightChimeSynth.stop(0.02);
     setSessionStatus("idle");
     setElapsedMs(0);
     accumulatedMsRef.current = 0;
@@ -268,6 +346,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
 
   const handleStop = () => {
     restSoundSynth.stop();
+    lightChimeSynth.stop(0.02);
     setSessionStatus("idle");
     setSelectedExperience(null);
     setElapsedMs(0);
@@ -275,19 +354,37 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
     startTimestampRef.current = null;
     lastPhaseIdRef.current = null;
     hasCompletedRef.current = false;
+    setSoundStatus("idle");
   };
 
   const toggleSound = async () => {
     const next = !soundEnabled;
     setSoundEnabled(next);
     if (next) {
-      if (selectedExperience === "guided_rest") await startGuidedRestSound();
-      else {
-        const played = await lightChimeSynth.playPhaseChime("inhale");
-        setSoundStatus(played ? "playing" : "blocked");
+      if (selectedExperience === "guided_rest") {
+        await startGuidedRestSound();
+      } else {
+        const ready = await lightChimeSynth.init();
+        if (!ready) {
+          setSoundStatus(lightChimeSynth.isSupported() ? "blocked" : "unsupported");
+        } else {
+          setSoundStatus("playing");
+          if (sessionStatus === "running") {
+            const current = getCurrentPhaseAudioParams();
+            if (current) {
+              void lightChimeSynth.playBreathingPhase({
+                phase: current.phase,
+                durationMs: current.phaseRemainingMs,
+                totalPhaseDurationMs: current.phaseDurationMs,
+                elapsedMs: current.phaseElapsedMs,
+              });
+            }
+          }
+        }
       }
     } else {
       restSoundSynth.stop();
+      lightChimeSynth.stop(0.03);
       setSoundStatus("idle");
     }
   };
@@ -363,18 +460,18 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
             type="button"
             id="app-a-reset-sound-toggle"
             onClick={() => void toggleSound()}
-            aria-label={soundEnabled ? tCommon.soundOn : tCommon.soundOff}
+            aria-label={soundEnabled ? tCommon.muteSound : tCommon.unmuteSound}
             className="app-a-focus-ring inline-flex h-9 items-center gap-1.5 rounded-lg border border-black/10 px-2.5 text-[12px] font-medium text-[#1d1d1f] hover:bg-black/5 dark:border-white/15 dark:text-[#f5f5f7] dark:hover:bg-white/5"
           >
             {soundEnabled ? (
               <>
                 <Volume2 className="h-4 w-4 text-[#0071e3] dark:text-[#2997ff]" />
-                <span>{selectedExperience === "guided_rest" ? tCommon.restSoundEnabled : tCommon.soundOn}</span>
+                <span>{selectedExperience === "guided_rest" ? tCommon.restSoundEnabled : tCommon.muteSound}</span>
               </>
             ) : (
               <>
                 <VolumeX className="h-4 w-4 text-[#76767b] dark:text-[#7c7c82]" />
-                <span>{selectedExperience === "guided_rest" ? tCommon.restSoundDisabled : tCommon.soundOff}</span>
+                <span>{selectedExperience === "guided_rest" ? tCommon.restSoundDisabled : tCommon.unmuteSound}</span>
               </>
             )}
           </button>
@@ -384,6 +481,10 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
             {soundStatus === "playing"
               ? tCommon.restSoundPlaying
               : tCommon.restSoundFailed}
+          </p>
+        ) : soundEnabled && soundStatus === "blocked" ? (
+          <p role="status" className="mb-3 text-[12px] text-amber-700 dark:text-amber-300">
+            {tCommon.audioBlockedNotice}
           </p>
         ) : null}
       </div>

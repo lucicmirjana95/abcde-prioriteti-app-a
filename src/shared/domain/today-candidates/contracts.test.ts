@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createSequencedVisionCandidate, createTodayCandidateId, getNextVisionSequenceIndex, getVisionStepSequence, isTodayCandidate, nextVisionCandidate, visionStepKey, type TodayCandidate } from "./contracts";
+import { createSequencedVisionCandidate, createTodayCandidateId, estimateVisionStepMinutes, getNextVisionSequenceIndex, getVisionStepSequence, isTodayCandidate, nextVisionCandidate, visionStepKey, type TodayCandidate } from "./contracts";
 import type { SavedVisionStrategy } from "../vision";
 
 const candidate: TodayCandidate = {
@@ -32,9 +32,30 @@ const strategy: SavedVisionStrategy = {
 };
 assert.deepEqual(getVisionStepSequence(strategy), ["Create the outline", "Write chapter one"]);
 assert.equal(createSequencedVisionCandidate(strategy, 0)?.id, createTodayCandidateId(`${strategy.id}_${visionStepKey('Create the outline')}`));
-assert.equal(createSequencedVisionCandidate(strategy, 0)?.estimatedMinutes, 0);
+assert.equal(createSequencedVisionCandidate(strategy, 0)?.estimatedMinutes, 20);
 assert.equal(createSequencedVisionCandidate(strategy, 1)?.title, "Write chapter one");
+assert.equal(createSequencedVisionCandidate(strategy, 1)?.estimatedMinutes, 20, "Neutral fallback when no existing or AI estimate is present");
+assert.equal(createSequencedVisionCandidate(strategy, 1, undefined, 45)?.estimatedMinutes, 45, "Respects existing/explicit minutes");
 assert.equal(createSequencedVisionCandidate(strategy, 2), null);
+
+// Verification of estimateVisionStepMinutes priority rules:
+// 1. Existing valid estimatedMinutes takes highest priority
+assert.equal(estimateVisionStepMinutes({ existingMinutes: 45 }), 45);
+assert.equal(estimateVisionStepMinutes({ existingMinutes: 30, aiEstimatedMinutes: 15 }), 30);
+assert.equal(estimateVisionStepMinutes(25), 25);
+// 2. AI-produced estimate used when existing is missing/invalid
+assert.equal(estimateVisionStepMinutes({ aiEstimatedMinutes: 15 }), 15);
+assert.equal(estimateVisionStepMinutes({ existingMinutes: null, aiEstimatedMinutes: 25 }), 25);
+assert.equal(estimateVisionStepMinutes({ existingMinutes: 0, aiEstimatedMinutes: 25 }), 25);
+assert.equal(estimateVisionStepMinutes(null, 35), 35);
+// 3. Fallback to neutral 20 minutes when no estimate is available
+assert.equal(estimateVisionStepMinutes(), 20);
+assert.equal(estimateVisionStepMinutes({ existingMinutes: null, aiEstimatedMinutes: null }), 20);
+assert.equal(estimateVisionStepMinutes({ existingMinutes: -1, aiEstimatedMinutes: 0 }), 20);
+// 4. No keyword heuristics on title text (titles with 'pozovi', 'napiši', 'draft', 'call' etc. return neutral fallback 20)
+assert.equal(estimateVisionStepMinutes("Napiši kod i istraži arhivu"), 20);
+assert.equal(estimateVisionStepMinutes("Pozovi klijenta i pošalji email"), 20);
+assert.equal(estimateVisionStepMinutes({ title: "Draft new project architecture" }), 20);
 assert.equal(getNextVisionSequenceIndex([], strategy.id), 0);
 assert.equal(getNextVisionSequenceIndex([{ ...candidate, sourceId: strategy.id, status: "pending", sequenceIndex: 0 }], strategy.id), null);
 assert.equal(getNextVisionSequenceIndex([{ ...candidate, sourceId: strategy.id, status: "scheduled", sequenceIndex: 0 }], strategy.id), null);

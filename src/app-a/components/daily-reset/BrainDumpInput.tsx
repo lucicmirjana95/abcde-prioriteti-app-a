@@ -22,9 +22,9 @@ export default function BrainDumpInput({ value, onChange, t, language, error }: 
   }, [error]);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <label htmlFor="brain-dump" className="text-[16px] font-medium" style={{ color: "var(--app-a-text)" }}>
+        <label htmlFor="brain-dump" className="text-[15px] font-medium" style={{ color: "var(--app-a-text)" }}>
           {t.brainDumpLabel}
         </label>
         <VoiceInputButton language={language} value={value} onChange={onChange} maxLength={MAX_CHARS} describedBy="brain-dump-voice-status" />
@@ -39,15 +39,14 @@ export default function BrainDumpInput({ value, onChange, t, language, error }: 
           placeholder={t.brainDumpPlaceholder}
           aria-invalid={!!error}
           aria-errormessage={error ? "brain-dump-error" : undefined}
-          className="app-a-field min-h-[210px] w-full resize-y p-4 pb-10 text-[17px] leading-relaxed transition-shadow md:min-h-[240px]"
+          className="app-a-field h-[170px] min-h-[160px] max-h-[240px] w-full resize-y p-3.5 pb-7 text-[15px] sm:text-[16px] leading-relaxed transition-shadow"
           style={{
             borderColor: error ? "var(--app-a-danger)" : "var(--app-a-border)",
           }}
         />
         <div
-          className="absolute bottom-3 right-3 text-[12px] px-2 py-0.5 rounded pointer-events-none"
+          className="absolute bottom-2 right-2.5 text-[11px] font-medium select-none pointer-events-none"
           style={{
-            backgroundColor: "var(--app-a-surface-secondary)",
             color: "var(--app-a-text-tertiary)",
           }}
         >
@@ -58,7 +57,7 @@ export default function BrainDumpInput({ value, onChange, t, language, error }: 
       {error && (
         <p
           id="brain-dump-error"
-          className="text-[14px] font-medium"
+          className="text-[13px] font-medium"
           style={{ color: "var(--app-a-danger)" }}
           role="alert"
         >

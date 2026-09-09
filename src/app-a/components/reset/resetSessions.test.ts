@@ -12,6 +12,7 @@ import {
 } from "./resetTimingEngine";
 import { RESET_LOCALIZATION } from "./resetLocalization";
 import { REST_SOUND_CARRIER_HZ, REST_SOUND_DIFFERENCE_HZ } from "./restSoundSynth";
+import { LightChimeSynthesizer, BREATHING_SOUND_PROFILES } from "./lightChimeSynth";
 
 console.log("Running Reset Sessions & Timing Engine Tests...");
 
@@ -325,6 +326,9 @@ for (const lang of languages) {
   assert.ok(l.common.restSoundDisabled.length > 0, `Missing restSoundDisabled for ${lang}`);
   assert.ok(l.common.restSoundPlaying.length > 0, `Missing restSoundPlaying for ${lang}`);
   assert.ok(l.common.restSoundFailed.length > 0, `Missing restSoundFailed for ${lang}`);
+  assert.ok(l.common.muteSound.length > 0, `Missing muteSound for ${lang}`);
+  assert.ok(l.common.unmuteSound.length > 0, `Missing unmuteSound for ${lang}`);
+  assert.ok(l.common.audioBlockedNotice.length > 0, `Missing audioBlockedNotice for ${lang}`);
 
   // Experience names
   assert.ok(l.balancedBox.name.length > 0);
@@ -357,4 +361,194 @@ assert.throws(() => {
   BOX_CYCLE_PRESETS[0] = { cycles: 2, durationMs: 32000, durationSec: 32, formattedTime: "0:32" };
 });
 
-console.log("All Reset Sessions & Timing Engine tests passed successfully! 🎉");
+// -------------------------------------------------------------
+// 8. Distinct Audio Profiles for Inhale, Exhale, Hold & Double-Inhale
+// -------------------------------------------------------------
+const inhaleProfile = BREATHING_SOUND_PROFILES.inhale;
+const exhaleProfile = BREATHING_SOUND_PROFILES.exhale;
+const holdProfile = BREATHING_SOUND_PROFILES.hold;
+const firstInhaleProfile = BREATHING_SOUND_PROFILES.first_inhale;
+const topupInhaleProfile = BREATHING_SOUND_PROFILES.topup_inhale;
+
+// Inhale rises in pitch smoothly
+assert.ok(
+  inhaleProfile.startFreq < inhaleProfile.endFreq,
+  `Inhale tone must rise in pitch: ${inhaleProfile.startFreq} -> ${inhaleProfile.endFreq}`
+);
+assert.equal(inhaleProfile.type, "sine");
+
+// Exhale descends in pitch smoothly and clearly differs from inhale
+assert.ok(
+  exhaleProfile.startFreq > exhaleProfile.endFreq,
+  `Exhale tone must descend in pitch: ${exhaleProfile.startFreq} -> ${exhaleProfile.endFreq}`
+);
+assert.notEqual(inhaleProfile.endFreq, exhaleProfile.endFreq);
+assert.equal(exhaleProfile.type, "sine");
+
+// Hold is very quiet and steady without disturbing jumps
+assert.equal(holdProfile.startFreq, holdProfile.endFreq);
+assert.ok(holdProfile.steady === true);
+assert.ok(
+  holdProfile.peakGain < inhaleProfile.peakGain,
+  "Hold sound must be substantially quieter than active inhale"
+);
+
+// Double-inhale has two distinct ascending stages
+assert.ok(firstInhaleProfile.startFreq < firstInhaleProfile.endFreq);
+assert.ok(topupInhaleProfile.startFreq < topupInhaleProfile.endFreq);
+assert.ok(
+  topupInhaleProfile.startFreq >= firstInhaleProfile.endFreq,
+  "Top-up inhale must build upon the primary inhale frequency range"
+);
+
+// -------------------------------------------------------------
+// 9. Web Audio Synthesizer Lifecycle & Duration Tracking Tests
+// -------------------------------------------------------------
+interface MockParamCalls {
+  setValue: Array<{ value: number; time: number }>;
+  linearRamp: Array<{ value: number; time: number }>;
+  expRamp: Array<{ value: number; time: number }>;
+  cancelledAt: number[];
+}
+
+function createMockAudioParam(initial = 0) {
+  const calls: MockParamCalls = {
+    setValue: [],
+    linearRamp: [],
+    expRamp: [],
+    cancelledAt: [],
+  };
+  return {
+    value: initial,
+    calls,
+    setValueAtTime(value: number, time: number) {
+      this.value = value;
+      calls.setValue.push({ value, time });
+    },
+    linearRampToValueAtTime(value: number, time: number) {
+      this.value = value;
+      calls.linearRamp.push({ value, time });
+    },
+    exponentialRampToValueAtTime(value: number, time: number) {
+      this.value = value;
+      calls.expRamp.push({ value, time });
+    },
+    cancelScheduledValues(time: number) {
+      calls.cancelledAt.push(time);
+    },
+  };
+}
+
+class MockOscillator {
+  public type: OscillatorType = "sine";
+  public frequency = createMockAudioParam(440);
+  public startedAt: number | null = null;
+  public stoppedAt: number | null = null;
+  public disconnected = false;
+
+  public start(time: number) {
+    this.startedAt = time;
+  }
+  public stop(time: number) {
+    this.stoppedAt = time;
+  }
+  public connect() {
+    return this;
+  }
+  public disconnect() {
+    this.disconnected = true;
+  }
+}
+
+class MockGainNode {
+  public gain = createMockAudioParam(0.0001);
+  public disconnected = false;
+
+  public connect() {
+    return this;
+  }
+  public disconnect() {
+    this.disconnected = true;
+  }
+}
+
+class MockAudioContext {
+  public currentTime = 10.0;
+  public state: AudioContextState = "running";
+  public destination = {};
+  public createdOscillators: MockOscillator[] = [];
+  public createdGains: MockGainNode[] = [];
+  public closed = false;
+
+  public createOscillator() {
+    const osc = new MockOscillator();
+    this.createdOscillators.push(osc);
+    return osc as unknown as OscillatorNode;
+  }
+  public createGain() {
+    const gain = new MockGainNode();
+    this.createdGains.push(gain);
+    return gain as unknown as GainNode;
+  }
+  public async resume() {
+    this.state = "running";
+  }
+  public async close() {
+    this.closed = true;
+  }
+}
+
+// Attach mock AudioContext to global window
+const originalWindow = (globalThis as unknown as { window?: unknown }).window;
+const mockCtx = new MockAudioContext();
+(globalThis as unknown as { window: unknown }).window = {
+  AudioContext: function () {
+    return mockCtx;
+  },
+};
+
+const testSynth = new LightChimeSynthesizer();
+assert.equal(testSynth.isSupported(), true);
+
+// Test 10: Sound duration precisely tracks phaseDurationMs
+await testSynth.playBreathingPhase({
+  phase: "inhale",
+  durationMs: 4000,
+});
+assert.equal(mockCtx.createdOscillators.length, 1);
+const activeOsc1 = mockCtx.createdOscillators[0];
+assert.equal(activeOsc1.startedAt, 10.0);
+// Oscillator stop scheduled at duration (4.0s) + 0.05s buffer
+assert.ok(Math.abs(activeOsc1.stoppedAt! - (10.0 + 4.05)) < 0.001);
+
+// Test 11: Phase transition smoothly stops previous oscillator without overlap
+await testSynth.playBreathingPhase({
+  phase: "exhale",
+  durationMs: 6000,
+});
+// Previous oscillator must have been stopped
+assert.ok(activeOsc1.stoppedAt !== null);
+assert.equal(mockCtx.createdOscillators.length, 2);
+const activeOsc2 = mockCtx.createdOscillators[1];
+assert.ok(Math.abs(activeOsc2.stoppedAt! - (10.0 + 6.05)) < 0.001);
+
+// Test 12: Pause interrupts and smooth-fades active sound
+testSynth.stop(0.04);
+const lastGain = mockCtx.createdGains[mockCtx.createdGains.length - 1];
+assert.ok(lastGain.gain.calls.linearRamp.some((r) => r.value === 0.0001));
+
+// Test 13: Full cleanup stops oscillators and closes AudioContext
+testSynth.cleanup();
+assert.equal(mockCtx.closed, true);
+
+// Test 14: Fallback when Web Audio is not supported
+(globalThis as unknown as { window: unknown }).window = undefined;
+const unsupportedSynth = new LightChimeSynthesizer();
+assert.equal(unsupportedSynth.isSupported(), false);
+const initResult = await unsupportedSynth.init();
+assert.equal(initResult, false, "Must gracefully return false when Web Audio is missing without crashing");
+
+// Restore globalThis
+(globalThis as unknown as { window?: unknown }).window = originalWindow;
+
+console.log("All Reset Sessions, Audio Guidance & Timing Engine tests passed successfully! 🎉");
