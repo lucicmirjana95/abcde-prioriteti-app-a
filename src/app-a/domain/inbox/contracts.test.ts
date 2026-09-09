@@ -21,6 +21,7 @@ assert.equal(first, repeated);
 assert.notEqual(first, other);
 assert.match(first, /^in_[a-f0-9]{32}$/);
 assert.equal(isAppAInboxItem(validItem), true);
+assert.equal(isAppAInboxItem({ ...validItem, kind: "note", estimatedMinutes: undefined }), true);
 assert.equal(isAppAInboxItem({ ...validItem, estimatedMinutes: 0 }), false);
 assert.equal(isAppAInboxItem({ ...validItem, scheduledLocalDate: "tomorrow" }), false);
 assert.equal(normalizeInboxTitle("  Call   THE dentist "), "call the dentist");
