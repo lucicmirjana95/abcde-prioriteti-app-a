@@ -248,14 +248,6 @@ export default function VisionStrategyBuilder({
     setError(false);
     setFeasibility(null);
     try {
-      // A deadline is useful context, never a prerequisite for forming a plan.
-      // Without one, generate a conservative sequence and keep unknowns as assumptions.
-      if (!timeframe.trim()) {
-        window.clearTimeout(timeout);
-        setLoading(false);
-        await generateStrategy(idea, "", additionalDetails);
-        return;
-      }
       const enrichedIdea = additionalDetails.trim()
         ? `${idea}\n\nUser-provided clarifying details:\n${additionalDetails.trim()}`
         : idea;
@@ -385,7 +377,7 @@ export default function VisionStrategyBuilder({
                 <strong>{ft.useTimeframe}:</strong> {feasibility.adjustedTimeframe}
               </p>
             ) : null}
-            {feasibility.status !== "insufficient_information" ? (
+            {feasibility.status !== "insufficient_information" && feasibility.status !== "not_a_vision" && feasibility.status !== "safety_sensitive" ? (
               <button
                 type="button"
                 onClick={() => void generateStrategy(feasibility.normalizedGoal)}

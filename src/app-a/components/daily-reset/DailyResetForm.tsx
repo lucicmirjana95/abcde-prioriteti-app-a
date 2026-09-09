@@ -23,8 +23,10 @@ export default function DailyResetForm({
   onDraftChange,
   aiEnabled = true,
   aiDisabledMessage,
+  onboardingCompleted = false,
   submissionError,
 }: Props) {
+  const [showHowItWorks, setShowHowItWorks] = useState(!onboardingCompleted);
   const [energy, setEnergy] = useState<EnergyLevel | undefined>(initialData.energy);
   const [pleasantness, setPleasantness] = useState<PleasantnessLevel | undefined>(initialData.pleasantness);
   const [stateNote, setStateNote] = useState(initialData.stateNote);
@@ -91,6 +93,31 @@ export default function DailyResetForm({
       className="app-a-surface rounded-2xl border p-4 sm:p-5 md:p-6 flex flex-col gap-5 transition-shadow shadow-sm"
       style={{ borderColor: "var(--app-a-border)" }}
     >
+      <section className="rounded-xl border px-4 py-3" style={{ borderColor: "var(--app-a-border)", background: "var(--app-a-surface-secondary)" }}>
+        <button
+          type="button"
+          aria-expanded={showHowItWorks}
+          onClick={() => setShowHowItWorks(value => !value)}
+          className="app-a-focus-ring flex min-h-11 w-full items-center justify-between gap-3 rounded-lg text-left"
+        >
+          <span>
+            <span className="block text-[14px] font-semibold">{t.onboardingHowItWorks}</span>
+            {!onboardingCompleted && !showHowItWorks ? <span className="mt-0.5 block text-[12px]" style={{ color: "var(--app-a-text-secondary)" }}>{t.onboardingIntro}</span> : null}
+          </span>
+          <span aria-hidden="true" className="text-[18px]">{showHowItWorks ? '−' : '+'}</span>
+        </button>
+        {showHowItWorks ? (
+          <div className="mt-2 border-t pt-3 text-[13px] leading-relaxed" style={{ borderColor: "var(--app-a-border)", color: "var(--app-a-text-secondary)" }}>
+            <p className="font-medium" style={{ color: "var(--app-a-text)" }}>{t.onboardingTitle}</p>
+            <ol className="mt-2 list-decimal space-y-1.5 pl-5">
+              <li>{t.onboardingMindHelp}</li>
+              <li>{t.onboardingStateHelp}</li>
+              <li>{language === 'sr' ? 'Pregledajte AI predlog i potvrdite ga tek kada vam redosled odgovara.' : language === 'tr' ? 'Yapay zekâ önerisini gözden geçirin ve yalnızca sıralama size uyduğunda onaylayın.' : 'Review the AI suggestion and confirm it only when the order works for you.'}</li>
+            </ol>
+          </div>
+        ) : null}
+      </section>
+
       {/* 1. Mind / Brain Dump */}
       <BrainDumpInput
         value={brainDump}

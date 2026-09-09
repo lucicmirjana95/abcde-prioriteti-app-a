@@ -14,7 +14,7 @@ export interface VisionDecompositionResult {
 }
 
 export interface VisionFeasibilityResult {
-  status: "feasible" | "feasible_with_assumptions" | "unrealistic_for_timeframe" | "insufficient_information";
+  status: "feasible" | "feasible_with_assumptions" | "unrealistic_for_timeframe" | "insufficient_information" | "not_a_vision" | "safety_sensitive";
   normalizedGoal: string;
   reason: string;
   assumptions: string[];
@@ -54,7 +54,7 @@ export function isVisionDecompositionResult(value: unknown): value is VisionDeco
 export function isVisionFeasibilityResult(value: unknown): value is VisionFeasibilityResult {
   if (!value || typeof value !== "object") return false;
   const item = value as Record<string, unknown>;
-  if (!(["feasible", "feasible_with_assumptions", "unrealistic_for_timeframe", "insufficient_information"] as unknown[]).includes(item.status)) return false;
+  if (!(["feasible", "feasible_with_assumptions", "unrealistic_for_timeframe", "insufficient_information", "not_a_vision", "safety_sensitive"] as unknown[]).includes(item.status)) return false;
   if (!isText(item.normalizedGoal, 4000) || !isText(item.reason, 500)) return false;
   if (!Array.isArray(item.assumptions) || item.assumptions.length > 5 || !item.assumptions.every((value) => isText(value, 240))) return false;
   if (!Array.isArray(item.questions) || item.questions.length > 3 || !item.questions.every((value) => isText(value, 240))) return false;
@@ -64,5 +64,6 @@ export function isVisionFeasibilityResult(value: unknown): value is VisionFeasib
   if (item.status === "unrealistic_for_timeframe" && item.questions.length > 0) return false;
   if (item.status === "insufficient_information" && item.questions.length === 0) return false;
   if (item.status === "insufficient_information" && (item.adjustedGoal || item.adjustedTimeframe)) return false;
+  if ((item.status === "not_a_vision" || item.status === "safety_sensitive") && (item.questions.length > 0 || item.adjustedGoal || item.adjustedTimeframe)) return false;
   return true;
 }

@@ -24,6 +24,9 @@ assert.equal(isVisionFeasibilityResult({ ...feasible, status: "unrealistic_for_t
 assert.equal(isVisionFeasibilityResult({ ...feasible, status: "insufficient_information", questions: [] }), false);
 assert.equal(isVisionFeasibilityResult({ ...feasible, status: "unrealistic_for_timeframe", adjustedGoal: "Write a draft", questions: ["How much is written?"] }), false);
 assert.equal(isVisionFeasibilityResult({ ...feasible, status: "insufficient_information", adjustedGoal: "Write a draft", questions: ["How much is written?"] }), false);
+assert.equal(isVisionFeasibilityResult({ ...feasible, status: "not_a_vision" }), true);
+assert.equal(isVisionFeasibilityResult({ ...feasible, status: "safety_sensitive" }), true);
+assert.equal(isVisionFeasibilityResult({ ...feasible, status: "safety_sensitive", questions: ["Continue?"] }), false);
 
 function responseHarness() {
   const result: { status?: number; body?: unknown } = {};
