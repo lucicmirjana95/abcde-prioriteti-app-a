@@ -66,6 +66,7 @@ export default function AppA() {
           demoConfig={demoConfig}
           initialData={demoConfig ? createDailyResetDemoInitialData(language) : undefined}
           preferences={preferences}
+          onOpenVision={() => { setDestination("vision"); setVisited((items) => items.includes("vision") ? items : [...items, "vision"]); window.dispatchEvent(new Event("app-a-navigation")); }}
         />
       );
       break;

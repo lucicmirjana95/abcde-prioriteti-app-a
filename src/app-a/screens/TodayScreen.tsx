@@ -54,6 +54,7 @@ interface Props {
   demoConfig?: DailyResetDemoConfig | null;
   initialData?: Partial<DailyResetData>;
   preferences: AppAPreferences;
+  onOpenVision: () => void;
 }
 
 const APP_A_ONBOARDING_KEY = 'app_a_daily_reset_onboarding_v1';
@@ -66,7 +67,7 @@ function readOnboardingCompleted(): boolean {
   }
 }
 
-export default function TodayScreen({ language, client, demoConfig, initialData, preferences }: Props) {
+export default function TodayScreen({ language, client, demoConfig, initialData, preferences, onOpenVision }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
   const effectiveTimeZone = getEffectiveTimeZone(preferences);
   const { user, authReady, signInWithGoogle } = useAppAAuth();
@@ -619,6 +620,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
               window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
             }}
             onAddToPlan={handleAddVisionCandidate}
+            onOpenVision={onOpenVision}
           />
           <DueInboxItemsSection userId={user?.uid} localDate={activePlanDate} language={language} canAddToPlan={Boolean(state.planDraft && viewMode === 'execution')} onAddToPlan={handleAddInboxItem} />
         </>

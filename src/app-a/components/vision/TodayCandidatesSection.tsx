@@ -27,6 +27,8 @@ const COPY = {
     cancelDuration: "Cancel",
     currentFocus: "Current focus",
     otherVisions: "Other active visions",
+    chooseFocus: "Choose a Vision focus",
+    chooseFocusHelp: "No active vision currently guides Today.",
   },
   sr: {
     title: "Akcije iz Vizije",
@@ -48,6 +50,8 @@ const COPY = {
     cancelDuration: "Otkaži",
     currentFocus: "Trenutni fokus",
     otherVisions: "Druge aktivne vizije",
+    chooseFocus: "Izaberi fokus Vizije",
+    chooseFocusHelp: "Trenutno nijedna aktivna vizija ne vodi Danas.",
   },
   tr: {
     title: "Vizyondan eylemler",
@@ -69,6 +73,8 @@ const COPY = {
     cancelDuration: "İptal",
     currentFocus: "Mevcut odak",
     otherVisions: "Diğer aktif vizyonlar",
+    chooseFocus: "Vizyon odağını seç",
+    chooseFocusHelp: "Şu anda hiçbir aktif vizyon Bugün'ü yönlendirmiyor.",
   },
 } as const;
 
@@ -84,9 +90,10 @@ interface Props {
   planState: TodayPlanState;
   onPlanAction: () => void;
   onAddToPlan: (candidate: TodayCandidate) => Promise<string | null>;
+  onOpenVision: () => void;
 }
 
-export default function TodayCandidatesSection({ userId, language, planState, onPlanAction, onAddToPlan }: Props) {
+export default function TodayCandidatesSection({ userId, language, planState, onPlanAction, onAddToPlan, onOpenVision }: Props) {
   const [items, setItems] = useState<TodayCandidate[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -197,6 +204,7 @@ export default function TodayCandidatesSection({ userId, language, planState, on
       ) : null}
       <div className="mt-3 space-y-2.5">
         {primary ? renderCandidate(primary, true) : null}
+        {!primary&&items.length>0?<div className="app-a-panel-warning"><p className="text-[13px] leading-relaxed">{t.chooseFocusHelp}</p><button type="button" onClick={onOpenVision} className="app-a-secondary-button app-a-focus-ring mt-3 px-4 text-[13px]"><Compass className="h-4 w-4"/>{t.chooseFocus}</button></div>:null}
         {others.length ? <><button type="button" onClick={()=>setShowOthers(value=>!value)} className="app-a-secondary-button w-full justify-between px-4"><span>{t.otherVisions} ({others.length})</span><ChevronDown className={`h-4 w-4 transition-transform ${showOthers?"rotate-180":""}`}/></button>{showOthers ? others.map(item=>renderCandidate(item)) : null}</> : null}
         {false && items.map((item) => {
           const minutes = getEffectiveMinutes(item);
