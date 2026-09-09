@@ -10,6 +10,10 @@ scripts:
   runCommand: node dist/server.cjs
 
 env:
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY
+    availability:
+      - RUNTIME
   - variable: NODE_ENV
     value: production
     availability:
