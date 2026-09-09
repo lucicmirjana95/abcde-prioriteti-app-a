@@ -19,7 +19,7 @@ function lowPriorityFirst(item: DailyPlanItem): number {
 /** A warning only: fixed commitments are never removed or silently shortened. */
 export function assessDailyLoad(draft: DailyPlanDraft, completedItemIds: string[] = []): DailyLoadAssessment {
   const completed = new Set(completedItemIds);
-  const remaining = [...draft.firstFocus, ...draft.laterToday, ...draft.ifCapacityRemains].filter((item) => !completed.has(item.id));
+  const remaining = [...draft.firstFocus, ...draft.laterToday].filter((item) => !completed.has(item.id));
   const fixedMinutes = remaining.filter((item) => item.capacityType === "fixed").reduce((sum, item) => sum + item.estimatedMinutes, 0);
   const flexible = remaining.filter((item) => item.capacityType !== "fixed");
   const flexibleMinutes = flexible.reduce((sum, item) => sum + item.estimatedMinutes, 0);

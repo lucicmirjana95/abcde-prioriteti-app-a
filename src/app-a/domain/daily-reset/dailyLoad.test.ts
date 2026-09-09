@@ -7,5 +7,6 @@ const draft: DailyPlanDraft = { classifiedItems: [], firstFocus: [], laterToday:
 const assessment = assessDailyLoad(draft);
 assert.equal(assessment.overloaded, true);
 assert.equal(assessment.fixedMinutes, 720);
-assert.ok(assessment.suggestedMoves.some((entry) => entry.id === "optional"));
+assert.ok(assessment.suggestedMoves.some((entry) => entry.id === "deep work"));
+assert.ok(!assessment.suggestedMoves.some((entry) => entry.id === "optional"));
 console.log("Daily load tests passed.");

@@ -11,11 +11,12 @@ export function addVisionCandidateToPlan(draft: DailyPlanDraft, candidate: Today
   const planItemId = `vision_plan_${candidate.id}`;
   const allToday = [...draft.firstFocus, ...draft.laterToday, ...draft.ifCapacityRemains];
   if (draft.classifiedItems.some((item) => item.id === sourceId) || allToday.some((item) => item.id === planItemId || item.title.trim().toLowerCase() === candidate.title.trim().toLowerCase())) return { error: "duplicate" };
-  if (draft.availableMinutes === undefined) return { error: "capacity_unknown" };
-  if ((draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes) + candidate.estimatedMinutes > draft.availableMinutes) return { error: "capacity_exceeded" };
+  const exceedsExplicitCapacity = draft.availableMinutes !== undefined
+    && (draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes) + candidate.estimatedMinutes > draft.availableMinutes;
   const priority = { goalContribution: 4 as const, explanation: "Explicitly selected from the user's saved Vision strategy." };
   const classified: ClassifiedBrainDumpItem = { id: sourceId, originalText: candidate.title, kind: "task", timeHorizon: "today", suggestedAction: candidate.title, estimatedMinutes: candidate.estimatedMinutes, requiredEnergy: 3, timeSensitivity: "none", isAmbiguous: false, needsCheck: false, priority, goalRelationship: { goalId: candidate.sourceId, relationshipExplanation: "Next step from a confirmed Vision strategy." } };
-  const planItem: DailyPlanItem = { id: planItemId, sourceItemIds: [sourceId], title: candidate.title, block: "later_today", estimatedMinutes: candidate.estimatedMinutes, capacityType: "flexible", requiredEnergy: 3, timeSensitivity: "none", priority, goalRelationship: classified.goalRelationship, reasoning: "Added by explicit user confirmation from Vision.", needsCheck: false };
-  const next = recalculatePlanTotals({ ...draft, classifiedItems: [...draft.classifiedItems, classified], laterToday: [...draft.laterToday, planItem] });
+  const block = exceedsExplicitCapacity ? "if_capacity_remains" as const : "later_today" as const;
+  const planItem: DailyPlanItem = { id: planItemId, sourceItemIds: [sourceId], title: candidate.title, block, estimatedMinutes: candidate.estimatedMinutes, capacityType: "flexible", requiredEnergy: 3, timeSensitivity: "none", priority, goalRelationship: classified.goalRelationship, reasoning: "Added by explicit user confirmation from Vision.", needsCheck: false };
+  const next = recalculatePlanTotals({ ...draft, classifiedItems: [...draft.classifiedItems, classified], laterToday: block === "later_today" ? [...draft.laterToday, planItem] : draft.laterToday, ifCapacityRemains: block === "if_capacity_remains" ? [...draft.ifCapacityRemains, planItem] : draft.ifCapacityRemains });
   return validatePlanDraft(next).valid ? { draft: next } : { error: "invalid_plan" };
 }

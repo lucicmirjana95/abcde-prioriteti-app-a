@@ -1,7 +1,7 @@
 /**
  * Lightweight, accessible phase-change chime synthesizer.
  * - Disabled by default.
- * - Single pure sine wave with subtle overtone.
+ * - Distinct rising inhale and falling exhale cues.
  * - Fully isolated, zero heavy audio engines or continuous background audio loops.
  * - Browser autoplay safe (only initializes when explicitly requested).
  */
@@ -33,23 +33,27 @@ class LightChimeSynthesizer {
       if (!ready || !this.ctx) return false;
 
       const now = this.ctx.currentTime;
-      let baseFreq = 440; // A4
+      let frequencies = [440];
+      let cueDuration = 0.72;
 
       switch (type) {
         case "inhale":
-          baseFreq = 523.25; // C5 (Lifting, gentle)
+          frequencies = [392, 523.25]; // rising G4 -> C5
           break;
         case "hold":
-          baseFreq = 440.0; // A4 (Centered)
+          frequencies = [440];
+          cueDuration = 0.35;
           break;
         case "exhale":
-          baseFreq = 349.23; // F4 (Grounding, relaxing)
+          frequencies = [440, 293.66]; // falling A4 -> D4
+          cueDuration = 0.9;
           break;
         case "stage":
-          baseFreq = 392.0; // G4
+          frequencies = [392];
           break;
         case "complete":
-          baseFreq = 587.33; // D5
+          frequencies = [523.25, 659.25];
+          cueDuration = 1.1;
           break;
       }
 
@@ -57,34 +61,20 @@ class LightChimeSynthesizer {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = "sine";
-      osc.frequency.setValueAtTime(baseFreq, now);
+      osc.frequency.setValueAtTime(frequencies[0], now);
+      if (frequencies.length > 1) {
+        osc.frequency.exponentialRampToValueAtTime(frequencies[1], now + cueDuration * 0.72);
+      }
 
-      gain.gain.setValueAtTime(0.001, now);
-      gain.gain.linearRampToValueAtTime(0.08, now + 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(type === "hold" ? 0.035 : 0.065, now + 0.06);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + cueDuration);
 
       osc.connect(gain);
       gain.connect(this.ctx.destination);
 
       osc.start(now);
-      osc.stop(now + 0.85);
-
-      if (type === "complete") {
-        // Subtle harmonic chord on completion
-        const osc2 = this.ctx.createOscillator();
-        const gain2 = this.ctx.createGain();
-        osc2.type = "sine";
-        osc2.frequency.setValueAtTime(baseFreq * 1.25, now + 0.1); // Major third
-
-        gain2.gain.setValueAtTime(0.001, now + 0.1);
-        gain2.gain.linearRampToValueAtTime(0.06, now + 0.15);
-        gain2.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
-
-        osc2.connect(gain2);
-        gain2.connect(this.ctx.destination);
-        osc2.start(now + 0.1);
-        osc2.stop(now + 1.25);
-      }
+      osc.stop(now + cueDuration + 0.04);
       return true;
     } catch {
       // Audio playback fails gracefully without disturbing user

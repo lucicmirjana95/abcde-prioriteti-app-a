@@ -16,7 +16,7 @@ import {
   createImportedInboxItemId,
   isAppAInboxItem,
 } from "../domain/inbox/contracts";
-import type { AppADailyPlanDocument } from "./dailyPlanDocument";
+import { isAppADailyPlanDocument, type AppADailyPlanDocument } from "./dailyPlanDocument";
 import { mergePlanAddition } from './planMutations';
 import { validatePlanDraft } from '../domain/daily-reset/validation';
 import { normalizeCompletedItemIds } from '../screens/todayExecution';
@@ -74,6 +74,43 @@ export async function importDailyPlanItemsToInbox(userId: string, document: AppA
   for (const item of missing) batch.set(inboxRef(userId, item.id), item, { merge: false });
   await batch.commit();
   return missing.length;
+}
+
+/** Confirms a reviewed plan and persists every actionable deferred item together.
+ * A failed Inbox write must never leave the plan saved while its deferred tasks vanish. */
+export async function saveConfirmedPlanAndInboxAtomic(
+  userId: string,
+  document: AppADailyPlanDocument,
+): Promise<AppADailyPlanDocument> {
+  if (!isAppADailyPlanDocument(document) || !validatePlanDraft(document.plan).valid) {
+    throw new Error("invalid_plan");
+  }
+  const uid = requireUserId(userId);
+  const planReference = doc(db, "appAUsers", uid, "dailyResets", document.localDate);
+  const inboxItems = inboxItemsFromDailyPlan(document);
+  return runTransaction(db, async (transaction) => {
+    const planSnapshot = await transaction.get(planReference);
+    const current = planSnapshot.data();
+    if (planSnapshot.exists() && (current?.revision || 0) !== (document.revision || 0)) {
+      throw new Error("plan_changed_elsewhere");
+    }
+    const inboxSnapshots = await Promise.all(
+      inboxItems.map((item) => transaction.get(inboxRef(uid, item.id))),
+    );
+    const completionIds = planSnapshot.exists()
+      ? current?.execution?.completedItemIds || []
+      : document.execution?.completedItemIds || [];
+    const saved: AppADailyPlanDocument = {
+      ...document,
+      revision: (current?.revision || 0) + 1,
+      execution: { completedItemIds: normalizeCompletedItemIds(document.plan, completionIds) },
+    };
+    transaction.set(planReference, { ...saved, updatedAt: serverTimestamp() });
+    inboxItems.forEach((item, index) => {
+      if (!inboxSnapshots[index].exists()) transaction.set(inboxRef(uid, item.id), item, { merge: false });
+    });
+    return saved;
+  });
 }
 
 export async function loadInboxItems(userId: string): Promise<AppAInboxItem[]> {

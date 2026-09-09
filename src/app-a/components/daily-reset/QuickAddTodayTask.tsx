@@ -45,6 +45,7 @@ const COPY = {
     movedOptional: "Moved to if time remains",
     confirm: "Confirm changes",
     back: "Back",
+    more: "More options",
   },
   sr: {
     open: "Dodaj zadatak",
@@ -74,6 +75,7 @@ const COPY = {
     movedOptional: "Pomera se ako ostane vremena",
     confirm: "Potvrdi promene",
     back: "Nazad",
+    more: "Više opcija",
   },
   tr: {
     open: "Görev ekle",
@@ -103,6 +105,7 @@ const COPY = {
     movedOptional: "Zaman kalırsa bölümüne taşındı",
     confirm: "Değişiklikleri onayla",
     back: "Geri",
+    more: "Daha fazla seçenek",
   },
 } as const;
 
@@ -167,10 +170,13 @@ export default function QuickAddTodayTask({ language, availableMinutes, plannedR
   return <section className="app-a-surface mb-5 p-4 sm:p-5" aria-labelledby="quick-add-title">
     <div className="flex items-start justify-between gap-3"><div><h2 id="quick-add-title" className="text-[18px] font-semibold">{t.title}</h2><p className="mt-1 text-[13px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>{reconsiderPriorities ? t.reconsiderIntro : t.intro}</p></div><button type="button" onClick={() => setOpen(false)} className="app-a-focus-ring flex h-11 w-11 shrink-0 items-center justify-center rounded-full" aria-label={t.cancel}><X className="h-4 w-4" /></button></div>
     <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_120px]"><label className="text-[13px] font-medium">{t.task}<input autoFocus maxLength={500} value={title} onChange={(event) => { setTitle(event.target.value); setPreview(null); }} placeholder={t.taskPlaceholder} className="app-a-field app-a-focus-ring mt-1 min-h-12 w-full px-3 text-[16px]" /></label><label className="text-[13px] font-medium">{t.minutes}<input type="number" min="1" max="1440" value={minutes} onChange={(event) => { setMinutes(event.target.value); setPreview(null); }} className="app-a-field app-a-focus-ring mt-1 min-h-12 w-full px-3 text-[16px]" /></label></div>
-    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+    <details className="mt-3 rounded-xl border border-black/10 p-3 dark:border-white/10">
+      <summary className="app-a-focus-ring cursor-pointer text-[13px] font-semibold">{t.more}</summary>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
       <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-black/10 p-3 text-[13px] dark:border-white/10"><input type="checkbox" className="mt-0.5" checked={capacityType === "fixed"} onChange={(event) => { const fixed = event.target.checked; setCapacityType(fixed ? "fixed" : "flexible"); if (fixed) setReconsiderPriorities(false); setPreview(null); }} /><span><span className="block font-semibold">{t.fixed}</span><span style={{ color: "var(--app-a-text-secondary)" }}>{t.fixedHint}</span></span></label>
       <label className={`flex items-start gap-2 rounded-xl border border-black/10 p-3 text-[13px] dark:border-white/10 ${capacityType === "fixed" ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}><input type="checkbox" className="mt-0.5" disabled={capacityType === "fixed"} checked={reconsiderPriorities} onChange={(event) => { setReconsiderPriorities(event.target.checked); setPreview(null); }} /><span><span className="block font-semibold">{t.reconsider}</span><span style={{ color: "var(--app-a-text-secondary)" }}>{t.reconsiderHint}</span></span></label>
-    </div>
+      </div>
+    </details>
     {preview ? <div className="mt-3 rounded-xl border border-[#0A84FF]/25 bg-[#0A84FF]/[0.055] p-3 text-[13px]" role="status"><p className="font-semibold">{t.previewTitle}</p><p className="mt-1" style={{ color: "var(--app-a-text-secondary)" }}>{t.previewIntro}</p>{preview.firstFocus.length ? <p className="mt-2"><strong>{t.firstFocus}:</strong> {preview.firstFocus.join(", ")}</p> : null}{preview.movedLater.length ? <p className="mt-1"><strong>{t.movedLater}:</strong> {preview.movedLater.join(", ")}</p> : null}{preview.movedOptional.length ? <p className="mt-1"><strong>{t.movedOptional}:</strong> {preview.movedOptional.join(", ")}</p> : null}</div> : null}
     {error ? <div role="alert" className="app-a-panel-danger mt-3 text-[13px]">{error}</div> : null}
     <div className="mt-4 flex flex-wrap gap-2">{preview ? <><button type="button" disabled={busy} onClick={() => void add(true)} className="app-a-primary-button app-a-focus-ring px-4">{t.confirm}</button><button type="button" disabled={busy} onClick={() => setPreview(null)} className="app-a-secondary-button app-a-focus-ring px-4">{t.back}</button></> : <><button type="button" disabled={busy} onClick={() => void add()} className="app-a-primary-button app-a-focus-ring px-4">{t.add}</button><button type="button" disabled={busy} onClick={() => void saveLater()} className="app-a-secondary-button app-a-focus-ring px-4">{t.later}</button></>}{error && (error === t.unknown || error === t.full(remaining)) ? <button type="button" onClick={onAdjustPlan} className="app-a-secondary-button app-a-focus-ring px-4">{language === "sr" ? "Prilagodi plan" : language === "tr" ? "Planı düzenle" : "Adjust plan"}</button> : null}</div>

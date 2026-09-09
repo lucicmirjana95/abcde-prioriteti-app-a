@@ -42,8 +42,8 @@ const missingDuration = addInboxItemToPlan(draft, { ...item, estimatedMinutes: u
 const unknownCapacity = addInboxItemToPlan({ ...draft, availableMinutes: undefined }, item);
 const exceededCapacity = addInboxItemToPlan({ ...draft, availableMinutes: 10 }, item);
 assert.equal("error" in missingDuration && missingDuration.error, "duration_required");
-assert.equal("error" in unknownCapacity && unknownCapacity.error, "capacity_unknown");
-assert.equal("error" in exceededCapacity && exceededCapacity.error, "capacity_exceeded");
+assert.equal("draft" in unknownCapacity && unknownCapacity.draft.laterToday.length, 1);
+assert.equal("draft" in exceededCapacity && exceededCapacity.draft.ifCapacityRemains.length, 1);
 
 const fixed = addInboxItemToPlan({ ...draft, availableMinutes: 10 }, { ...item, id: "in_fixed", capacityType: "fixed", estimatedMinutes: 90 });
 assert.equal("draft" in fixed, true, "Fixed commitments do not consume flexible capacity");

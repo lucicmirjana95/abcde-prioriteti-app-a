@@ -22,13 +22,11 @@ import { getEffectiveTimeZone } from '../settings/preferences';
 import {
   loadConfirmedDailyPlan,
   saveDailyPlanCompletion,
-  saveConfirmedDailyPlan,
   extractDiagnosticFromSaveError,
   PersistenceSaveDiagnostic,
 } from '../persistence/dailyPlanRepository';
 import type { DailyPlanDraft } from '../domain/daily-reset/contracts';
 import { normalizeCompletedItemIds, toggleCompletedItemId } from './todayExecution';
-import DailyRoutinesSection from '../components/routines/DailyRoutinesSection';
 import ResetSessions from '../components/reset/ResetSessions';
 import TodayCandidatesSection from '../components/vision/TodayCandidatesSection';
 import type { TodayCandidate } from '../../shared/domain/today-candidates';
@@ -44,7 +42,7 @@ import {
 import { shiftLocalDate, type UnfinishedRolloverCandidate } from '../domain/rollover/contracts';
 import { addRolloverCandidateToPlan } from './rolloverCandidatePlan';
 import type { DataResetEventDetail } from '../components/settings/DataResetModal';
-import { createInboxItemAndAddToPlanAtomic, createInboxItemAndReplacePlanAtomic, importDailyPlanItemsToInbox, saveDailyPlanCompletionAndInboxStatusAtomic, saveInboxItem, savePlanAndScheduleInboxItemAtomic } from '../persistence/inboxRepository';
+import { createInboxItemAndAddToPlanAtomic, createInboxItemAndReplacePlanAtomic, saveConfirmedPlanAndInboxAtomic, saveDailyPlanCompletionAndInboxStatusAtomic, saveInboxItem, savePlanAndScheduleInboxItemAtomic } from '../persistence/inboxRepository';
 import { createManualInboxItemId, type AppAInboxItem } from '../domain/inbox/contracts';
 import { addInboxItemToPlan } from './inboxCandidatePlan';
 import DueInboxItemsSection from '../components/inbox/DueInboxItemsSection';
@@ -251,12 +249,9 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
       const document = createDailyPlanDocument(state.inputData, draft, language, localDate, effectiveTimeZone);
       document.revision = activePlanDate === localDate ? planRevision.current : 0;
       document.execution = { completedItemIds: normalizeCompletedItemIds(draft, activePlanDate === localDate ? completedItemIds : []) };
-      const savedDocument = await saveConfirmedDailyPlan(activeUser.uid, document);
+      const savedDocument = await saveConfirmedPlanAndInboxAtomic(activeUser.uid, document);
       document.execution = savedDocument.execution;
       planRevision.current = savedDocument.revision || 0;
-      // Inbox ingestion is secondary: a confirmed daily plan must never be reported as
-      // failed merely because deferred-item indexing is temporarily unavailable.
-      void importDailyPlanItemsToInbox(activeUser.uid, document).catch(() => undefined);
       loadedForUserAndDate.current = `${activeUser.uid}:${document.localDate}`;
       setActivePlanDate(document.localDate);
       setCompletedItemIds(document.execution.completedItemIds);
@@ -603,7 +598,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
         <DailyResetDemoBanner language={language} scenario={demoConfig.scenario} />
       )}
       {content}
-      {!isLoadingSavedPlan && state.phase !== 'submitting' && state.phase !== 'resolving' && (
+      {!isLoadingSavedPlan && state.phase === 'plan_ready' && viewMode === 'execution' && (
         <>
           <UnfinishedTasksSection
             candidates={rolloverCandidates}
@@ -626,12 +621,11 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
             onAddToPlan={handleAddVisionCandidate}
           />
           <DueInboxItemsSection userId={user?.uid} localDate={activePlanDate} language={language} canAddToPlan={Boolean(state.planDraft && viewMode === 'execution')} onAddToPlan={handleAddInboxItem} />
-          <DailyRoutinesSection userId={user?.uid} language={language} />
         </>
       )}
       {resetSessionsOpen ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={language === 'sr' ? 'Sesije za predah' : language === 'tr' ? 'Mola oturumları' : 'Reset sessions'} onMouseDown={(event) => { if (event.target === event.currentTarget) setResetSessionsOpen(false); }}>
-          <div className="app-a-surface max-h-[92vh] w-full max-w-[820px] overflow-y-auto p-1 shadow-2xl sm:p-2" onMouseDown={(event) => event.stopPropagation()}>
+          <div className="app-a-surface max-h-[92vh] w-full max-w-[820px] overflow-x-hidden overflow-y-auto p-1 shadow-2xl sm:p-2" onMouseDown={(event) => event.stopPropagation()}>
             <div className="sticky top-0 z-10 flex justify-end bg-[var(--app-a-surface)] px-3 pt-3">
               <button type="button" onClick={() => setResetSessionsOpen(false)} className="app-a-secondary-button app-a-focus-ring px-3 text-[13px]">
                 {language === 'sr' ? 'Zatvori' : language === 'tr' ? 'Kapat' : 'Close'}

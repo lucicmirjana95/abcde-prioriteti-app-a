@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { buildDailyResetPrompt } from "./prompt";
-import { parseModelResponse } from "./parseModelResponse";
+import { isClearlyNonActionObservation, parseModelResponse } from "./parseModelResponse";
 import {
   fixValidClarificationResponse,
   fixValidPlanResponse,
@@ -40,6 +40,30 @@ const basicInput = {
   brainDump: "test",
   language: "en" as any
 };
+
+runTest("relationship-state observations are not executable tasks", () => {
+  assert.equal(isClearlyNonActionObservation("ne pricam sa suprugom"), true);
+  assert.equal(isClearlyNonActionObservation("Ne razgovaram sa suprugom"), true);
+  assert.equal(isClearlyNonActionObservation("I am not talking with my spouse"), true);
+  assert.equal(isClearlyNonActionObservation("Razgovaraj sa suprugom u 18h"), false);
+});
+
+runTest("misclassified relationship state is removed from Today and preserved as a note", () => {
+  const mistakenPlan = {
+    phase: "plan_ready",
+    draft: {
+      classifiedItems: [{ originalText: "ne pricam sa suprugom", kind: "task", timeHorizon: "today", suggestedAction: "Razgovaraj sa suprugom", estimatedMinutes: 20, timeSensitivity: "none", isAmbiguous: false, needsCheck: false, priority: { explanation: "Relationship" } }],
+      firstFocus: [{ sourceItemIndex: 0, title: "Razgovaraj sa suprugom", block: "first_focus", estimatedMinutes: 20, requiredEnergy: 3, timeSensitivity: "none", priority: { explanation: "Relationship" }, needsCheck: false }],
+      laterToday: [], ifCapacityRemains: [], deferredItems: [], longTermIdeas: [], nonActionItems: [], planRationale: "Test"
+    }
+  };
+  const result = parseModelResponse(mistakenPlan, idFactory, false);
+  assert.equal(result.phase, "plan_ready");
+  if (result.phase === "plan_ready") {
+    assert.equal(result.draft.firstFocus.length, 0);
+    assert.equal(result.draft.nonActionItems[0]?.originalText, "ne pricam sa suprugom");
+  }
+});
 
 runTest("prompt generation for Serbian", () => {
   const prompt = buildDailyResetPrompt({ ...basicInput, language: "sr" });

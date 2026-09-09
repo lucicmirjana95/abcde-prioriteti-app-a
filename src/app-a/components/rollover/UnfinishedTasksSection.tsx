@@ -78,7 +78,7 @@ export default function UnfinishedTasksSection({
   onMarkComplete,
   onDismiss,
 }: Props) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<{ id: string; message: string } | null>(null);
   const t = COPY[language] || COPY.en;

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { DailyResetData, EnergyLevel, PleasantnessLevel, AvailableTimeValue, type AppALanguage } from '../../types';
+import { DailyResetData, EnergyLevel, PleasantnessLevel, type AppALanguage } from '../../types';
 import FiveLevelScale from './FiveLevelScale';
-import AvailableTimeSelector from './AvailableTimeSelector';
 import BrainDumpInput from './BrainDumpInput';
 
 interface Props {
@@ -19,18 +18,15 @@ interface Props {
 export default function DailyResetForm({ t, language, initialData, onSubmit, onDraftChange, aiEnabled = true, aiDisabledMessage, onboardingCompleted = false, submissionError }: Props) {
   const [energy, setEnergy] = useState<EnergyLevel | undefined>(initialData.energy);
   const [pleasantness, setPleasantness] = useState<PleasantnessLevel | undefined>(initialData.pleasantness);
-  const [time, setTime] = useState<AvailableTimeValue | undefined>(initialData.availableTime);
   const [stateNote, setStateNote] = useState(initialData.stateNote);
   const [brainDump, setBrainDump] = useState(initialData.brainDump);
   const [showHelp, setShowHelp] = useState(!onboardingCompleted);
 
-  const [timeError, setTimeError] = useState<string | undefined>();
   const [brainDumpError, setBrainDumpError] = useState<string | undefined>();
   const [stateError, setStateError] = useState<string | undefined>();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setTimeError(undefined);
     setBrainDumpError(undefined);
     setStateError(undefined);
 
@@ -47,22 +43,12 @@ export default function DailyResetForm({ t, language, initialData, onSubmit, onD
       hasError = true;
     }
 
-    // Validate custom time
-    if (time?.type === 'custom') {
-      const h = time.customHours || 0;
-      const m = time.customMinutes || 0;
-      if (h === 0 && m === 0) {
-        setTimeError(t.timeErrorInvalid);
-        hasError = true;
-      }
-    }
-
     if (hasError || !aiEnabled) return;
 
     onSubmit({
       energy,
       pleasantness,
-      availableTime: time,
+      availableTime: undefined,
       stateNote,
       brainDump
     });
@@ -115,30 +101,8 @@ export default function DailyResetForm({ t, language, initialData, onSubmit, onD
           error={brainDumpError}
         />
       </section>
-      {/* SECTION 2: Time */}
-      <section
-        className="order-2 flex flex-col gap-5 border-t p-5 sm:p-6"
-        style={{ borderColor: "var(--app-a-border)" }}
-      >
-        <h2 className="text-[20px] font-semibold tracking-[-0.02em]" style={{ color: "var(--app-a-text)" }}>
-          {t.sectionTime}
-        </h2>
-        <p className="text-[14px] leading-relaxed" style={{ color: 'var(--app-a-text-secondary)' }}>{language === 'sr' ? 'Koliko fleksibilnog vremena danas želiš da izdvojiš za zadatke iz ovog unosa? Ne računaj već zakazane ili neizbežne obaveze — njih samo navedi u unosu zajedno sa trajanjem. Ako još ne znaš, možeš početi jednim korakom.' : language === 'tr' ? 'Bu girdideki görevler için bugün ne kadar esnek zaman ayırmak istiyorsun? Önceden planlanmış veya kaçınılmaz sorumlulukları bu süreye katma; onları süreleriyle birlikte metinde belirt. Henüz bilmiyorsan tek bir adımla başlayabilirsin.' : 'How much flexible time do you want to spend on tasks from this entry today? Do not count fixed or unavoidable commitments here—include those in your text with their duration. If you are unsure, you can start with one step.'}</p>
-        <AvailableTimeSelector
-          unknownLabel={language === 'sr' ? 'Ne znam još' : language === 'tr' ? 'Henüz bilmiyorum' : "I'm not sure yet"}
-          value={time}
-          onChange={(val) => {
-             setTime(val);
-             onDraftChange?.({ availableTime: val });
-             setTimeError(undefined);
-          }}
-          t={t}
-          error={timeError}
-        />
-      </section>
-
       {/* SECTION 1: State */}
-      <section className="order-3 border-t p-5 sm:p-6" aria-labelledby="daily-state-heading">
+      <section className="order-2 border-t p-5 sm:p-6" aria-labelledby="daily-state-heading">
         <h2 id="daily-state-heading" className="text-[20px] font-semibold tracking-[-0.02em]">{language === 'sr' ? 'Energija i raspoloženje' : language === 'tr' ? 'Enerji ve ruh hali' : 'Energy and mood'}</h2>
         <p className="mt-1 text-[14px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>{language === 'sr' ? 'Potrebno je da bi AI prilagodio zahtevnost, veličinu koraka i redosled zadataka.' : language === 'tr' ? 'Yapay zekanın zorluk düzeyini, adım boyutunu ve görev sırasını ayarlaması için gereklidir.' : 'Required so the AI can adapt difficulty, step size, and task order.'}</p>
         <div className="mt-5 flex flex-col gap-6">
@@ -178,7 +142,7 @@ export default function DailyResetForm({ t, language, initialData, onSubmit, onD
 
 
       <div
-        className="order-4 border-t p-5 sm:flex sm:justify-end sm:p-6"
+        className="order-3 border-t p-5 sm:flex sm:justify-end sm:p-6"
         style={{
           borderColor: "var(--app-a-border)",
           backgroundColor: "var(--app-a-disabled-bg)",

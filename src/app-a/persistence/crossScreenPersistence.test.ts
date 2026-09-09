@@ -124,8 +124,23 @@ assert.equal(repo.read(path).plan.laterToday.length, 0); scenarios++;
 
 start();
 repo.seed(path, { ...document, plan: { ...plan, availableMinutes: 20 } });
-await assert.rejects(repo.savePlanAndScheduleInboxItemAtomic('user-1', { ...document, plan: inboxAddition.draft }, inbox), /capacity_exceeded/);
-assert.equal(repo.read(inboxPath).status, 'inbox'); scenarios++;
+await repo.savePlanAndScheduleInboxItemAtomic('user-1', { ...document, plan: inboxAddition.draft }, inbox);
+assert.equal(repo.read(inboxPath).status, 'scheduled');
+assert.equal(repo.read(path).plan.ifCapacityRemains[0].title, inbox.title); scenarios++;
+
+const deferredTask = { id: 's2', originalText: 'Send the draft this week', kind: 'task', timeHorizon: 'this_week', suggestedAction: 'Send the draft', estimatedMinutes: 15, timeSensitivity: 'soft', isAmbiguous: false, needsCheck: false, priority: { explanation: 'Explicit next action' } };
+const deferredDocument = { ...document, plan: { ...plan, classifiedItems: [...plan.classifiedItems, deferredTask], deferredItems: [deferredTask] } };
+const importedId = repo.inboxItemsFromDailyPlan(deferredDocument)[0].id;
+const importedPath = `appAUsers/user-1/inboxItems/${importedId}`;
+start();
+await repo.saveConfirmedPlanAndInboxAtomic('user-1', deferredDocument);
+assert.equal(repo.read(importedPath).title, 'Send the draft');
+assert.equal(repo.read(importedPath).horizon, 'this_week'); scenarios++;
+
+start(); repo.failNext();
+await assert.rejects(repo.saveConfirmedPlanAndInboxAtomic('user-1', deferredDocument));
+assert.equal(repo.read(importedPath), undefined);
+assert.deepEqual(repo.read(path).plan.deferredItems, []); scenarios++;
 
 start();
 await repo.savePlanAndScheduleInboxItemAtomic('user-1', { ...document, plan: inboxAddition.draft }, inbox);

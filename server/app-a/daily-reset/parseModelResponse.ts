@@ -22,6 +22,11 @@ import {
 import { ModelResponseShape } from "./modelSchema";
 import { explicitAvailableMinutes } from './availableTime';
 
+export function isClearlyNonActionObservation(text: string): boolean {
+  const normalized = text.normalize("NFKC").trim().toLocaleLowerCase();
+  return /^(ne\s+(pri[cčć]am|razgovaram)\s+sa|(i\s+am\s+)?not\s+(talking|speaking)\s+(to|with)|eşimle\s+konuşmuyorum\b)/u.test(normalized);
+}
+
 function isPopulatedDraft(draft: any): boolean {
   if (!draft || typeof draft !== "object") return false;
   const hasItems = (arr: any) => Array.isArray(arr) && arr.length > 0;
@@ -276,9 +281,9 @@ export function parseModelResponse(
         });
       };
 
-      const deferredItems = processSubsetItems(draft.deferredItems, "Deferred", ["this_week", "later"]);
-      const longTermIdeas = processSubsetItems(draft.longTermIdeas, "Long-term idea", ["long_term_idea"]);
-      const nonActionItems = processSubsetItems(draft.nonActionItems, "Non-action", ["no_action"]);
+      let deferredItems = processSubsetItems(draft.deferredItems, "Deferred", ["this_week", "later"]);
+      let longTermIdeas = processSubsetItems(draft.longTermIdeas, "Long-term idea", ["long_term_idea"]);
+      let nonActionItems = processSubsetItems(draft.nonActionItems, "Non-action", ["no_action"]);
 
       const processPlanItems = (items: any[] | undefined, expectedBlock: PlanBlock): DailyPlanItem[] => {
         if (!items || !Array.isArray(items)) return [];
@@ -332,13 +337,36 @@ export function parseModelResponse(
         });
       };
 
-      const firstFocus = processPlanItems(draft.firstFocus, "first_focus");
+      let firstFocus = processPlanItems(draft.firstFocus, "first_focus");
       if (firstFocus.length > 3) {
         throw new Error("Four or more First-focus items provided.");
       }
       
-      const laterToday = processPlanItems(draft.laterToday, "later_today");
-      const ifCapacityRemains = processPlanItems(draft.ifCapacityRemains, "if_capacity_remains");
+      let laterToday = processPlanItems(draft.laterToday, "later_today");
+      let ifCapacityRemains = processPlanItems(draft.ifCapacityRemains, "if_capacity_remains");
+
+      // A fact or worry with no concrete suggested action is not executable work,
+      // even if the model assigned it a calendar horizon. Keep it visible, but
+      // deterministically move it to the non-action group.
+      const normalizedNonActionIds = new Set<string>();
+      for (const item of classifiedItems) {
+        if (isClearlyNonActionObservation(item.originalText)) {
+          item.timeHorizon = "no_action";
+          item.kind = "fact";
+          item.suggestedAction = undefined;
+          item.estimatedMinutes = undefined;
+          normalizedNonActionIds.add(item.id);
+        }
+      }
+      if (normalizedNonActionIds.size) {
+        deferredItems = deferredItems.filter((item) => !normalizedNonActionIds.has(item.id));
+        longTermIdeas = longTermIdeas.filter((item) => !normalizedNonActionIds.has(item.id));
+        nonActionItems = classifiedItems.filter((item) => item.timeHorizon === "no_action");
+        const isExecutable = (item: DailyPlanItem) => item.sourceItemIds.some((id) => !normalizedNonActionIds.has(id));
+        firstFocus = firstFocus.filter(isExecutable);
+        laterToday = laterToday.filter(isExecutable);
+        ifCapacityRemains = ifCapacityRemains.filter(isExecutable);
+      }
 
       let intervention: SafeIntervention | undefined = undefined;
       if (draft.intervention && typeof draft.intervention === "object" && draft.intervention.type) {

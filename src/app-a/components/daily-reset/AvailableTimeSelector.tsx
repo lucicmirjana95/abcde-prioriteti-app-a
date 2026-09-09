@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AvailableTimeValue, AvailableTimeType } from '../../types';
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
 }
 
 export default function AvailableTimeSelector({ value, onChange, t, error, unknownLabel = "I'm not sure yet" }: Props) {
+  const [unknownSelected, setUnknownSelected] = useState(false);
   const options: { type: AvailableTimeType, label: string }[] = [
     { type: '30m', label: t.time30m },
     { type: '1h', label: t.time1h },
@@ -19,6 +20,7 @@ export default function AvailableTimeSelector({ value, onChange, t, error, unkno
   ];
 
   const handleSelect = (type: AvailableTimeType) => {
+    setUnknownSelected(false);
     if (type === 'custom') {
       onChange({ type: 'custom', customHours: 0, customMinutes: 0 });
     } else {
@@ -43,7 +45,7 @@ export default function AvailableTimeSelector({ value, onChange, t, error, unkno
          {value !== undefined && (
             <button
               type="button"
-              onClick={() => onChange(undefined)}
+              onClick={() => { setUnknownSelected(false); onChange(undefined); }}
               className="app-a-focus-ring min-h-[44px] rounded-lg px-2 text-[14px] font-medium transition-colors"
               style={{ color: "var(--app-a-accent)" }}
             >
@@ -77,7 +79,19 @@ export default function AvailableTimeSelector({ value, onChange, t, error, unkno
             </label>
           );
         })}
-        <button type="button" aria-pressed={value === undefined} onClick={() => onChange(undefined)} className="app-a-secondary-button app-a-focus-ring min-h-12 px-3 text-[16px]">{unknownLabel}</button>
+        <button
+          type="button"
+          aria-pressed={unknownSelected}
+          onClick={() => { setUnknownSelected(true); onChange(undefined); }}
+          className="app-a-focus-ring min-h-12 rounded-xl border px-3 text-[16px] font-medium transition-all"
+          style={{
+            borderColor: unknownSelected ? "var(--app-a-accent)" : "var(--app-a-border)",
+            backgroundColor: unknownSelected ? "var(--app-a-accent-soft)" : "var(--app-a-surface)",
+            color: unknownSelected ? "var(--app-a-accent)" : "var(--app-a-text)",
+          }}
+        >
+          {unknownLabel}
+        </button>
       </div>
 
       {value?.type === 'custom' && (

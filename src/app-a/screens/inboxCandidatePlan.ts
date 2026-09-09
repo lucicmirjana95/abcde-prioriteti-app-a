@@ -48,8 +48,8 @@ export function addInboxItemToPlan(draft: DailyPlanDraft, item: AppAInboxItem, o
     return { error: "duplicate" };
   }
   const capacityType = item.capacityType || "flexible";
-  if (capacityType === "flexible" && draft.availableMinutes === undefined) return { error: "capacity_unknown" };
-  if (!options.reconsiderPriorities && capacityType === "flexible" && (draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes) + item.estimatedMinutes > draft.availableMinutes!) return { error: "capacity_exceeded" };
+  const exceedsExplicitCapacity = capacityType === "flexible" && draft.availableMinutes !== undefined
+    && (draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes) + item.estimatedMinutes > draft.availableMinutes;
   const priority = options.reconsiderPriorities
     ? { consequence: 4 as const, urgency: 5 as const, goalContribution: 3 as const, explanation: "Marked urgent by the user and reconsidered against unfinished priorities." }
     : { explanation: "Added by the user from Inbox." };
@@ -71,7 +71,7 @@ export function addInboxItemToPlan(draft: DailyPlanDraft, item: AppAInboxItem, o
     sourceItemIds: [sourceId],
     title: item.title,
     ...(item.details ? { description: item.details } : {}),
-    block: options.reconsiderPriorities && capacityType === "flexible" ? "first_focus" : "later_today",
+    block: options.reconsiderPriorities && capacityType === "flexible" ? "first_focus" : exceedsExplicitCapacity ? "if_capacity_remains" : "later_today",
     estimatedMinutes: item.estimatedMinutes,
     capacityType,
     requiredEnergy: 3,
@@ -84,7 +84,8 @@ export function addInboxItemToPlan(draft: DailyPlanDraft, item: AppAInboxItem, o
     const next = recalculatePlanTotals({
       ...draft,
       classifiedItems: [...draft.classifiedItems, classified],
-      laterToday: [...draft.laterToday, planItem],
+      laterToday: exceedsExplicitCapacity ? draft.laterToday : [...draft.laterToday, planItem],
+      ifCapacityRemains: exceedsExplicitCapacity ? [...draft.ifCapacityRemains, planItem] : draft.ifCapacityRemains,
     });
     return validatePlanDraft(next).valid ? { draft: next, changes: { firstFocus: [], movedLater: [], movedOptional: [] } } : { error: "invalid_plan" };
   }

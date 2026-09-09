@@ -90,21 +90,21 @@ if ("draft" in result) {
   assert.equal("error" in duplicateByTitleResult && duplicateByTitleResult.error, "duplicate");
 }
 
-// 4. Capacity exceeded check
+// 4. Explicit capacity overflow stays visible as optional
 const tightDraft: DailyPlanDraft = {
   ...createBaseDraft(),
   availableMinutes: 60, // 30 already planned, only 30 left; candidate needs 45 min
 };
 const exceededResult = addRolloverCandidateToPlan(tightDraft, candidate);
-assert.equal("error" in exceededResult && exceededResult.error, "capacity_exceeded");
+assert.equal("draft" in exceededResult && exceededResult.draft.ifCapacityRemains.length, 1);
 
-// 5. Capacity unknown check
+// 5. Automatic capacity allows an explicit user addition
 const unknownCapDraft: DailyPlanDraft = {
   ...createBaseDraft(),
   availableMinutes: undefined,
 };
 const unknownResult = addRolloverCandidateToPlan(unknownCapDraft, candidate);
-assert.equal("error" in unknownResult && unknownResult.error, "capacity_unknown");
+assert.equal("draft" in unknownResult && unknownResult.draft.laterToday.length, 1);
 
 // 6. Placement in ifCapacityRemains when explicitly requested
 const optionalResult = addRolloverCandidateToPlan(initialDraft, candidate, "if_capacity_remains");

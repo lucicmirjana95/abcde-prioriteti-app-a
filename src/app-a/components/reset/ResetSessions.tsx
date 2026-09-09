@@ -198,9 +198,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
     }
 
     if (lastPhaseIdRef.current !== currentPhaseKey) {
-      if (lastPhaseIdRef.current !== null) {
-        lightChimeSynth.playPhaseChime(chimeType);
-      }
+      void lightChimeSynth.playPhaseChime(chimeType);
       lastPhaseIdRef.current = currentPhaseKey;
     }
   }, [selectedExperience, timingState, sessionStatus, soundEnabled]);
@@ -539,18 +537,18 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
           /* VIEW 3: ACTIVE / PAUSED / IDLE SESSION INTERFACE */
           <div role="timer" aria-live="polite" className="text-center">
             {/* Top Navigation & Title */}
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2">
               <button
                 type="button"
                 id="reset-back-btn"
                 onClick={handleStop}
-                className="app-a-focus-ring inline-flex items-center gap-1.5 text-[13px] font-medium text-[#555558] hover:text-[#1d1d1f] dark:text-[#a1a1a6] dark:hover:text-[#f5f5f7]"
+                className="app-a-focus-ring inline-flex h-11 w-11 items-center justify-center text-[#555558] hover:text-[#1d1d1f] dark:text-[#a1a1a6] dark:hover:text-[#f5f5f7]"
               >
                 <ArrowLeft className="h-4 w-4" />
-                <span>{tCommon.completedReturnButton}</span>
+                <span className="sr-only">{tCommon.completedReturnButton}</span>
               </button>
 
-              <span className="text-[13px] font-semibold uppercase tracking-wider text-[#76767b] dark:text-[#7c7c82]">
+              <span className="min-w-0 truncate px-1 text-[12px] font-semibold uppercase tracking-wider text-[#76767b] dark:text-[#7c7c82]">
                 {selectedExperience === "balanced_box" && loc.balancedBox.name}
                 {selectedExperience === "longer_exhale" && loc.longerExhale.name}
                 {selectedExperience === "double_inhale" && loc.doubleInhale.name}
@@ -745,13 +743,13 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
             )}
 
             {/* Interaction Buttons */}
-            <div className="mt-6 flex items-center justify-center gap-3">
+            <div className="mt-6 grid grid-cols-2 gap-2.5">
               {sessionStatus === "idle" && (
                 <button
                   type="button"
                   id="reset-start-btn"
                   onClick={() => void handleStart()}
-                  className="app-a-primary-button app-a-focus-ring gap-2 px-6 py-2.5 text-[15px] font-semibold"
+                  className="app-a-primary-button app-a-focus-ring w-full justify-center gap-2 px-4 py-2.5 text-[15px] font-semibold"
                 >
                   <Play className="h-4 w-4" />
                   {tCommon.start}
@@ -763,7 +761,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
                   type="button"
                   id="reset-pause-btn"
                   onClick={handlePause}
-                  className="app-a-primary-button app-a-focus-ring gap-2 px-5 py-2.5 text-[15px] font-semibold"
+                  className="app-a-primary-button app-a-focus-ring w-full justify-center gap-2 px-3 py-2.5 text-[15px] font-semibold"
                 >
                   <Pause className="h-4 w-4" />
                   {tCommon.pause}
@@ -775,7 +773,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
                   type="button"
                   id="reset-resume-btn"
                   onClick={() => void handleResume()}
-                  className="app-a-primary-button app-a-focus-ring gap-2 px-5 py-2.5 text-[15px] font-semibold"
+                  className="app-a-primary-button app-a-focus-ring w-full justify-center gap-2 px-3 py-2.5 text-[15px] font-semibold"
                 >
                   <Play className="h-4 w-4" />
                   {tCommon.resume}
@@ -787,7 +785,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
                   type="button"
                   id="reset-restart-btn"
                   onClick={handleRestart}
-                  className="app-a-secondary-button app-a-focus-ring gap-1.5 px-4 py-2.5 text-[14px]"
+                  className="app-a-secondary-button app-a-focus-ring w-full justify-center gap-1.5 px-3 py-2.5 text-[14px]"
                 >
                   <RotateCcw className="h-4 w-4" />
                   {tCommon.restart}
@@ -798,7 +796,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
                 type="button"
                 id="reset-stop-btn"
                 onClick={handleStop}
-                className="app-a-secondary-button app-a-focus-ring gap-1.5 px-4 py-2.5 text-[14px]"
+                className="app-a-secondary-button app-a-focus-ring col-span-2 w-full justify-center gap-1.5 px-4 py-2.5 text-[14px]"
               >
                 {tCommon.stop}
               </button>

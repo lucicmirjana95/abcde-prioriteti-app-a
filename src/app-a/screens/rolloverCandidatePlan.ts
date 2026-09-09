@@ -57,18 +57,10 @@ export function addRolloverCandidateToPlan(
     return { error: "duplicate" };
   }
 
-  if (draft.availableMinutes === undefined) {
-    return { error: "capacity_unknown" };
-  }
-
-  if (targetBlock === "later_today") {
-    if (
-      (draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes) + candidate.estimatedMinutes >
-      draft.availableMinutes
-    ) {
-      return { error: "capacity_exceeded" };
-    }
-  }
+  const effectiveTarget = targetBlock === "later_today" && draft.availableMinutes !== undefined
+    && (draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes) + candidate.estimatedMinutes > draft.availableMinutes
+      ? "if_capacity_remains"
+      : targetBlock;
 
   const priority = candidate.priority || {
     explanation: `Carried forward from unfinished plan on ${candidate.sourceLocalDate}.`,
@@ -96,7 +88,7 @@ export function addRolloverCandidateToPlan(
     sourceItemIds: [sourceId],
     title: candidate.title,
     description: candidate.description,
-    block: targetBlock,
+    block: effectiveTarget,
     estimatedMinutes: candidate.estimatedMinutes,
     capacityType: "flexible",
     requiredEnergy: candidate.requiredEnergy || 3,
@@ -114,11 +106,11 @@ export function addRolloverCandidateToPlan(
     classifiedItems: [...draft.classifiedItems, classified],
     firstFocus: [...draft.firstFocus], // Never auto-promoted to firstFocus!
     laterToday:
-      targetBlock === "later_today"
+      effectiveTarget === "later_today"
         ? [...draft.laterToday, planItem]
         : [...draft.laterToday],
     ifCapacityRemains:
-      targetBlock === "if_capacity_remains"
+      effectiveTarget === "if_capacity_remains"
         ? [...draft.ifCapacityRemains, planItem]
         : [...draft.ifCapacityRemains],
   });

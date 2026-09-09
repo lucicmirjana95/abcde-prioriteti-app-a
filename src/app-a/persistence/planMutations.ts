@@ -11,9 +11,15 @@ export function mergePlanAddition(current: unknown, proposed: AppADailyPlanDocum
   if (!item) throw new Error('invalid_plan');
   if (all.some((entry) => entry.title.normalize('NFKC').trim().toLowerCase() === item.title.normalize('NFKC').trim().toLowerCase())) throw new Error('duplicate');
   const sources = proposed.plan.classifiedItems.filter((source) => item.sourceItemIds.includes(source.id) && !current.plan.classifiedItems.some((old) => old.id === source.id));
-  const plan = recalculatePlanTotals({ ...current.plan, classifiedItems: [...current.plan.classifiedItems, ...sources], laterToday: [...current.plan.laterToday, { ...item, block: 'later_today' as const }] });
-  if (plan.availableMinutes === undefined) throw new Error('capacity_unknown');
-  if ((plan.plannedFlexibleMinutes ?? plan.plannedRequiredMinutes) > plan.availableMinutes) throw new Error('capacity_exceeded');
+  const wouldExceed = item.capacityType !== 'fixed' && current.plan.availableMinutes !== undefined
+    && (current.plan.plannedFlexibleMinutes ?? current.plan.plannedRequiredMinutes) + item.estimatedMinutes > current.plan.availableMinutes;
+  const targetBlock = wouldExceed ? 'if_capacity_remains' as const : 'later_today' as const;
+  const plan = recalculatePlanTotals({
+    ...current.plan,
+    classifiedItems: [...current.plan.classifiedItems, ...sources],
+    laterToday: targetBlock === 'later_today' ? [...current.plan.laterToday, { ...item, block: targetBlock }] : current.plan.laterToday,
+    ifCapacityRemains: targetBlock === 'if_capacity_remains' ? [...current.plan.ifCapacityRemains, { ...item, block: targetBlock }] : current.plan.ifCapacityRemains,
+  });
   if (!validatePlanDraft(plan).valid) throw new Error('invalid_plan');
   return { ...current, plan, revision: (current.revision || 0) + 1 };
 }

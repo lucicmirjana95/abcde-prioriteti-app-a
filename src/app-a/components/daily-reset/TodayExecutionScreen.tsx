@@ -53,12 +53,12 @@ export default function TodayExecutionScreen({
     return (
       <div
         key={item.id}
-        className={`app-a-focus-ring flex min-h-[64px] w-full items-start gap-3 rounded-[14px] border p-3.5 text-left transition-colors sm:p-4 ${
+        className={`app-a-focus-ring flex min-h-[64px] w-full items-start gap-3 rounded-[16px] border p-3.5 text-left transition-all sm:p-4 ${
           isComplete
             ? "border-black/[0.06] bg-black/[0.025] text-black/45 dark:border-white/[0.06] dark:bg-white/[0.035] dark:text-white/45"
             : emphasized
-              ? "border-[#0A84FF]/25 bg-[#0A84FF]/[0.055] text-black dark:text-white"
-              : "border-black/[0.08] bg-white text-black dark:border-white/10 dark:bg-[#242426] dark:text-white"
+              ? "border-[#0A84FF]/30 bg-white text-black shadow-[0_10px_32px_rgba(0,113,227,0.10)] dark:bg-[#242426] dark:text-white"
+              : "border-black/[0.07] bg-white/70 text-black dark:border-white/[0.08] dark:bg-white/[0.035] dark:text-white"
         }`}
       >
         <button
@@ -99,20 +99,20 @@ export default function TodayExecutionScreen({
             )}
           </span>
         </span>
-        {!isComplete && <div className="flex shrink-0 gap-1.5"><button type="button" onClick={() => setFocusItem(item)} className="app-a-focus-ring rounded-xl border border-black/10 p-2.5 text-[#0071E3] dark:border-white/15 dark:text-[#0A84FF]" aria-label={`Focus: ${item.title}`}><Timer className="h-4 w-4" /></button><button type="button" onClick={onOpenReset} className="app-a-focus-ring rounded-xl border border-black/10 p-2.5 text-[#0071E3] dark:border-white/15 dark:text-[#0A84FF]" aria-label={language === "sr" ? `Predah pre: ${item.title}` : language === "tr" ? `${item.title} öncesi mola` : `Reset before: ${item.title}`}><Wind className="h-4 w-4" /></button></div>}
+        {!isComplete && <div className="flex shrink-0 flex-col gap-1.5 sm:flex-row"><button type="button" onClick={() => setFocusItem(item)} className={emphasized ? "app-a-primary-button app-a-focus-ring justify-center gap-1.5 px-3 text-[13px]" : "app-a-focus-ring rounded-xl border border-black/10 p-2.5 text-[#0071E3] dark:border-white/15 dark:text-[#0A84FF]"} aria-label={`Focus: ${item.title}`}><Timer className="h-4 w-4" />{emphasized ? <span>{language === "sr" ? "Pokreni fokus" : language === "tr" ? "Odağı başlat" : "Start focus"}</span> : null}</button><button type="button" onClick={onOpenReset} className="app-a-focus-ring rounded-xl border border-black/10 p-2.5 text-[#0071E3] dark:border-white/15 dark:text-[#0A84FF]" aria-label={language === "sr" ? `Predah pre: ${item.title}` : language === "tr" ? `${item.title} öncesi mola` : `Reset before: ${item.title}`}><Wind className="h-4 w-4" /></button></div>}
       </div>
     );
   };
 
   return (
     <div className="mx-auto w-full max-w-[760px] px-5 pb-16 sm:px-6">
-      <header className="mb-7">
+      <header className="mb-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="mb-2 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#0071E3] dark:text-[#0A84FF]">
+            <p className="mb-1.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#0071E3] dark:text-[#0A84FF]">
               {t.today}
             </p>
-            <h1 className="text-[30px] font-bold leading-tight tracking-[-0.035em] text-black sm:text-[36px] dark:text-white">
+            <h1 className="text-[28px] font-bold leading-tight tracking-[-0.035em] text-black sm:text-[34px] dark:text-white">
               {t.todayPlanTitle}
             </h1>
           </div>
@@ -125,30 +125,20 @@ export default function TodayExecutionScreen({
             <span className="hidden sm:inline">{t.editTodayPlan}</span>
           </button>
         </div>
-        <p className="mt-3 max-w-[620px] text-[16px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
-          {t.todayPlanIntro}
-        </p>
-      </header>
-
-      <section className="app-a-surface mb-5 p-4 sm:p-5" aria-label={summary}>
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-[15px] font-semibold text-black dark:text-white">{summary}</span>
-          <span className="text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]">
-            {draft.plannedRequiredMinutes} min
-          </span>
-        </div>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/[0.07] dark:bg-white/[0.1]">
+        <div className="mt-3 flex items-center gap-3 text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]" aria-label={summary}>
+          <span className="shrink-0 font-medium">{summary}</span>
+          <div className="h-1.5 min-w-16 max-w-40 flex-1 overflow-hidden rounded-full bg-black/[0.07] dark:bg-white/[0.1]">
           <div
             className="h-full rounded-full bg-[#34C759] transition-[width]"
             style={{ width: `${todayItems.length ? (completed.length / todayItems.length) * 100 : 0}%` }}
           />
+          </div>
+          <span className="shrink-0">{draft.plannedRequiredMinutes} min</span>
         </div>
-        {draft.plannedFixedMinutes ? <p className="mt-2 text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]">{language === 'sr' ? `${draft.plannedFlexibleMinutes ?? 0} min fleksibilno + ${draft.plannedFixedMinutes} min fiksnih obaveza` : language === 'tr' ? `${draft.plannedFlexibleMinutes ?? 0} dk esnek + ${draft.plannedFixedMinutes} dk sabit yükümlülük` : `${draft.plannedFlexibleMinutes ?? 0} min flexible + ${draft.plannedFixedMinutes} min fixed commitments`}</p> : null}
-      </section>
+        {draft.plannedFixedMinutes ? <p className="mt-1.5 text-[12px] text-[#86868B]">{language === 'sr' ? `${draft.plannedFlexibleMinutes ?? 0} min fleksibilno · ${draft.plannedFixedMinutes} min fiksno` : language === 'tr' ? `${draft.plannedFlexibleMinutes ?? 0} dk esnek · ${draft.plannedFixedMinutes} dk sabit` : `${draft.plannedFlexibleMinutes ?? 0} min flexible · ${draft.plannedFixedMinutes} min fixed`}</p> : null}
+      </header>
 
       <DailyLoadWarning draft={draft} language={language} completedItemIds={completed} onReview={onEditPlan} />
-
-      <QuickAddTodayTask language={language} availableMinutes={draft.availableMinutes} plannedRequiredMinutes={draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes} onAddToday={onQuickAddToday} onSaveLater={onQuickSaveLater} onAdjustPlan={onEditPlan} />
 
       {error && (
         <div role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-[14px] font-medium text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
@@ -164,33 +154,43 @@ export default function TodayExecutionScreen({
       )}
 
       {requiredItems.length > 0 && (
-        <section className="mb-6" aria-labelledby="required-today-heading">
-          <h2 id="required-today-heading" className="mb-3 text-[19px] font-semibold tracking-[-0.015em] text-black dark:text-white">
+        <section className="mb-7" aria-labelledby="required-today-heading">
+          <h2 id="required-today-heading" className="mb-3 text-[14px] font-semibold uppercase tracking-[0.07em] text-[#6E6E73] dark:text-[#AEAEB2]">
             {t.requiredTodayLabel}
           </h2>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {requiredItems.map((item, index) => renderItem(item, index === 0 && !completed.includes(item.id)))}
           </div>
         </section>
       )}
 
       {optionalItems.length > 0 && (
-        <section className="mb-6" aria-labelledby="optional-today-heading">
-          <h2 id="optional-today-heading" className="mb-3 text-[17px] font-semibold text-[#6E6E73] dark:text-[#AEAEB2]">
-            {t.optionalTodayLabel}
-          </h2>
-          <div className="space-y-2">{optionalItems.map((item) => renderItem(item))}</div>
-        </section>
+        <details className="mb-6 rounded-2xl border border-black/[0.07] p-3 dark:border-white/[0.08]">
+          <summary id="optional-today-heading" className="app-a-focus-ring cursor-pointer px-1 text-[14px] font-semibold uppercase tracking-[0.07em] text-[#86868B]">
+            {t.optionalTodayLabel} ({optionalItems.length})
+          </summary>
+          <div className="mt-3 space-y-2">{optionalItems.map((item) => renderItem(item))}</div>
+        </details>
       )}
 
       {draft.intervention && (
         <SafeInterventionCard intervention={draft.intervention} language={language} onOpenReset={onOpenReset} />
       )}
 
+      <div className="mt-7 border-t border-black/[0.07] pt-5 dark:border-white/[0.08]">
+        <QuickAddTodayTask language={language} availableMinutes={draft.availableMinutes} plannedRequiredMinutes={draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes} onAddToday={onQuickAddToday} onSaveLater={onQuickSaveLater} onAdjustPlan={onEditPlan} />
+      </div>
+
       {outsideCount > 0 && (
-        <p className="mt-6 rounded-2xl bg-black/[0.035] p-4 text-[14px] leading-relaxed text-[#6E6E73] dark:bg-white/[0.06] dark:text-[#AEAEB2]">
-          {t.outsideTodaySummary.replace("{count}", String(outsideCount))}
-        </p>
+        <details className="mt-6 rounded-2xl border border-black/[0.07] bg-black/[0.025] p-4 text-[14px] dark:border-white/[0.08] dark:bg-white/[0.035]">
+          <summary className="app-a-focus-ring cursor-pointer font-medium text-[#6E6E73] dark:text-[#AEAEB2]">
+            {t.outsideTodaySummary.replace("{count}", String(outsideCount))}
+          </summary>
+          <div className="mt-3 space-y-3 border-t border-black/[0.07] pt-3 dark:border-white/[0.08]">
+            {draft.deferredItems.length ? <div><p className="text-[12px] font-semibold uppercase tracking-wide text-[#86868B]">{language === "sr" ? "Sačuvano u Inboksu za kasnije" : language === "tr" ? "Daha sonrası için Gelen Kutusuna kaydedildi" : "Saved in Inbox for later"}</p><ul className="mt-1.5 space-y-1">{draft.deferredItems.map((item) => <li key={item.id}>• {item.suggestedAction || item.originalText}</li>)}</ul></div> : null}
+            {[...draft.longTermIdeas, ...draft.nonActionItems].length ? <div><p className="text-[12px] font-semibold uppercase tracking-wide text-[#86868B]">{language === "sr" ? "Beleške bez zadatka za danas" : language === "tr" ? "Bugün için görev olmayan notlar" : "Notes without a task for today"}</p><ul className="mt-1.5 space-y-1 text-[#6E6E73] dark:text-[#AEAEB2]">{[...draft.longTermIdeas, ...draft.nonActionItems].map((item) => <li key={item.id}>• {item.originalText}</li>)}</ul></div> : null}
+          </div>
+        </details>
       )}
       {focusItem ? <FocusTimer item={focusItem} language={language} defaultMinutes={defaultFocusMinutes} onClose={() => setFocusItem(null)} /> : null}
     </div>

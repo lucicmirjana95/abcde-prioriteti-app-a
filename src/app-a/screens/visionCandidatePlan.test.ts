@@ -14,8 +14,8 @@ if ("draft" in added) {
   assert.equal("error" in dup && dup.error, "duplicate");
 }
 const exceeded = addVisionCandidateToPlan({ ...draft, availableMinutes: 20 }, candidate);
-assert.equal("error" in exceeded && exceeded.error, "capacity_exceeded");
+assert.equal("draft" in exceeded && exceeded.draft.ifCapacityRemains.length, 1);
 const unknownCap = addVisionCandidateToPlan({ ...draft, availableMinutes: undefined }, candidate);
-assert.equal("error" in unknownCap && unknownCap.error, "capacity_unknown");
+assert.equal("draft" in unknownCap && unknownCap.draft.laterToday.length, 1);
 assert.equal(draft.laterToday.length, 0);
 console.log("Vision candidate plan tests passed.");
