@@ -10,6 +10,12 @@ export interface AddInboxItemOptions {
   completedItemIds?: string[];
 }
 
+export function getInboxPlanningMinutes(item: AppAInboxItem): number {
+  return Number.isInteger(item.estimatedMinutes) && (item.estimatedMinutes || 0) > 0 && (item.estimatedMinutes || 0) <= 1440
+    ? item.estimatedMinutes as number
+    : 20;
+}
+
 export interface PriorityChangeSummary {
   firstFocus: string[];
   movedLater: string[];

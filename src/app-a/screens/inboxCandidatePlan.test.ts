@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import type { DailyPlanDraft } from "../domain/daily-reset/contracts";
 import type { AppAInboxItem } from "../domain/inbox/contracts";
-import { addInboxItemToPlan } from "./inboxCandidatePlan";
+import { addInboxItemToPlan, getInboxPlanningMinutes } from "./inboxCandidatePlan";
 
 const draft: DailyPlanDraft = {
   classifiedItems: [],
@@ -39,6 +39,8 @@ if ("draft" in added) {
   assert.equal("error" in duplicate && duplicate.error, "duplicate");
 }
 const missingDuration = addInboxItemToPlan(draft, { ...item, estimatedMinutes: undefined });
+assert.equal(getInboxPlanningMinutes({ ...item, estimatedMinutes: undefined }), 20);
+assert.equal(getInboxPlanningMinutes({ ...item, estimatedMinutes: 45 }), 45);
 const unknownCapacity = addInboxItemToPlan({ ...draft, availableMinutes: undefined }, item);
 const exceededCapacity = addInboxItemToPlan({ ...draft, availableMinutes: 10 }, item);
 assert.equal("error" in missingDuration && missingDuration.error, "duration_required");

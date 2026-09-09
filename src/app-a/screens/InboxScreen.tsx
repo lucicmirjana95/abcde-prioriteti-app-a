@@ -9,8 +9,7 @@ import { getLocalDateKeyInTimeZone } from "../persistence/dailyPlanDocument";
 import { loadConfirmedDailyPlan, loadRecentDailyPlans } from "../persistence/dailyPlanRepository";
 import { getEffectiveTimeZone } from "../settings/preferences";
 import type { AppALanguage, AppAPreferences } from "../types";
-import { addInboxItemToPlan } from "./inboxCandidatePlan";
-import { addMissingInboxDuration } from '../persistence/inboxRepository';
+import { addInboxItemToPlan, getInboxPlanningMinutes } from "./inboxCandidatePlan";
 import { useDataRefresh } from '../persistence/useDataRefresh';
 import { clarifyInboxNote, type NoteClarification } from "../api/noteClarificationApi";
 
@@ -41,9 +40,7 @@ export default function InboxScreen({ language, preferences }: { language: AppAL
   const [processing, setProcessing] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [openActions, setOpenActions] = useState<string | null>(null);
-  const [durationForToday, setDurationForToday] = useState<string | null>(null);
   const [scheduleFor, setScheduleFor] = useState<Record<string, string>>({});
-  const [missingMinutes, setMissingMinutes] = useState<Record<string, string>>({});
   const [clarifyingId, setClarifyingId] = useState<string | null>(null);
   const [clarifiedAction, setClarifiedAction] = useState("");
   const [clarificationHelp, setClarificationHelp] = useState<NoteClarification | null>(null);
@@ -107,26 +104,18 @@ export default function InboxScreen({ language, preferences }: { language: AppAL
   const scheduleToday = async (item: AppAInboxItem): Promise<AppAInboxItem | null> => {
     const localDate = getLocalDateKeyInTimeZone(effectiveTimeZone); const document = await loadConfirmedDailyPlan(user.uid, localDate);
     if (!document) { setError(t.noPlan); return null; }
-    const result = addInboxItemToPlan(document.plan, item);
+    const estimatedItem = { ...item, estimatedMinutes: getInboxPlanningMinutes(item) };
+    const result = addInboxItemToPlan(document.plan, estimatedItem);
     if ("error" in result) { setError(result.error === "duplicate" ? t.duplicate : result.error === "duration_required" ? t.durationNeeded : result.error.includes("capacity") ? t.capacity : t.error); return null; }
-    const scheduled = await savePlanAndScheduleInboxItemAtomic(user.uid, { ...document, plan: result.draft }, item);
+    const scheduled = await savePlanAndScheduleInboxItemAtomic(user.uid, { ...document, plan: result.draft }, estimatedItem);
     return scheduled.item;
   };
   const addToday = (item: AppAInboxItem) => {
-    if (!item.estimatedMinutes) { setDurationForToday(item.id); setOpenActions(null); return; }
     void run(item.id, async () => {
       const scheduled = await scheduleToday(item);
       if (scheduled) setItems((all) => all.map((entry) => entry.id === item.id ? scheduled : entry));
     });
   };
-  const saveDurationAndAddToday = (item: AppAInboxItem) => run(item.id, async () => {
-    const minutes = Number(missingMinutes[item.id]);
-    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440) { setError(t.durationNeeded); return; }
-    const withDuration = await addMissingInboxDuration(user.uid, item.id, minutes);
-    const scheduled = await scheduleToday(withDuration);
-    setItems((all) => all.map((entry) => entry.id === item.id ? scheduled || withDuration : entry));
-    if (scheduled) setDurationForToday(null);
-  });
   const taskFilters: Array<[Exclude<Filter, "notes">, string]> = [["all", t.active], ["this_week", t.week], ["later", t.later], ["waiting", t.waiting], ["scheduled", t.scheduled], ["completed", t.completed], ["archived", t.archived]];
 
   return <div className="mx-auto w-full max-w-[760px] px-4 pb-10 sm:px-6">
@@ -169,12 +158,6 @@ export default function InboxScreen({ language, preferences }: { language: AppAL
           </div>
           {processing === item.id ? <Loader2 className="mt-1 h-5 w-5 shrink-0 animate-spin" /> : <button type="button" aria-label={t.more} aria-expanded={openActions === item.id} onClick={() => setOpenActions((open) => open === item.id ? null : item.id)} className="app-a-secondary-button app-a-focus-ring h-11 w-11 shrink-0 p-0"><Ellipsis className="h-5 w-5" /></button>}
         </div>
-
-        {durationForToday === item.id ? <div className="mt-3 flex min-w-0 flex-wrap gap-2 rounded-xl bg-black/[0.025] p-2.5 dark:bg-white/[0.04]">
-          <input autoFocus type="number" min="1" max="1440" inputMode="numeric" aria-label={t.duration} placeholder={t.duration} className="app-a-field app-a-focus-ring min-h-11 min-w-[120px] flex-1 px-3 text-[16px]" value={missingMinutes[item.id] || ""} onChange={(event) => setMissingMinutes((values) => ({ ...values, [item.id]: event.target.value }))} />
-          <button type="button" disabled={Boolean(processing) || !missingMinutes[item.id]} onClick={() => void saveDurationAndAddToday(item)} className="app-a-primary-button app-a-focus-ring min-h-11 shrink-0 px-3 text-[13px]">{t.saveAndAdd}</button>
-          <button type="button" onClick={() => setDurationForToday(null)} className="app-a-secondary-button app-a-focus-ring min-h-11 shrink-0 px-3 text-[13px]">{t.cancel}</button>
-        </div> : null}
 
         <div className="mt-3 flex min-w-0 flex-wrap gap-2">
           {isNote ? <button type="button" onClick={() => { setClarifyingId(item.id); setClarifiedAction(""); setClarificationHelp(null); }} className="app-a-primary-button app-a-focus-ring min-h-11 px-3 text-[13px]">{CLARIFY_COPY[language].clarify}</button> : canAddToday ? <button type="button" onClick={() => addToday(item)} disabled={Boolean(processing)} className="app-a-primary-button app-a-focus-ring min-h-11 px-3 text-[13px]"><CalendarPlus className="h-4 w-4" />{t.addToday}</button> : null}
