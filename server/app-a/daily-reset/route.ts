@@ -43,6 +43,24 @@ function localizeTimeoutError(lang: string) {
   return "Planning took too long this time. Your input is preserved — you can try again.";
 }
 
+function localizeServiceError(lang: string) {
+  if (lang === "sr") return "Usluga je privremeno nedostupna. Pokušajte ponovo.";
+  if (lang === "tr") return "Hizmet geçici olarak kullanılamıyor. Tekrar deneyin.";
+  return "Service is temporarily unavailable. Please try again.";
+}
+
+function localizeRateLimitError(lang: string) {
+  if (lang === "sr") return "Previše zahteva. Pokušajte ponovo malo kasnije.";
+  if (lang === "tr") return "Çok fazla istek gönderildi. Lütfen biraz sonra tekrar deneyin.";
+  return "Too many requests. Please try again later.";
+}
+
+function localizeUnexpectedError(lang: string) {
+  if (lang === "sr") return "Došlo je do neočekivane greške. Pokušajte ponovo.";
+  if (lang === "tr") return "Beklenmeyen bir hata oluştu. Tekrar deneyin.";
+  return "An unexpected error occurred. Please try again.";
+}
+
 export function createDailyResetRoute(
   isEnabledResolver: () => boolean,
   generateFn: (prompt: string, schema: any, meta?: any) => Promise<unknown>,
@@ -62,12 +80,15 @@ export function createDailyResetRoute(
     let clarificationAnswersCharCount = 0;
 
     try {
+      const requestedLanguage = req.body?.input?.language ?? req.body?.submission?.language;
+      if (requestedLanguage === "sr" || requestedLanguage === "tr") language = requestedLanguage;
       if (!isEnabledResolver()) {
         res.status(503).json({
           success: false,
           phase: "error",
           code: "service_unavailable",
-          error: "Endpoint is currently disabled."
+          error: localizeServiceError(language),
+          retryable: true
         });
         return;
       }
@@ -94,7 +115,8 @@ export function createDailyResetRoute(
           success: false,
           phase: "error",
           code: "rate_limited",
-          error: "Too many requests. Please try again later."
+          error: localizeRateLimitError(language),
+          retryable: true
         });
         return;
       }
@@ -105,7 +127,8 @@ export function createDailyResetRoute(
           success: false, 
           phase: "error", 
           code: "invalid_input", 
-          error: "Invalid request body." 
+          error: "Invalid request body.",
+          retryable: false
         });
         return;
       }
@@ -123,13 +146,14 @@ export function createDailyResetRoute(
             phase: "error",
             code: "invalid_input",
             error: localizeInvalidInput(body.input?.language || "en"),
+            retryable: false,
             fieldErrors: validation.fieldErrors
           });
           return;
         }
         const stateValidation = validateRequiredPlanningState(body.input || {});
         if (!stateValidation.valid) {
-          res.status(400).json({ success: false, phase: "error", code: "invalid_input", error: localizeInvalidInput(body.input?.language || "en"), fieldErrors: stateValidation.fieldErrors });
+          res.status(400).json({ success: false, phase: "error", code: "invalid_input", error: localizeInvalidInput(body.input?.language || "en"), retryable: false, fieldErrors: stateValidation.fieldErrors });
           return;
         }
         prompt = buildDailyResetPrompt(body.input);
@@ -143,7 +167,8 @@ export function createDailyResetRoute(
             success: false, 
             phase: "error", 
             code: "invalid_input", 
-            error: localizeInvalidInput(body.submission?.language || "en")
+            error: localizeInvalidInput(body.submission?.language || "en"),
+            retryable: false
           });
           return;
         }
@@ -155,13 +180,14 @@ export function createDailyResetRoute(
             phase: "error",
             code: "invalid_input",
             error: localizeInvalidInput(body.submission?.language || "en"),
+            retryable: false,
             fieldErrors: validation.fieldErrors
           });
           return;
         }
         const stateValidation = validateRequiredPlanningState(body.submission || {});
         if (!stateValidation.valid) {
-          res.status(400).json({ success: false, phase: "error", code: "invalid_input", error: localizeInvalidInput(body.submission?.language || "en"), fieldErrors: stateValidation.fieldErrors });
+          res.status(400).json({ success: false, phase: "error", code: "invalid_input", error: localizeInvalidInput(body.submission?.language || "en"), retryable: false, fieldErrors: stateValidation.fieldErrors });
           return;
         }
         prompt = buildDailyResetPrompt(body.submission, body.questions);
@@ -180,7 +206,8 @@ export function createDailyResetRoute(
           success: false, 
           phase: "error", 
           code: "invalid_input", 
-          error: "Invalid phase." 
+          error: "Invalid phase.",
+          retryable: false
         });
         return;
       }
@@ -211,7 +238,8 @@ export function createDailyResetRoute(
             success: false,
             phase: "error",
             code: "timeout",
-            error: localizeTimeoutError(language)
+            error: localizeTimeoutError(language),
+            retryable: true
           });
           return;
         }
@@ -219,7 +247,8 @@ export function createDailyResetRoute(
           success: false,
           phase: "error",
           code: "service_unavailable",
-          error: "AI service is temporarily unavailable."
+          error: localizeServiceError(language),
+          retryable: true
         });
         return;
       } finally {
@@ -287,8 +316,9 @@ export function createDailyResetRoute(
       res.status(500).json({
         success: false,
         phase: "error",
-        code: "internal_error",
-        error: "An unexpected internal error occurred."
+        code: "unknown",
+        error: localizeUnexpectedError(language),
+        retryable: true
       });
     }
   };
