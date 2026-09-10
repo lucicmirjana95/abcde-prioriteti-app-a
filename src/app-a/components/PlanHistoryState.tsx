@@ -34,9 +34,11 @@ interface Props {
   onSignIn?: () => void;
   errorText?: string;
   retryLabel?: string;
+  signInTitle?: string;
+  signInText?: string;
 }
 
-export default function PlanHistoryState({ language, state, onSignIn, errorText, retryLabel }: Props) {
+export default function PlanHistoryState({ language, state, onSignIn, errorText, retryLabel, signInTitle, signInText }: Props) {
   const t = COPY[language] || COPY.en;
   if (state === "loading") {
     return (
@@ -72,8 +74,8 @@ export default function PlanHistoryState({ language, state, onSignIn, errorText,
       >
         <LogIn className="h-5 w-5" aria-hidden="true" />
       </span>
-      <h2 className="text-[19px] font-semibold" style={{ color: "var(--app-a-text)" }}>{t.signInTitle}</h2>
-      <p className="max-w-sm text-[15px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>{t.signInText}</p>
+      <h2 className="text-[19px] font-semibold" style={{ color: "var(--app-a-text)" }}>{signInTitle || t.signInTitle}</h2>
+      <p className="max-w-sm text-[15px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>{signInText || t.signInText}</p>
       <button type="button" onClick={onSignIn} className="app-a-primary-button app-a-focus-ring mt-2 px-6">
         {t.signIn}
       </button>
