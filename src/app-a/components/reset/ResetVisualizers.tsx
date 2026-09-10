@@ -338,14 +338,15 @@ export function GuidedRestVisualizer({
 
   return (
     <div className="mx-auto max-w-md text-center">
-      <div className="relative mx-auto flex h-[190px] w-[190px] items-center justify-center" aria-hidden="true">
-        <div className="absolute inset-2 rounded-full border border-[#64D2FF]/25" />
-        <div className={`absolute h-32 w-32 rounded-[44%_56%_52%_48%/47%_43%_57%_53%] bg-gradient-to-br from-[#64D2FF]/30 via-[#5E5CE6]/20 to-[#AF52DE]/20 shadow-[0_0_48px_rgba(94,92,230,.18)] ${prefersReducedMotion ? "" : "app-a-rest-orb"}`} style={{ transform: prefersReducedMotion ? "scale(.88)" : undefined }} />
+      <div className="relative mx-auto flex h-[160px] w-[160px] items-center justify-center" aria-hidden="true">
+        <div className={`absolute inset-2 rounded-full border border-[#64D2FF]/30 ${prefersReducedMotion ? "" : "app-a-rest-ring"}`} />
+        <div className="absolute inset-6 rounded-full bg-[#64D2FF]/[0.06] blur-md" />
+        <div className={`absolute h-28 w-28 rounded-[44%_56%_52%_48%/47%_43%_57%_53%] bg-gradient-to-br from-[#64D2FF]/40 via-[#5E5CE6]/25 to-[#AF52DE]/25 shadow-[0_0_42px_rgba(94,92,230,.22)] ${prefersReducedMotion ? "" : "app-a-rest-orb"}`} style={{ transform: prefersReducedMotion ? "scale(.88)" : undefined }} />
         <div className="relative text-center"><p className="text-[38px] font-semibold tabular-nums tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">{formattedTime}</p><p className="mt-1 text-[11px] font-semibold uppercase tracking-[.12em] text-[#6E6E73] dark:text-[#AEAEB2]">{stageLabels[stageIndex]}</p></div>
       </div>
 
       {/* Stage Timeline */}
-      <div className="mt-4 flex items-center justify-between gap-1.5 px-2">
+      <div className="mt-2 flex items-center justify-between gap-1.5 px-2">
         {stageLabels.map((stg, idx) => {
           const isCurrent = idx === stageIndex;
           const isDone = idx < stageIndex;
@@ -379,7 +380,7 @@ export function GuidedRestVisualizer({
       </div>
 
       {/* Progress Bar */}
-      <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-black/5 dark:bg-white/5">
+      <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-black/5 dark:bg-white/5">
         <div
           className="h-full bg-[#0071e3] transition-all duration-300 dark:bg-[#2997ff]"
           style={{ width: `${progressPercent}%` }}
@@ -387,8 +388,8 @@ export function GuidedRestVisualizer({
       </div>
 
       {/* Guidance Text Card */}
-      <div className="mt-6 rounded-2xl bg-black/[0.03] p-5 dark:bg-white/[0.03] border border-black/5 dark:border-white/5">
-        <p className="text-[17px] font-normal leading-relaxed text-[#1d1d1f] dark:text-[#f5f5f7]">
+      <div className="mt-4 rounded-2xl bg-black/[0.03] p-4 dark:bg-white/[0.03] border border-black/5 dark:border-white/5">
+        <p className="text-[16px] font-normal leading-relaxed text-[#1d1d1f] dark:text-[#f5f5f7]">
           {stageDescription}
         </p>
       </div>

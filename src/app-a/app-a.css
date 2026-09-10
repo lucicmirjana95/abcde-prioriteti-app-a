@@ -105,8 +105,18 @@
   will-change: transform, border-radius;
 }
 
+@keyframes app-a-rest-ring-breathe {
+  0%, 100% { opacity: .35; transform: scale(.9); }
+  50% { opacity: .9; transform: scale(1); }
+}
+
+.app-a-rest-ring {
+  animation: app-a-rest-ring-breathe 8s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .app-a-rest-orb { animation: none; }
+  .app-a-rest-orb, .app-a-rest-ring { animation: none; }
 }
 
 /* Form Fields */

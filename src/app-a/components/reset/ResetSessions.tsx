@@ -846,7 +846,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
             )}
 
             {/* Interaction Buttons */}
-            <div className="mt-6 grid min-w-0 grid-cols-2 gap-2.5">
+            <div className={`mt-5 grid min-w-0 grid-cols-2 gap-2.5 ${embedded ? "sticky bottom-0 z-10 -mx-2 border-t border-black/10 bg-[var(--app-a-surface)] px-2 pb-2 pt-3 shadow-[0_-10px_24px_rgba(0,0,0,.06)] dark:border-white/10" : ""}`}>
               {sessionStatus === "idle" && (
                 <button
                   type="button"
