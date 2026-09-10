@@ -33,6 +33,7 @@ const COPY = {
     ai: "AI daily planning",
     aiHelp: "Turning this off prevents new AI daily plans; saved content remains available.",
     logout: "Sign out",
+    logoutError: "Sign-out could not be completed. Try again.",
   },
   sr: {
     eyebrow: "Vaše preference",
@@ -53,6 +54,7 @@ const COPY = {
     ai: "AI dnevno planiranje",
     aiHelp: "Isključivanje sprečava nove AI dnevne planove; sačuvani sadržaj ostaje dostupan.",
     logout: "Odjavi se",
+    logoutError: "Odjava nije završena. Pokušajte ponovo.",
   },
   tr: {
     eyebrow: "Tercihleriniz",
@@ -73,6 +75,7 @@ const COPY = {
     ai: "AI günlük planlama",
     aiHelp: "Kapatıldığında yeni AI günlük planları durur; kayıtlı içerik kalır.",
     logout: "Çıkış yap",
+    logoutError: "Çıkış tamamlanamadı. Tekrar deneyin.",
   },
 } as const;
 
@@ -265,6 +268,7 @@ export default function SettingsScreen({
   const t = COPY[language];
   const tReset = DATA_RESET_LOCALIZATION[language] || DATA_RESET_LOCALIZATION.en;
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [signOutError, setSignOutError] = useState(false);
 
   const { user } = useAppAAuth();
 
@@ -448,14 +452,17 @@ export default function SettingsScreen({
         />
       )}
 
-      <button
-        type="button"
-        onClick={() => void signOut(auth)}
-        className="app-a-secondary-button app-a-focus-ring mt-5 w-full gap-2 text-[14px]"
-      >
-        <LogOut className="h-4 w-4" />
-        {t.logout}
-      </button>
+      {user ? <>
+        <button
+          type="button"
+          onClick={() => { setSignOutError(false); void signOut(auth).catch(() => setSignOutError(true)); }}
+          className="app-a-secondary-button app-a-focus-ring mt-5 w-full gap-2 text-[14px]"
+        >
+          <LogOut className="h-4 w-4" />
+          {t.logout}
+        </button>
+        {signOutError ? <p role="alert" className="mt-2 text-center text-[12px]" style={{ color: "var(--app-a-danger)" }}>{t.logoutError}</p> : null}
+      </> : null}
 
       <div className="mt-4 flex justify-center text-[#8E8E93]">
         <Settings2 className="h-4 w-4" />
@@ -463,4 +470,3 @@ export default function SettingsScreen({
     </div>
   );
 }
-
