@@ -461,7 +461,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
             id="app-a-reset-sound-toggle"
             onClick={() => void toggleSound()}
             aria-label={soundEnabled ? tCommon.muteSound : tCommon.unmuteSound}
-            className="app-a-focus-ring inline-flex h-9 items-center gap-1.5 rounded-lg border border-black/10 px-2.5 text-[12px] font-medium text-[#1d1d1f] hover:bg-black/5 dark:border-white/15 dark:text-[#f5f5f7] dark:hover:bg-white/5"
+            className="app-a-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-black/10 px-2.5 text-[12px] font-medium text-[#1d1d1f] hover:bg-black/5 dark:border-white/15 dark:text-[#f5f5f7] dark:hover:bg-white/5"
           >
             {soundEnabled ? (
               <>

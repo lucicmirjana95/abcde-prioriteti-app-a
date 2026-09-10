@@ -250,7 +250,7 @@ export default function DailyPlanItemRow({
               <button
                 type="button"
                 onClick={() => setShowWhy(!showWhy)}
-                className="inline-flex min-h-[32px] items-center text-[13px] font-medium transition-colors"
+                className="app-a-focus-ring inline-flex min-h-11 items-center text-[13px] font-medium transition-colors"
                 style={{ color: "var(--app-a-accent)" }}
               >
                 {t.whyLabel} {showWhy ? "▲" : "▼"}

@@ -222,7 +222,7 @@ export default function DailyResetForm({
             <button
               type="button"
               onClick={() => setShowNote(true)}
-              className="app-a-focus-ring inline-flex min-h-[36px] items-center text-[13px] font-medium transition-colors hover:underline"
+              className="app-a-focus-ring inline-flex min-h-11 items-center text-[13px] font-medium transition-colors hover:underline"
               style={{ color: "var(--app-a-accent)" }}
             >
               {t.stateNoteToggle || (language === 'sr' ? '+ Dodaj kratku belešku o stanju' : language === 'tr' ? '+ Durumun hakkında kısa bir not ekle' : '+ Add a quick note about your state')}

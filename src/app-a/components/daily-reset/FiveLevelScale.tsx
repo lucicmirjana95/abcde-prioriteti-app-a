@@ -33,7 +33,7 @@ export default function FiveLevelScale({ id, label, value, onChange, options, cl
           <button
             type="button"
             onClick={() => onChange(undefined)}
-            className="app-a-focus-ring min-h-[36px] rounded-lg px-2 text-[12px] font-medium transition-colors"
+            className="app-a-focus-ring min-h-11 rounded-lg px-2 text-[12px] font-medium transition-colors"
             style={{ color: "var(--app-a-accent)" }}
           >
             {clearLabel}
