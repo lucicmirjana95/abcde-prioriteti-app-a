@@ -115,6 +115,20 @@ export function estimateVisionStepMinutes(
   return 20;
 }
 
+/**
+ * Secondary visions are deliberately surfaced on a stable, low-frequency
+ * cadence. The result is deterministic for a user and local calendar date,
+ * so rerenders never make the suggestion appear or disappear at random.
+ */
+export function shouldSurfaceSecondaryVision(userId: string, localDate: string): boolean {
+  if (!userId.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(localDate)) return false;
+  const epochDay = Math.floor(Date.parse(`${localDate}T12:00:00Z`) / 86_400_000);
+  if (!Number.isFinite(epochDay)) return false;
+  let userBucket = 0;
+  for (const character of userId) userBucket = (userBucket + character.codePointAt(0)!) % 3;
+  return (epochDay + userBucket) % 3 === 0;
+}
+
 export function createSequencedVisionCandidate(
   document: SavedVisionStrategy,
   sequenceIndex: number,

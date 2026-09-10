@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createSequencedVisionCandidate, createTodayCandidateId, estimateVisionStepMinutes, getNextVisionSequenceIndex, getVisionStepSequence, isTodayCandidate, nextVisionCandidate, visionStepKey, type TodayCandidate } from "./contracts";
+import { createSequencedVisionCandidate, createTodayCandidateId, estimateVisionStepMinutes, getNextVisionSequenceIndex, getVisionStepSequence, isTodayCandidate, nextVisionCandidate, shouldSurfaceSecondaryVision, visionStepKey, type TodayCandidate } from "./contracts";
 import type { SavedVisionStrategy } from "../vision";
 
 const candidate: TodayCandidate = {
@@ -70,5 +70,11 @@ const first = nextVisionCandidate(brokenDown, [])!;
 assert.equal(nextVisionCandidate(brokenDown, [first]), null);
 assert.equal(nextVisionCandidate(brokenDown, [{ ...first, status: 'dismissed' }])?.title, 'Order the chapter topics');
 assert.equal(nextVisionCandidate({ ...brokenDown, status: 'archived' }, []), null);
+
+assert.equal(shouldSurfaceSecondaryVision("", "2026-09-10"), false);
+assert.equal(shouldSurfaceSecondaryVision("user-1", "invalid"), false);
+const secondaryCadence = ["2026-09-10", "2026-09-11", "2026-09-12"].map(date => shouldSurfaceSecondaryVision("user-1", date));
+assert.equal(secondaryCadence.filter(Boolean).length, 1, "A secondary Vision is offered on exactly one of every three consecutive local dates");
+assert.equal(shouldSurfaceSecondaryVision("user-1", "2026-09-10"), shouldSurfaceSecondaryVision("user-1", "2026-09-10"), "The cadence is stable across rerenders");
 
 console.log("Today candidate contract tests passed.");

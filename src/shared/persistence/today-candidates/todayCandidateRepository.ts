@@ -18,19 +18,30 @@ export async function saveTodayCandidate(userId: string, candidate: TodayCandida
   await setDoc(doc(db, "users", userId, "todayCandidates", candidate.id), candidate, { merge: false });
 }
 
-export async function loadPendingTodayCandidates(userId: string): Promise<TodayCandidate[]> {
+export interface PendingTodayCandidatesContext {
+  items: TodayCandidate[];
+  currentVisionId: string | null;
+}
+
+export async function loadPendingTodayCandidatesContext(userId: string): Promise<PendingTodayCandidatesContext> {
   await requireUser(userId);
   const [snapshot, strategies, userSnapshot] = await Promise.all([getDocs(collection(db, "users", userId, "todayCandidates")), getDocs(collection(db, "users", userId, "visionStrategies")), getDoc(doc(db, "users", userId))]);
   const active = new Set(strategies.docs.map(entry => entry.data()).filter(isSavedVisionStrategy).filter(item => item.status !== 'archived').map(item => item.id));
   const activeStrategies = new Map(strategies.docs.map(entry => entry.data()).filter(isSavedVisionStrategy).filter(item => item.status !== 'archived').map(item => [item.id, item]));
   const focusId = typeof userSnapshot.data()?.currentVisionId === "string" ? userSnapshot.data()!.currentVisionId : null;
-  return snapshot.docs.map((entry) => entry.data()).filter(isTodayCandidate)
+  const currentVisionId = focusId && active.has(focusId) ? focusId : null;
+  const items = snapshot.docs.map((entry) => entry.data()).filter(isTodayCandidate)
     .filter((item) => item.status === "pending" && active.has(item.sourceId))
     .map((item) => {
       const strategy = activeStrategies.get(item.sourceId);
       return { ...item, isCurrentFocus: item.sourceId === focusId, ...(strategy ? { sourceTitle: strategy.planningContext?.acceptedGoal || strategy.idea } : {}) };
     })
-    .sort((a, b) => Number(b.sourceId === focusId) - Number(a.sourceId === focusId) || b.updatedAt.localeCompare(a.updatedAt));
+    .sort((a, b) => Number(b.sourceId === currentVisionId) - Number(a.sourceId === currentVisionId) || b.updatedAt.localeCompare(a.updatedAt));
+  return { items, currentVisionId };
+}
+
+export async function loadPendingTodayCandidates(userId: string): Promise<TodayCandidate[]> {
+  return (await loadPendingTodayCandidatesContext(userId)).items;
 }
 
 export async function dismissTodayCandidate(userId: string, candidate: TodayCandidate): Promise<void> {

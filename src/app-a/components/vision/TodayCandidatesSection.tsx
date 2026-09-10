@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { ArrowUp, CalendarPlus, Check, ChevronDown, Clock3, Compass, Pencil, X } from "lucide-react";
 import type { AppALanguage } from "../../types";
-import { estimateVisionStepMinutes, type TodayCandidate } from "../../../shared/domain/today-candidates";
-import { dismissTodayCandidate, ensurePendingVisionCandidates, loadPendingTodayCandidates } from "../../../shared/persistence/today-candidates";
+import { estimateVisionStepMinutes, shouldSurfaceSecondaryVision, type TodayCandidate } from "../../../shared/domain/today-candidates";
+import { dismissTodayCandidate, ensurePendingVisionCandidates, loadPendingTodayCandidatesContext } from "../../../shared/persistence/today-candidates";
 
 export type TodayPlanState = "none" | "draft" | "confirmed";
 
@@ -26,7 +26,7 @@ const COPY = {
     cancelDuration: "Cancel",
     currentFocus: "Current focus",
     otherVisions: "Keep another vision moving?",
-    otherVisionsHelp: "Optional: review a small step from another active vision. Nothing is added unless you choose it.",
+    otherVisionsHelp: "Occasionally, you can review one small optional step from another active vision. Nothing is added unless you choose it.",
     fromVision: "From",
     chooseFocus: "Choose a Vision focus",
     chooseFocusHelp: "No active vision currently guides Today.",
@@ -50,7 +50,7 @@ const COPY = {
     cancelDuration: "Otkaži",
     currentFocus: "Trenutni fokus",
     otherVisions: "Pokrenuti i drugu viziju?",
-    otherVisionsHelp: "Opciono: pregledajte mali korak iz druge aktivne vizije. Ništa se ne dodaje bez vašeg izbora.",
+    otherVisionsHelp: "Povremeno možete pregledati jedan mali opcioni korak iz druge aktivne vizije. Ništa se ne dodaje bez vašeg izbora.",
     fromVision: "Iz vizije",
     chooseFocus: "Izaberi fokus Vizije",
     chooseFocusHelp: "Trenutno nijedna aktivna vizija ne vodi Danas.",
@@ -74,7 +74,7 @@ const COPY = {
     cancelDuration: "İptal",
     currentFocus: "Mevcut odak",
     otherVisions: "Başka bir vizyon da ilerlesin mi?",
-    otherVisionsHelp: "İsteğe bağlı: başka bir aktif vizyondan küçük bir adımı inceleyin. Siz seçmeden hiçbir şey eklenmez.",
+    otherVisionsHelp: "Bazen başka bir aktif vizyondan küçük ve isteğe bağlı tek bir adımı inceleyebilirsiniz. Siz seçmeden hiçbir şey eklenmez.",
     fromVision: "Vizyon",
     chooseFocus: "Vizyon odağını seç",
     chooseFocusHelp: "Şu anda hiçbir aktif vizyon Bugün'ü yönlendirmiyor.",
@@ -90,14 +90,16 @@ function formatEstimatedDuration(minutes: number, language: AppALanguage): strin
 interface Props {
   userId?: string | null;
   language: AppALanguage;
+  localDate: string;
   planState: TodayPlanState;
   onPlanAction: () => void;
   onAddToPlan: (candidate: TodayCandidate) => Promise<string | null>;
   onOpenVision: () => void;
 }
 
-export default function TodayCandidatesSection({ userId, language, planState, onPlanAction, onAddToPlan, onOpenVision }: Props) {
+export default function TodayCandidatesSection({ userId, language, localDate, planState, onPlanAction, onAddToPlan, onOpenVision }: Props) {
   const [items, setItems] = useState<TodayCandidate[]>([]);
+  const [currentVisionId, setCurrentVisionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [refreshVersion, setRefreshVersion] = useState(0);
@@ -109,10 +111,10 @@ export default function TodayCandidatesSection({ userId, language, planState, on
   const t = COPY[language];
 
   useEffect(() => {
-    if (!userId) { setItems([]); return; }
+    if (!userId) { setItems([]); setCurrentVisionId(null); return; }
     let active = true;
     setError(null);
-    void ensurePendingVisionCandidates(userId).then(() => loadPendingTodayCandidates(userId)).then((value) => { if (active) setItems(value); }).catch(() => { if (active) setError("error"); });
+    void ensurePendingVisionCandidates(userId).then(() => loadPendingTodayCandidatesContext(userId)).then((value) => { if (active) { setItems(value.items); setCurrentVisionId(value.currentVisionId); } }).catch(() => { if (active) setError("error"); });
     return () => { active = false; };
   }, [userId, refreshVersion]);
 
@@ -168,7 +170,9 @@ export default function TodayCandidatesSection({ userId, language, planState, on
   const planAction = planState === "none" ? t.createPlan : t.reviewPlan;
 
   const primary = items.find(item => item.isCurrentFocus);
-  const others = items.filter(item => item.id !== primary?.id);
+  const others = currentVisionId && shouldSurfaceSecondaryVision(userId || "", localDate)
+    ? items.filter(item => item.sourceId !== currentVisionId).slice(0, 1)
+    : [];
   const renderCandidate = (item: TodayCandidate, isPrimary = false) => {
     const minutes = getEffectiveMinutes(item);
     const isEditingThis = editingId === item.id;
@@ -207,7 +211,7 @@ export default function TodayCandidatesSection({ userId, language, planState, on
       ) : null}
       <div className="mt-3 space-y-2.5">
         {primary ? renderCandidate(primary, true) : null}
-        {!primary&&items.length>0?<div className="app-a-panel-warning"><p className="text-[13px] leading-relaxed">{t.chooseFocusHelp}</p><button type="button" onClick={onOpenVision} className="app-a-secondary-button app-a-focus-ring mt-3 px-4 text-[13px]"><Compass className="h-4 w-4"/>{t.chooseFocus}</button></div>:null}
+        {!currentVisionId&&items.length>0?<div className="app-a-panel-warning"><p className="text-[13px] leading-relaxed">{t.chooseFocusHelp}</p><button type="button" onClick={onOpenVision} className="app-a-secondary-button app-a-focus-ring mt-3 px-4 text-[13px]"><Compass className="h-4 w-4"/>{t.chooseFocus}</button></div>:null}
         {others.length ? <div className="rounded-xl border p-3" style={{borderColor:"var(--app-a-border)",backgroundColor:"var(--app-a-surface-secondary)"}}><button type="button" onClick={()=>setShowOthers(value=>!value)} aria-expanded={showOthers} className="app-a-focus-ring flex min-h-11 w-full items-center justify-between gap-3 text-left"><span><span className="block text-[14px] font-semibold">{t.otherVisions}</span><span className="mt-0.5 block text-[12px] font-normal leading-relaxed" style={{color:"var(--app-a-text-secondary)"}}>{t.otherVisionsHelp}</span></span><span className="inline-flex shrink-0 items-center gap-1 text-[12px]">{others.length}<ChevronDown className={`h-4 w-4 transition-transform ${showOthers?"rotate-180":""}`}/></span></button>{showOthers ? <div className="mt-3 space-y-2.5">{others.map(item=>renderCandidate(item))}</div> : null}</div> : null}
         {false && items.map((item) => {
           const minutes = getEffectiveMinutes(item);

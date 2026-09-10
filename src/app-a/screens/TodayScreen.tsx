@@ -615,6 +615,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
           <TodayCandidatesSection
             userId={user?.uid}
             language={language}
+            localDate={activePlanDate}
             planState={!state.planDraft ? 'none' : viewMode === 'execution' ? 'confirmed' : 'draft'}
             onPlanAction={() => {
               const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
