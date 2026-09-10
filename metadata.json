@@ -1,6 +1,6 @@
 {
-  "name": "Kaizen Flow",
-  "description": "Premium full-stack platforma za kretanje kroz duboki fokus, kognitivno restrukturiranje, biohacking dopamina i harmonizaciju životnih osnova uz stalne asistenčne krugove.",
+  "name": "Daily Reset",
+  "description": "Turn what is on your mind into a realistic daily plan shaped around your priorities, energy, mood, and fixed commitments.",
   "requestFramePermissions": ["microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
