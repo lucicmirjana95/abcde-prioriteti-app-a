@@ -22,10 +22,14 @@ export async function loadPendingTodayCandidates(userId: string): Promise<TodayC
   await requireUser(userId);
   const [snapshot, strategies, userSnapshot] = await Promise.all([getDocs(collection(db, "users", userId, "todayCandidates")), getDocs(collection(db, "users", userId, "visionStrategies")), getDoc(doc(db, "users", userId))]);
   const active = new Set(strategies.docs.map(entry => entry.data()).filter(isSavedVisionStrategy).filter(item => item.status !== 'archived').map(item => item.id));
+  const activeStrategies = new Map(strategies.docs.map(entry => entry.data()).filter(isSavedVisionStrategy).filter(item => item.status !== 'archived').map(item => [item.id, item]));
   const focusId = typeof userSnapshot.data()?.currentVisionId === "string" ? userSnapshot.data()!.currentVisionId : null;
   return snapshot.docs.map((entry) => entry.data()).filter(isTodayCandidate)
     .filter((item) => item.status === "pending" && active.has(item.sourceId))
-    .map((item) => ({ ...item, isCurrentFocus: item.sourceId === focusId }))
+    .map((item) => {
+      const strategy = activeStrategies.get(item.sourceId);
+      return { ...item, isCurrentFocus: item.sourceId === focusId, ...(strategy ? { sourceTitle: strategy.planningContext?.acceptedGoal || strategy.idea } : {}) };
+    })
     .sort((a, b) => Number(b.sourceId === focusId) - Number(a.sourceId === focusId) || b.updatedAt.localeCompare(a.updatedAt));
 }
 

@@ -25,7 +25,9 @@ const COPY = {
     saveDuration: "Save",
     cancelDuration: "Cancel",
     currentFocus: "Current focus",
-    otherVisions: "Other active visions",
+    otherVisions: "Keep another vision moving?",
+    otherVisionsHelp: "Optional: review a small step from another active vision. Nothing is added unless you choose it.",
+    fromVision: "From",
     chooseFocus: "Choose a Vision focus",
     chooseFocusHelp: "No active vision currently guides Today.",
   },
@@ -47,7 +49,9 @@ const COPY = {
     saveDuration: "Sačuvaj",
     cancelDuration: "Otkaži",
     currentFocus: "Trenutni fokus",
-    otherVisions: "Druge aktivne vizije",
+    otherVisions: "Pokrenuti i drugu viziju?",
+    otherVisionsHelp: "Opciono: pregledajte mali korak iz druge aktivne vizije. Ništa se ne dodaje bez vašeg izbora.",
+    fromVision: "Iz vizije",
     chooseFocus: "Izaberi fokus Vizije",
     chooseFocusHelp: "Trenutno nijedna aktivna vizija ne vodi Danas.",
   },
@@ -69,7 +73,9 @@ const COPY = {
     saveDuration: "Kaydet",
     cancelDuration: "İptal",
     currentFocus: "Mevcut odak",
-    otherVisions: "Diğer aktif vizyonlar",
+    otherVisions: "Başka bir vizyon da ilerlesin mi?",
+    otherVisionsHelp: "İsteğe bağlı: başka bir aktif vizyondan küçük bir adımı inceleyin. Siz seçmeden hiçbir şey eklenmez.",
+    fromVision: "Vizyon",
     chooseFocus: "Vizyon odağını seç",
     chooseFocusHelp: "Şu anda hiçbir aktif vizyon Bugün'ü yönlendirmiyor.",
   },
@@ -169,7 +175,7 @@ export default function TodayCandidatesSection({ userId, language, planState, on
     return (
       <article key={item.id} className="app-a-surface flex items-start gap-3.5 rounded-xl border p-4 shadow-sm" style={{ borderColor: isPrimary ? "var(--app-a-accent)" : "var(--app-a-border)" }}>
         <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#AF52DE]/10 text-[#AF52DE]"><Compass className="h-5 w-5" /></span>
-        <div className="min-w-0 flex-1">{isPrimary ? <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--app-a-accent)" }}>{t.currentFocus}</p> : null}<h3 className="text-[15px] font-semibold leading-snug">{item.title}</h3>
+        <div className="min-w-0 flex-1">{isPrimary ? <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--app-a-accent)" }}>{t.currentFocus}</p> : item.sourceTitle ? <p className="mb-1 line-clamp-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--app-a-text-secondary)" }}>{t.fromVision}: {item.sourceTitle}</p> : null}<h3 className="text-[15px] font-semibold leading-snug">{item.title}</h3>
           {isEditingThis ? <div className="mt-2 flex flex-wrap items-center gap-2"><input type="number" min="1" max="480" value={editMinutesInput} onChange={e=>setEditMinutesInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")commitEditedDuration(item.id);if(e.key==="Escape")setEditingId(null)}} autoFocus className="app-a-field min-h-9 w-20 px-2"/><button onClick={()=>commitEditedDuration(item.id)} className="text-[13px] font-semibold" style={{color:"var(--app-a-accent)"}}>{t.saveDuration}</button><button onClick={()=>setEditingId(null)} className="text-[13px]">{t.cancelDuration}</button></div> : <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px]"><span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5"/>{formatEstimatedDuration(minutes,language)}</span><button onClick={()=>startEditingDuration(item)} className="inline-flex items-center gap-1 text-[12px]"><Pencil className="h-3 w-3"/>{t.editDuration}</button></div>}
           {planState==="confirmed"?<button disabled={busyId!==null} onClick={()=>void add(item)} className="app-a-primary-button mt-3 gap-2 px-3.5 text-[13px]"><CalendarPlus className="h-4 w-4"/>{t.add}</button>:null}
         </div><button disabled={busyId!==null} onClick={()=>void dismiss(item)} className="h-9 w-9 shrink-0 rounded-full" aria-label={t.dismiss}><X className="mx-auto h-4 w-4"/></button>
@@ -202,7 +208,7 @@ export default function TodayCandidatesSection({ userId, language, planState, on
       <div className="mt-3 space-y-2.5">
         {primary ? renderCandidate(primary, true) : null}
         {!primary&&items.length>0?<div className="app-a-panel-warning"><p className="text-[13px] leading-relaxed">{t.chooseFocusHelp}</p><button type="button" onClick={onOpenVision} className="app-a-secondary-button app-a-focus-ring mt-3 px-4 text-[13px]"><Compass className="h-4 w-4"/>{t.chooseFocus}</button></div>:null}
-        {others.length ? <><button type="button" onClick={()=>setShowOthers(value=>!value)} className="app-a-secondary-button w-full justify-between px-4"><span>{t.otherVisions} ({others.length})</span><ChevronDown className={`h-4 w-4 transition-transform ${showOthers?"rotate-180":""}`}/></button>{showOthers ? others.map(item=>renderCandidate(item)) : null}</> : null}
+        {others.length ? <div className="rounded-xl border p-3" style={{borderColor:"var(--app-a-border)",backgroundColor:"var(--app-a-surface-secondary)"}}><button type="button" onClick={()=>setShowOthers(value=>!value)} aria-expanded={showOthers} className="app-a-focus-ring flex min-h-11 w-full items-center justify-between gap-3 text-left"><span><span className="block text-[14px] font-semibold">{t.otherVisions}</span><span className="mt-0.5 block text-[12px] font-normal leading-relaxed" style={{color:"var(--app-a-text-secondary)"}}>{t.otherVisionsHelp}</span></span><span className="inline-flex shrink-0 items-center gap-1 text-[12px]">{others.length}<ChevronDown className={`h-4 w-4 transition-transform ${showOthers?"rotate-180":""}`}/></span></button>{showOthers ? <div className="mt-3 space-y-2.5">{others.map(item=>renderCandidate(item))}</div> : null}</div> : null}
         {false && items.map((item) => {
           const minutes = getEffectiveMinutes(item);
           const isEditingThis = editingId === item.id;

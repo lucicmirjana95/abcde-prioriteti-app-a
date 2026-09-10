@@ -15,6 +15,8 @@ export interface TodayCandidate {
   updatedAt: string;
   /** Read-time UI hint; it is not required in persisted candidate documents. */
   isCurrentFocus?: boolean;
+  /** Read-time label of the source Vision; it is not persisted with the candidate. */
+  sourceTitle?: string;
 }
 
 export function createTodayCandidateId(sourceId?: string): string {
@@ -35,6 +37,7 @@ export function isTodayCandidate(value: unknown): value is TodayCandidate {
     (["pending", "scheduled", "completed", "dismissed"] as unknown[]).includes(item.status) &&
     (item.sequenceIndex === undefined || (typeof item.sequenceIndex === "number" && Number.isInteger(item.sequenceIndex) && item.sequenceIndex >= 0 && item.sequenceIndex <= 650)) &&
     (item.stepKey === undefined || (typeof item.stepKey === 'string' && /^[a-z0-9_]{1,80}$/.test(item.stepKey))) &&
+    (item.sourceTitle === undefined || (typeof item.sourceTitle === "string" && item.sourceTitle.trim().length > 0 && item.sourceTitle.length <= 4000)) &&
     typeof item.createdAt === "string" && !Number.isNaN(Date.parse(item.createdAt)) &&
     typeof item.updatedAt === "string" && !Number.isNaN(Date.parse(item.updatedAt));
 }

@@ -14,6 +14,8 @@ const candidate: TodayCandidate = {
 };
 
 assert.equal(isTodayCandidate(candidate), true);
+assert.equal(isTodayCandidate({ ...candidate, sourceTitle: "Write a book" }), true);
+assert.equal(isTodayCandidate({ ...candidate, sourceTitle: "" }), false);
 assert.equal(isTodayCandidate({ ...candidate, estimatedMinutes: 0 }), true, 'A suggestion may have unknown duration; scheduling must require a positive duration');
 assert.equal(isTodayCandidate({ ...candidate, estimatedMinutes: 25.5 }), false);
 assert.equal(isTodayCandidate({ ...candidate, estimatedMinutes: 481 }), false);
