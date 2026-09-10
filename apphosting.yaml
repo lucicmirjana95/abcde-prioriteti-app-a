@@ -22,3 +22,7 @@ env:
     value: "true"
     availability:
       - RUNTIME
+  - variable: APP_A_AI_DAILY_LIMIT
+    value: "500"
+    availability:
+      - RUNTIME
