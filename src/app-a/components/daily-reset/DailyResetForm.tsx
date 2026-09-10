@@ -26,7 +26,7 @@ export default function DailyResetForm({
   onboardingCompleted = false,
   submissionError,
 }: Props) {
-  const [showHowItWorks, setShowHowItWorks] = useState(!onboardingCompleted);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [energy, setEnergy] = useState<EnergyLevel | undefined>(initialData.energy);
   const [pleasantness, setPleasantness] = useState<PleasantnessLevel | undefined>(initialData.pleasantness);
   const [stateNote, setStateNote] = useState(initialData.stateNote);
