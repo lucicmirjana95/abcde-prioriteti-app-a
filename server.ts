@@ -4637,6 +4637,18 @@ app.post("/api/app-a/clarify-note",async(req,res)=>{
   }catch{return res.status(503).json({success:false,code:"AI_UNAVAILABLE"})}
 });
 
+// Minimal unauthenticated liveness endpoint for the hosting platform. It does
+// not expose configuration, user data, dependency state, or secret status.
+app.get("/healthz", (_req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
+// API requests must never fall through to the SPA index page. Keep this after
+// every registered API route and before static asset delivery.
+app.use("/api", (_req, res) => {
+  res.status(404).json({ success: false, code: "NOT_FOUND" });
+});
+
 // Configure Vite integration or build asset delivery
 async function startServer() {
   if (!isProduction) {

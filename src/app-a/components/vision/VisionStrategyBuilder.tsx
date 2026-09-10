@@ -8,11 +8,13 @@ import {
   ChevronUp,
   Loader2,
   MoreHorizontal,
+  Pencil,
   Route,
   Save,
   ShieldCheck,
   Sparkles,
   Split,
+  X,
 } from "lucide-react";
 import type { VisionFeasibilityResult, VisionStrategyResult } from "../../../shared/domain/vision";
 import { assessVisionFeasibility, createVisionStrategy, decomposeVisionStep } from "../../api/visionStrategyApi";
@@ -70,6 +72,10 @@ const COPY = {
     maxDepthReached: "Maximum breakdown depth reached.",
     nextFlow: "This step appears automatically in Today. You decide whether to add it to the daily plan. The following step appears after this one is completed.",
     stepOptions: "Step options",
+    editStep: "Edit this step",
+    saveStep: "Save step",
+    cancelStep: "Cancel",
+    stepRequired: "Enter a concrete step (3–240 characters).",
     substepsCount: (count: number) => `${count} step${count === 1 ? "" : "s"}`,
   },
   sr: {
@@ -96,6 +102,10 @@ const COPY = {
     maxDepthReached: "Maksimalan nivo raščlanjivanja je dostignut.",
     nextFlow: "Ovaj korak se automatski pojavljuje u odeljku Danas. Vi birate da li ćete ga dodati u dnevni plan. Naredni korak se pojavljuje kada završite ovaj.",
     stepOptions: "Opcije koraka",
+    editStep: "Izmeni ovaj korak",
+    saveStep: "Sačuvaj korak",
+    cancelStep: "Otkaži",
+    stepRequired: "Unesite konkretan korak (3–240 znakova).",
     substepsCount: (count: number) => `${count} korak${count === 1 ? "" : count < 5 ? "a" : "a"}`,
   },
   tr: {
@@ -122,6 +132,10 @@ const COPY = {
     maxDepthReached: "Maksimum ayrıştırma derinliğine ulaşıldı.",
     nextFlow: "Bu adım Bugün bölümünde otomatik olarak görünür. Günlük plana ekleyip eklememeye siz karar verirsiniz. Sonraki adım, bunu tamamladığınızda görünür.",
     stepOptions: "Adım seçenekleri",
+    editStep: "Bu adımı düzenle",
+    saveStep: "Adımı kaydet",
+    cancelStep: "İptal",
+    stepRequired: "Somut bir adım girin (3–240 karakter).",
     substepsCount: (count: number) => `${count} adım`,
   },
 } as const;
@@ -159,6 +173,9 @@ export default function VisionStrategyBuilder({
   const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
   const [checkingStep, setCheckingStep] = useState<string | null>(null);
   const [concreteStep, setConcreteStep] = useState<string | null>(null);
+  const [editingStep, setEditingStep] = useState<string | null>(null);
+  const [editingStepText, setEditingStepText] = useState("");
+  const [stepEditError, setStepEditError] = useState(false);
   const [saved, setSaved] = useState(Boolean(initialDocument) && !working);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -197,6 +214,7 @@ export default function VisionStrategyBuilder({
       setError(false);
       setSaveDiagnostic(null);
       onSaved?.(document);
+      window.dispatchEvent(new Event("app-a-vision-candidates-changed"));
       return true;
     } catch (cause) {
       const diagnostic = getVisionSaveDiagnostic(cause);
@@ -290,6 +308,48 @@ export default function VisionStrategyBuilder({
       setError(true);
     } finally {
       setCheckingStep(null);
+    }
+  }
+
+  async function saveStepEdit(originalStep: string, key: string) {
+    if (!strategy) return;
+    const value = editingStepText.trim();
+    if (value.length < 3 || value.length > 240) {
+      setStepEditError(true);
+      return;
+    }
+    setStepEditError(false);
+    const topLevel = key.match(/^m(\d+)-s(\d+)$/);
+    if (topLevel) {
+      const milestoneIndex = Number(topLevel[1]);
+      const stepIndex = Number(topLevel[2]);
+      const nextStrategy: VisionStrategyResult = {
+        ...strategy,
+        nextStep: strategy.nextStep === originalStep ? value : strategy.nextStep,
+        milestones: strategy.milestones.map((milestone, index) => index === milestoneIndex ? {
+          ...milestone,
+          steps: milestone.steps.map((step, indexInMilestone) => indexInMilestone === stepIndex ? value : step),
+        } : milestone),
+      };
+      if (await persistStrategy(nextStrategy, breakdowns)) {
+        setStrategy(nextStrategy);
+        setEditingStep(null);
+      }
+      return;
+    }
+    const child = key.match(/^(.*)-d(\d+)$/);
+    if (!child) return;
+    const parentKey = child[1];
+    const childIndex = Number(child[2]);
+    const parentSteps = breakdowns[parentKey];
+    if (!parentSteps?.[childIndex]) return;
+    const nextBreakdowns = {
+      ...breakdowns,
+      [parentKey]: parentSteps.map((step, index) => index === childIndex ? value : step),
+    };
+    if (await persistStrategy(strategy, nextBreakdowns)) {
+      setBreakdowns(nextBreakdowns);
+      setEditingStep(null);
     }
   }
 
@@ -403,6 +463,7 @@ export default function VisionStrategyBuilder({
     const isMenuOpen = openMenuKey === key;
     const isChecking = checkingStep === key;
     const isConcrete = concreteStep === key;
+    const isEditing = editingStep === key;
 
     return (
       <div className="group relative my-1 rounded-lg p-1.5 transition-colors hover:bg-black/5 dark:hover:bg-white/5">
@@ -419,8 +480,12 @@ export default function VisionStrategyBuilder({
               </button>
             )}
 
-            <div className="flex-1">
-              <span className="text-[13px] text-[#3A3A3C] dark:text-[#D1D1D6]">{stepText}</span>
+            <div className="min-w-0 flex-1">
+              {isEditing ? <div>
+                <input autoFocus value={editingStepText} maxLength={240} onChange={event => { setEditingStepText(event.target.value); setStepEditError(false); }} onKeyDown={event => { if (event.key === "Escape") setEditingStep(null); if (event.key === "Enter") { event.preventDefault(); void saveStepEdit(stepText, key); } }} className="app-a-field app-a-focus-ring w-full px-3 py-2 text-[14px]" aria-label={t.editStep} />
+                {stepEditError ? <p role="alert" className="mt-1 text-[12px] text-[#FF3B30]">{t.stepRequired}</p> : null}
+                <div className="mt-2 flex flex-wrap gap-2"><button type="button" onClick={() => void saveStepEdit(stepText, key)} className="app-a-primary-button min-h-10 px-3 text-[12px]"><Save className="h-3.5 w-3.5" />{t.saveStep}</button><button type="button" onClick={() => { setEditingStep(null); setStepEditError(false); }} className="app-a-secondary-button min-h-10 px-3 text-[12px]"><X className="h-3.5 w-3.5" />{t.cancelStep}</button></div>
+              </div> : <span className="text-[13px] text-[#3A3A3C] dark:text-[#D1D1D6]">{stepText}</span>}
 
               {hasSubsteps && (
                 <span className="ml-2 inline-flex items-center rounded-md bg-black/5 px-2 py-0.5 text-[11px] font-medium text-[#6E6E73] dark:bg-white/10 dark:text-[#AEAEB2]">
@@ -431,7 +496,7 @@ export default function VisionStrategyBuilder({
           </div>
 
           {/* Overflow Menu Button */}
-          <div className="relative shrink-0">
+          {!isEditing ? <div className="relative shrink-0">
             <button
               type="button"
               onClick={() => setOpenMenuKey((prev) => (prev === key ? null : key))}
@@ -448,6 +513,15 @@ export default function VisionStrategyBuilder({
                 role="menu"
                 className="app-a-surface-elevated absolute right-0 top-full z-20 mt-1 min-w-[200px] rounded-xl border border-black/10 bg-white p-1 shadow-lg dark:border-white/15 dark:bg-[#2C2C2E]"
               >
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => { setEditingStep(key); setEditingStepText(stepText); setStepEditError(false); setOpenMenuKey(null); }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-black hover:bg-black/5 dark:text-white dark:hover:bg-white/5"
+                >
+                  <Pencil className="h-4 w-4 text-[#0071E3] dark:text-[#2997ff]" />
+                  {t.editStep}
+                </button>
                 {depth < 2 ? (
                   <button
                     type="button"
@@ -466,7 +540,7 @@ export default function VisionStrategyBuilder({
                 )}
               </div>
             )}
-          </div>
+          </div> : null}
         </div>
 
         {/* Status Indicators */}

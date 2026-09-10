@@ -29,6 +29,8 @@ Before the first production deployment:
 4. Add the final App Hosting domain to Firebase Authentication **Authorized domains**.
 5. Confirm App Hosting uses `apphosting.yaml`. The platform supplies `PORT`; the server binds it on `0.0.0.0`.
 
+The deployed server exposes `GET /healthz` as a data-free liveness check. Unknown `/api/*` paths return a JSON `404` and never the SPA shell.
+
 `APP_A_AI_DAILY_LIMIT` is a server-wide daily safety limit. Each signed-in user is also limited to 15 App A AI requests per rolling 10-minute window.
 
 ## Production smoke test

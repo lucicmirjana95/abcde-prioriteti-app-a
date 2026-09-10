@@ -271,4 +271,19 @@ runTest("capacity policy separates flexible time from explicit fixed commitments
   assert.ok(prompt.includes("Fixed commitments remain visible outside that flexible budget"));
 });
 
+runTest("prompt enforces chronological constraints and blocked-deadline clarification", () => {
+  const prompt = buildDailyResetPrompt({
+    brainDump: "Appointment at 11:30, rest after it, proposal due 14:30 but I am waiting for prices, school pickup at 15:00.",
+    language: "en",
+    energy: 2,
+    pleasantness: 2,
+    availableMinutes: 240,
+  });
+  assert.ok(prompt.includes("Treat array order in firstFocus and laterToday as the proposed execution order"));
+  assert.ok(prompt.includes("honor stated before/after relationships"));
+  assert.ok(prompt.includes("Never show a 14:30 deadline after a 15:00 commitment"));
+  assert.ok(prompt.includes("hard-deadline deliverable that depends on awaited external input requires a material clarification question"));
+  assert.ok(prompt.includes("A task blocked by missing external input is not executable merely because it has a deadline"));
+});
+
 console.log("\nAll prompt invariant tests passed successfully! 🎉");

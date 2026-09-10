@@ -134,6 +134,7 @@ CLARIFICATION QUESTIONS:
 - When ambiguity is not important enough to block planning, set needsCheck=true instead.
 - If you ask clarification questions (1-3 questions), return ONLY the clarification response (phase: "clarification_needed") without a provisional draft.
 - If no material clarification is necessary, return a final plan immediately (phase: "plan_ready") with a complete draft.
+- A hard-deadline deliverable that depends on awaited external input requires a material clarification question when the input arrival time or a viable contingency is unknown. Ask what can be completed without it and when it is expected; do not pretend the blocked final action is immediately executable.
 `;
   } else {
     prompt += `
@@ -188,6 +189,9 @@ Capacity and Duration Rules:
 - Move nonessential items to "this_week", "later", "long_term_idea", or "no_action".
 - Provide realistic, conservative duration estimates.
 - Preserve explicit deadline wording. Create an ISO deadline only when the date is completely unambiguous.
+- Treat array order in firstFocus and laterToday as the proposed execution order shown to the user.
+- Build that order from explicit temporal constraints before general priority: honor stated before/after relationships, place preparation before the event it prepares for, place a requested rest immediately after the referenced event when feasible, sort fixed commitments by their stated time, and schedule deadline work before any later timed commitment. Never show a 14:30 deadline after a 15:00 commitment as if that were a workable sequence.
+- If the stated durations, dependencies, deadlines, and fixed commitments cannot coexist, do not manufacture a feasible order. In the initial phase ask one material clarification about the conflict; after clarification, mark the narrowest unresolved item needsCheck=true and explain the conflict plainly.
 
 PRIORITIZATION & INTERNAL ABCDE REASONING LAYER:
 Use the reasoning principles behind the ABCDE prioritization method as an internal qualitative decision layer to evaluate and order items before assigning them to schedule blocks.
@@ -218,6 +222,7 @@ SAFEGUARDS & CONSTRAINTS FOR ABCDE REASONING:
 10. Worries and facts are not automatically tasks. Convert a worry into an action only when a safe, concrete next step exists; otherwise classify as worry with no_action.
 10a. Descriptions of interpersonal situations are non-action observations unless the user explicitly requests an action. A time horizon never turns a situation statement into a task.
 11. Waiting-for items must normally be deferred (e.g. to deferredItems) unless a concrete follow-up action is due today.
+11a. A task blocked by missing external input is not executable merely because it has a deadline. The unblocked preparation may be planned separately, while the blocked completion remains waiting_for or needsCheck until the dependency is resolved.
 12. Long-term ideas must not displace necessary today tasks merely because they are exciting.
 13. NEVER classify rest, hydration, meals, medication reminders, health, safety, caregiving, animal care, or accessibility needs as disposable merely because they appear unproductive.
 14. NEVER infer medical urgency or provide medical advice.
