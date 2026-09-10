@@ -14,6 +14,15 @@ dotenv.config();
 
 const app = express();
 const PORT = Number.parseInt(process.env.PORT || "3000", 10);
+const isProduction = process.env.NODE_ENV === "production";
+
+app.disable("x-powered-by");
+app.use((_, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(), geolocation=(), microphone=(self)");
+  next();
+});
 
 const STRUCTOGRAM_INSTRUCTION = `
 STRUCTOGRAM ADAPTATION RULE (MANDATORY):
@@ -28,12 +37,14 @@ STRUCTOGRAM ADAPTATION RULE (MANDATORY):
 Do not explicitly tell the user their color unless asked, just invisibly adapt to it.
 `;
 
-app.use(cors());
+// App A calls its API through relative same-origin URLs in production. Keep
+// permissive CORS only for local development tools and previews.
+app.use(cors(isProduction ? { origin: false } : undefined));
 app.use('/api/app-a', express.json({ limit: '64kb' }));
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use('/api', (req, res, next) => {
-  if (process.env.NODE_ENV !== 'production') return next();
+  if (!isProduction) return next();
   if (req.method === 'POST' && !req.path.startsWith('/app-a/')) return res.status(404).json({ success: false, code: 'NOT_FOUND' });
   return appAApiAccess(req, res, next);
 });
@@ -4628,7 +4639,7 @@ app.post("/api/app-a/clarify-note",async(req,res)=>{
 
 // Configure Vite integration or build asset delivery
 async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
+  if (!isProduction) {
     // Development mode
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
