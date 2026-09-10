@@ -65,7 +65,7 @@ export default function AppAShell({ currentDestination, onNavigate, language, th
             <Sparkles className="h-[18px] w-[18px]" aria-hidden="true" />
           </span>
           <div>
-            <div className="text-[15px] font-semibold tracking-[-0.01em]">{t.dailyResetTitle}</div>
+            <div className="text-[15px] font-semibold tracking-[-0.01em]">Daily Reset</div>
             <div className="text-[12px]" style={{ color: "var(--app-a-text-tertiary)" }}>App A</div>
           </div>
         </div>
