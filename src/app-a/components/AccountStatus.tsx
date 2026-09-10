@@ -24,9 +24,9 @@ export default function AccountStatus({ language, compact = false }: { language:
     finally { setSigningIn(false); }
   };
   if (compact) {
-    return user ? <button type="button" className="app-a-focus-ring flex h-9 w-9 items-center justify-center overflow-hidden rounded-full" aria-label={`${t.signedIn}: ${label}`} title={label}>
+    return user ? <span role="status" className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full" aria-label={`${t.signedIn}: ${label}`} title={label}>
       {user.photoURL ? <img src={user.photoURL} alt="" referrerPolicy="no-referrer" className="h-full w-full object-cover" /> : <UserRound className="h-5 w-5" />}
-    </button> : <button type="button" disabled={!authReady || signingIn} onClick={() => void startSignIn()} className="app-a-focus-ring inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-[12px] font-semibold" style={signInError ? { color: "var(--app-a-danger)" } : undefined} aria-label={signInError ? `${t.error} ${t.retry}` : t.signIn}><LogIn className="h-4 w-4" />{signInError ? t.retry : t.signIn}</button>;
+    </span> : <button type="button" disabled={!authReady || signingIn} onClick={() => void startSignIn()} className="app-a-focus-ring inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-[12px] font-semibold" style={signInError ? { color: "var(--app-a-danger)" } : undefined} aria-label={signInError ? `${t.error} ${t.retry}` : t.signIn}><LogIn className="h-4 w-4" />{signInError ? t.retry : t.signIn}</button>;
   }
   return <div className="mt-auto border-t pt-4" style={{ borderColor: "var(--app-a-border)" }}>
     <div className="flex items-center gap-3 rounded-xl px-3 py-2">

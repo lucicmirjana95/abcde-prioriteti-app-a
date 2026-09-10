@@ -46,6 +46,9 @@ export default function AppA() {
   }, []);
   const { preferences, setPreferences } = useAppAPreferences();
   const language: AppALanguage = preferences.language;
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
   const demoConfig = useMemo(
     () => getDailyResetDemoConfig(window.location.search),
     []
