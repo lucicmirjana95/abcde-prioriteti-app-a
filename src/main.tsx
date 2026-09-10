@@ -88,7 +88,7 @@ class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean,
 }
 
 const params = new URLSearchParams(window.location.search);
-const renderLegacyApp = params.get("app") === "legacy";
+const renderLegacyApp = import.meta.env.DEV && params.get("app") === "legacy";
 if (renderLegacyApp) document.title = "Kaizen Flow";
 
 createRoot(document.getElementById("root")!).render(
