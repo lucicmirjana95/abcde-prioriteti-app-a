@@ -88,13 +88,13 @@ class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean,
 }
 
 const params = new URLSearchParams(window.location.search);
-const renderAppA = params.get("app") === "a";
+const renderLegacyApp = params.get("app") === "legacy";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ErrorBoundary>
       <Suspense fallback={<div role="status" aria-live="polite" className="flex min-h-screen items-center justify-center">Loading…</div>}>
-        {renderAppA ? <AppA /> : <LegacyApp />}
+        {renderLegacyApp ? <LegacyApp /> : <AppA />}
       </Suspense>
     </ErrorBoundary>
   </StrictMode>,

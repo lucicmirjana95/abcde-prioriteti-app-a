@@ -9,7 +9,7 @@ Requirements: Node.js and pnpm.
 1. Run `pnpm install --frozen-lockfile`.
 2. Copy `.env.example` to `.env.local` and set `GEMINI_API_KEY`.
 3. Run `pnpm run dev`.
-4. Open `http://localhost:3000/?app=a`.
+4. Open `http://localhost:3000/`. App A is the default application; the retained legacy interface is available only at `?app=legacy`.
 
 Before deployment, run:
 
