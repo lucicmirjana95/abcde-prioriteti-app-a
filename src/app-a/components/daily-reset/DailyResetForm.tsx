@@ -108,17 +108,16 @@ export default function DailyResetForm({
         </button>
         {showHowItWorks ? (
           <div className="mt-2 border-t pt-3 text-[13px] leading-relaxed" style={{ borderColor: "var(--app-a-border)", color: "var(--app-a-text-secondary)" }}>
-            <p className="font-medium" style={{ color: "var(--app-a-text)" }}>{t.onboardingTitle}</p>
-            <p className="mt-1">{t.onboardingIntro}</p>
-            <div className="mt-3 grid gap-2 md:grid-cols-3">
+            <p>{t.onboardingIntro}</p>
+            <div className="mt-2 divide-y" style={{ borderColor: "var(--app-a-border)" }}>
               {[
                 [t.onboardingSortTitle, t.onboardingSortText],
                 [t.onboardingPrioritizeTitle, t.onboardingPrioritizeText],
                 [t.onboardingControlTitle, t.onboardingControlText],
               ].map(([title, text]) => (
-                <div key={title} className="rounded-lg border p-3" style={{ borderColor: "var(--app-a-border)", background: "var(--app-a-surface)" }}>
-                  <h3 className="text-[13px] font-semibold" style={{ color: "var(--app-a-text)" }}>{title}</h3>
-                  <p className="mt-1 text-[12px] leading-relaxed">{text}</p>
+                <div key={title} className="py-2 first:pt-1 last:pb-0">
+                  <h3 className="text-[12px] font-semibold" style={{ color: "var(--app-a-text)" }}>{title}</h3>
+                  <p className="mt-0.5 text-[12px] leading-snug">{text}</p>
                 </div>
               ))}
             </div>
