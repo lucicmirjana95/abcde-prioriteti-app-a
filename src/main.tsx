@@ -3,7 +3,6 @@ import { createRoot } from "react-dom/client";
 import "./lib/safeStorageSetup";
 import "./index.css";
 
-const LegacyApp = lazy(() => import("./App.tsx"));
 const AppA = lazy(() => import("./app-a/AppA.tsx"));
 const SHOW_ERROR_DETAILS = import.meta.env.DEV;
 const ERROR_COPY = {
@@ -87,15 +86,11 @@ class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean,
   }
 }
 
-const params = new URLSearchParams(window.location.search);
-const renderLegacyApp = import.meta.env.DEV && params.get("app") === "legacy";
-if (renderLegacyApp) document.title = "Kaizen Flow";
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ErrorBoundary>
       <Suspense fallback={<div role="status" aria-live="polite" className="flex min-h-screen items-center justify-center">Loading…</div>}>
-        {renderLegacyApp ? <LegacyApp /> : <AppA />}
+        <AppA />
       </Suspense>
     </ErrorBoundary>
   </StrictMode>,
