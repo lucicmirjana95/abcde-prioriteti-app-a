@@ -57,8 +57,8 @@ export function addRolloverCandidateToPlan(
     return { error: "duplicate" };
   }
 
-  const effectiveTarget = targetBlock === "later_today" && draft.availableMinutes !== undefined
-    && (draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes) + candidate.estimatedMinutes > draft.availableMinutes
+  const effectiveTarget = targetBlock === "later_today" && (draft.availableMinutes === undefined
+    || (draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes) + candidate.estimatedMinutes > draft.availableMinutes)
       ? "if_capacity_remains"
       : targetBlock;
 

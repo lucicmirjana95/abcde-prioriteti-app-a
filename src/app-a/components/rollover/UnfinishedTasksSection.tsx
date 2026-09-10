@@ -29,7 +29,7 @@ const COPY = {
     empty: "No unfinished tasks from previous days.",
     duplicateError: "This task is already in today's plan.",
     capacityExceededError: "Adding this task would exceed today's available time.",
-    capacityUnknownError: "Please set available time before adding tasks.",
+    capacityUnknownError: "This task could not be added safely.",
     generalError: "Could not perform action. Please try again.",
   },
   sr: {
@@ -46,7 +46,7 @@ const COPY = {
     empty: "Nema nezavršenih zadataka iz prethodnih dana.",
     duplicateError: "Ovaj zadatak je već u današnjem planu.",
     capacityExceededError: "Dodavanje ovog zadatka premašuje raspoloživo vreme za danas.",
-    capacityUnknownError: "Postavite raspoloživo vreme pre dodavanja zadataka.",
+    capacityUnknownError: "Zadatak nije mogao bezbedno da se doda.",
     generalError: "Radnja nije uspela. Pokušajte ponovo.",
   },
   tr: {
@@ -63,7 +63,7 @@ const COPY = {
     empty: "Önceki günlerden kalan tamamlanmamış görev yok.",
     duplicateError: "Bu görev zaten bugünün planında var.",
     capacityExceededError: "Bu görevi eklemek bugünkü müsait süreyi aşacaktır.",
-    capacityUnknownError: "Görev eklemeden önce lütfen müsait süreyi belirleyin.",
+    capacityUnknownError: "Bu görev güvenli biçimde eklenemedi.",
     generalError: "İşlem gerçekleştirilemedi. Lütfen tekrar deneyin.",
   },
 } as const;

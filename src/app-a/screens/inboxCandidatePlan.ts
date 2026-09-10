@@ -44,7 +44,7 @@ function summarizeChanges(before: DailyPlanDraft, after: DailyPlanDraft, newItem
 }
 
 export function addInboxItemToPlan(draft: DailyPlanDraft, item: AppAInboxItem, options: AddInboxItemOptions = {}): AddInboxItemWithSummaryResult {
-  if (!item.estimatedMinutes) return { error: "duration_required" };
+  const estimatedMinutes = getInboxPlanningMinutes(item);
   const sourceId = `inbox_source_${item.id}`;
   const planItemId = `inbox_plan_${item.id}`;
   const allPlanItems = [...draft.firstFocus, ...draft.laterToday, ...draft.ifCapacityRemains];
@@ -55,7 +55,8 @@ export function addInboxItemToPlan(draft: DailyPlanDraft, item: AppAInboxItem, o
   }
   const capacityType = item.capacityType || "flexible";
   const exceedsExplicitCapacity = capacityType === "flexible" && draft.availableMinutes !== undefined
-    && (draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes) + item.estimatedMinutes > draft.availableMinutes;
+    && (draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes) + estimatedMinutes > draft.availableMinutes;
+  const capacityUnknown = capacityType === "flexible" && draft.availableMinutes === undefined;
   const priority = options.reconsiderPriorities
     ? { consequence: 4 as const, urgency: 5 as const, goalContribution: 3 as const, explanation: "Marked urgent by the user and reconsidered against unfinished priorities." }
     : { explanation: "Added by the user from Inbox." };
@@ -65,7 +66,7 @@ export function addInboxItemToPlan(draft: DailyPlanDraft, item: AppAInboxItem, o
     kind: "task",
     timeHorizon: "today",
     suggestedAction: item.title,
-    estimatedMinutes: item.estimatedMinutes,
+    estimatedMinutes,
     requiredEnergy: 3,
     timeSensitivity: options.reconsiderPriorities ? "urgent" : "none",
     isAmbiguous: false,
@@ -77,8 +78,8 @@ export function addInboxItemToPlan(draft: DailyPlanDraft, item: AppAInboxItem, o
     sourceItemIds: [sourceId],
     title: item.title,
     ...(item.details ? { description: item.details } : {}),
-    block: options.reconsiderPriorities && capacityType === "flexible" ? "first_focus" : exceedsExplicitCapacity ? "if_capacity_remains" : "later_today",
-    estimatedMinutes: item.estimatedMinutes,
+    block: options.reconsiderPriorities && capacityType === "flexible" ? "first_focus" : exceedsExplicitCapacity || capacityUnknown ? "if_capacity_remains" : "later_today",
+    estimatedMinutes,
     capacityType,
     requiredEnergy: 3,
     timeSensitivity: options.reconsiderPriorities ? "urgent" : "none",
@@ -90,8 +91,8 @@ export function addInboxItemToPlan(draft: DailyPlanDraft, item: AppAInboxItem, o
     const next = recalculatePlanTotals({
       ...draft,
       classifiedItems: [...draft.classifiedItems, classified],
-      laterToday: exceedsExplicitCapacity ? draft.laterToday : [...draft.laterToday, planItem],
-      ifCapacityRemains: exceedsExplicitCapacity ? [...draft.ifCapacityRemains, planItem] : draft.ifCapacityRemains,
+      laterToday: exceedsExplicitCapacity || capacityUnknown ? draft.laterToday : [...draft.laterToday, planItem],
+      ifCapacityRemains: exceedsExplicitCapacity || capacityUnknown ? [...draft.ifCapacityRemains, planItem] : draft.ifCapacityRemains,
     });
     return validatePlanDraft(next).valid ? { draft: next, changes: { firstFocus: [], movedLater: [], movedOptional: [] } } : { error: "invalid_plan" };
   }

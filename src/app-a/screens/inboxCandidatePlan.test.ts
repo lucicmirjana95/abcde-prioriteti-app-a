@@ -43,8 +43,8 @@ assert.equal(getInboxPlanningMinutes({ ...item, estimatedMinutes: undefined }), 
 assert.equal(getInboxPlanningMinutes({ ...item, estimatedMinutes: 45 }), 45);
 const unknownCapacity = addInboxItemToPlan({ ...draft, availableMinutes: undefined }, item);
 const exceededCapacity = addInboxItemToPlan({ ...draft, availableMinutes: 10 }, item);
-assert.equal("error" in missingDuration && missingDuration.error, "duration_required");
-assert.equal("draft" in unknownCapacity && unknownCapacity.draft.laterToday.length, 1);
+assert.equal("draft" in missingDuration && missingDuration.draft.laterToday[0].estimatedMinutes, 20);
+assert.equal("draft" in unknownCapacity && unknownCapacity.draft.ifCapacityRemains.length, 1);
 assert.equal("draft" in exceededCapacity && exceededCapacity.draft.ifCapacityRemains.length, 1);
 
 const fixed = addInboxItemToPlan({ ...draft, availableMinutes: 10 }, { ...item, id: "in_fixed", capacityType: "fixed", estimatedMinutes: 90 });

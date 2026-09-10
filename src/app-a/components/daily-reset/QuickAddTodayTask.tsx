@@ -24,13 +24,13 @@ const COPY = {
     reconsiderIntro: "The new task will be compared with unfinished priorities. Review the proposal before saving.",
     task: "Task",
     taskPlaceholder: "What needs to be done?",
-    minutes: "Minutes",
+    minutes: "Minutes (optional)",
     add: "Add to today",
     later: "Save for later",
     cancel: "Cancel",
-    required: "Enter a task and a realistic duration.",
+    required: "Enter a task.",
+    fixedDurationRequired: "Add the duration of this fixed commitment so the daily load stays accurate.",
     duplicate: "This task is already in today’s plan.",
-    unknown: "Set today’s flexible time before adding this task.",
     full: (remaining: number) => `Only ${remaining} min remain in today’s flexible time. Adjust the plan or save this task for later.`,
     failed: "The task could not be saved. Try again.",
     savedLater: "Saved in Inbox for later.",
@@ -54,13 +54,13 @@ const COPY = {
     reconsiderIntro: "Novi zadatak će biti upoređen sa nezavršenim prioritetima. Pregledajte predlog pre čuvanja.",
     task: "Zadatak",
     taskPlaceholder: "Šta treba uraditi?",
-    minutes: "Minuta",
+    minutes: "Minuta (opciono)",
     add: "Dodaj danas",
     later: "Sačuvaj za kasnije",
     cancel: "Otkaži",
-    required: "Unesite zadatak i realno trajanje.",
+    required: "Unesite zadatak.",
+    fixedDurationRequired: "Unesite trajanje fiksne obaveze kako bi ukupno opterećenje dana bilo tačno.",
     duplicate: "Ovaj zadatak je već u današnjem planu.",
-    unknown: "Prvo odredite današnje vreme za fleksibilne zadatke.",
     full: (remaining: number) => `U današnjem fleksibilnom vremenu ostalo je još ${remaining} min. Prilagodite plan ili sačuvajte zadatak za kasnije.`,
     failed: "Zadatak nije sačuvan. Pokušajte ponovo.",
     savedLater: "Sačuvano u Inboksu za kasnije.",
@@ -84,13 +84,13 @@ const COPY = {
     reconsiderIntro: "Yeni görev tamamlanmamış önceliklerle karşılaştırılacak. Kaydetmeden önce öneriyi inceleyin.",
     task: "Görev",
     taskPlaceholder: "Ne yapılması gerekiyor?",
-    minutes: "Dakika",
+    minutes: "Dakika (isteğe bağlı)",
     add: "Bugüne ekle",
     later: "Daha sonrası için kaydet",
     cancel: "İptal",
-    required: "Bir görev ve gerçekçi bir süre girin.",
+    required: "Bir görev girin.",
+    fixedDurationRequired: "Günlük yükün doğru kalması için sabit yükümlülüğün süresini ekleyin.",
     duplicate: "Bu görev bugünün planında zaten var.",
-    unknown: "Bu görevi eklemeden önce bugünkü esnek zamanınızı belirleyin.",
     full: (remaining: number) => `Bugünkü esnek zamanda yalnızca ${remaining} dk kaldı. Planı düzenleyin veya görevi daha sonrası için kaydedin.`,
     failed: "Görev kaydedilemedi. Tekrar deneyin.",
     savedLater: "Daha sonrası için Gelen Kutusuna kaydedildi.",
@@ -133,20 +133,21 @@ export default function QuickAddTodayTask({ language, availableMinutes, plannedR
 
   const values = () => {
     const cleanTitle = title.trim();
-    const duration = Number(minutes);
-    if (!cleanTitle || !Number.isInteger(duration) || duration < 1 || duration > 1440) return null;
+    if (!cleanTitle) { setError(t.required); return null; }
+    const duration = minutes.trim() === "" ? 20 : Number(minutes);
+    if (capacityType === "fixed" && minutes.trim() === "") { setError(t.fixedDurationRequired); return null; }
+    if (!Number.isInteger(duration) || duration < 1 || duration > 1440) { setError(t.required); return null; }
     return { cleanTitle, duration };
   };
 
   const add = async (confirmReprioritization = false) => {
     const input = values();
-    if (!input) { setError(t.required); return; }
+    if (!input) return;
     setBusy(true); setError(null); setNotice(null);
     try {
       const result = await onAddToday({ title: input.cleanTitle, minutes: input.duration, capacityType, reconsiderPriorities, confirmReprioritization });
       if (result.status === "preview") setPreview(result.changes);
       else if (result.status === "error" && result.code === "duplicate") setError(t.duplicate);
-      else if (result.status === "error" && result.code === "capacity_unknown") setError(t.unknown);
       else if (result.status === "error" && result.code === "capacity_exceeded") setError(t.full(remaining));
       else if (result.status === "error") setError(t.failed);
       else { setTitle(""); setMinutes(""); setCapacityType("flexible"); setReconsiderPriorities(false); setPreview(null); setOpen(false); }
@@ -156,7 +157,7 @@ export default function QuickAddTodayTask({ language, availableMinutes, plannedR
 
   const saveLater = async () => {
     const input = values();
-    if (!input) { setError(t.required); return; }
+    if (!input) return;
     setBusy(true); setError(null); setNotice(null);
     try {
       if (!await onSaveLater(input.cleanTitle, input.duration, capacityType)) setError(t.failed);
@@ -169,7 +170,7 @@ export default function QuickAddTodayTask({ language, availableMinutes, plannedR
 
   return <section className="app-a-surface mb-5 p-4 sm:p-5" aria-labelledby="quick-add-title">
     <div className="flex items-start justify-between gap-3"><div><h2 id="quick-add-title" className="text-[18px] font-semibold">{t.title}</h2><p className="mt-1 text-[13px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>{reconsiderPriorities ? t.reconsiderIntro : t.intro}</p></div><button type="button" onClick={() => setOpen(false)} className="app-a-focus-ring flex h-11 w-11 shrink-0 items-center justify-center rounded-full" aria-label={t.cancel}><X className="h-4 w-4" /></button></div>
-    <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_120px]"><label className="text-[13px] font-medium">{t.task}<input autoFocus maxLength={500} value={title} onChange={(event) => { setTitle(event.target.value); setPreview(null); }} placeholder={t.taskPlaceholder} className="app-a-field app-a-focus-ring mt-1 min-h-12 w-full px-3 text-[16px]" /></label><label className="text-[13px] font-medium">{t.minutes}<input type="number" min="1" max="1440" value={minutes} onChange={(event) => { setMinutes(event.target.value); setPreview(null); }} className="app-a-field app-a-focus-ring mt-1 min-h-12 w-full px-3 text-[16px]" /></label></div>
+    <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_150px]"><label className="text-[13px] font-medium">{t.task}<input autoFocus maxLength={500} value={title} onChange={(event) => { setTitle(event.target.value); setPreview(null); }} placeholder={t.taskPlaceholder} className="app-a-field app-a-focus-ring mt-1 min-h-12 w-full px-3 text-[16px]" /></label><label className="text-[13px] font-medium">{capacityType === "fixed" ? t.minutes.replace(/\s*\([^)]*\)$/, "") : t.minutes}<input type="number" min="1" max="1440" value={minutes} onChange={(event) => { setMinutes(event.target.value); setPreview(null); }} placeholder={capacityType === "fixed" ? undefined : "20"} className="app-a-field app-a-focus-ring mt-1 min-h-12 w-full px-3 text-[16px]" /></label></div>
     <details className="mt-3 rounded-xl border border-black/10 p-3 dark:border-white/10">
       <summary className="app-a-focus-ring cursor-pointer text-[13px] font-semibold">{t.more}</summary>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -179,6 +180,6 @@ export default function QuickAddTodayTask({ language, availableMinutes, plannedR
     </details>
     {preview ? <div className="mt-3 rounded-xl border border-[#0A84FF]/25 bg-[#0A84FF]/[0.055] p-3 text-[13px]" role="status"><p className="font-semibold">{t.previewTitle}</p><p className="mt-1" style={{ color: "var(--app-a-text-secondary)" }}>{t.previewIntro}</p>{preview.firstFocus.length ? <p className="mt-2"><strong>{t.firstFocus}:</strong> {preview.firstFocus.join(", ")}</p> : null}{preview.movedLater.length ? <p className="mt-1"><strong>{t.movedLater}:</strong> {preview.movedLater.join(", ")}</p> : null}{preview.movedOptional.length ? <p className="mt-1"><strong>{t.movedOptional}:</strong> {preview.movedOptional.join(", ")}</p> : null}</div> : null}
     {error ? <div role="alert" className="app-a-panel-danger mt-3 text-[13px]">{error}</div> : null}
-    <div className="mt-4 flex flex-wrap gap-2">{preview ? <><button type="button" disabled={busy} onClick={() => void add(true)} className="app-a-primary-button app-a-focus-ring px-4">{t.confirm}</button><button type="button" disabled={busy} onClick={() => setPreview(null)} className="app-a-secondary-button app-a-focus-ring px-4">{t.back}</button></> : <><button type="button" disabled={busy} onClick={() => void add()} className="app-a-primary-button app-a-focus-ring px-4">{t.add}</button><button type="button" disabled={busy} onClick={() => void saveLater()} className="app-a-secondary-button app-a-focus-ring px-4">{t.later}</button></>}{error && (error === t.unknown || error === t.full(remaining)) ? <button type="button" onClick={onAdjustPlan} className="app-a-secondary-button app-a-focus-ring px-4">{language === "sr" ? "Prilagodi plan" : language === "tr" ? "Planı düzenle" : "Adjust plan"}</button> : null}</div>
+    <div className="mt-4 flex flex-wrap gap-2">{preview ? <><button type="button" disabled={busy} onClick={() => void add(true)} className="app-a-primary-button app-a-focus-ring px-4">{t.confirm}</button><button type="button" disabled={busy} onClick={() => setPreview(null)} className="app-a-secondary-button app-a-focus-ring px-4">{t.back}</button></> : <><button type="button" disabled={busy} onClick={() => void add()} className="app-a-primary-button app-a-focus-ring px-4">{t.add}</button><button type="button" disabled={busy} onClick={() => void saveLater()} className="app-a-secondary-button app-a-focus-ring px-4">{t.later}</button></>}{error === t.full(remaining) ? <button type="button" onClick={onAdjustPlan} className="app-a-secondary-button app-a-focus-ring px-4">{language === "sr" ? "Prilagodi plan" : language === "tr" ? "Planı düzenle" : "Adjust plan"}</button> : null}</div>
   </section>;
 }

@@ -44,7 +44,7 @@ import { addRolloverCandidateToPlan } from './rolloverCandidatePlan';
 import type { DataResetEventDetail } from '../components/settings/DataResetModal';
 import { createInboxItemAndAddToPlanAtomic, createInboxItemAndReplacePlanAtomic, saveConfirmedPlanAndInboxAtomic, saveDailyPlanCompletionAndInboxStatusAtomic, saveInboxItem, savePlanAndScheduleInboxItemAtomic } from '../persistence/inboxRepository';
 import { createManualInboxItemId, type AppAInboxItem } from '../domain/inbox/contracts';
-import { addInboxItemToPlan } from './inboxCandidatePlan';
+import { addInboxItemToPlan, getInboxPlanningMinutes } from './inboxCandidatePlan';
 import DueInboxItemsSection from '../components/inbox/DueInboxItemsSection';
 import type { QuickAddInput, QuickAddResult } from '../components/daily-reset/QuickAddTodayTask';
 
@@ -350,12 +350,13 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
 
   const handleAddInboxItem = async (item: AppAInboxItem): Promise<string | null> => {
     if (!user || !state.planDraft) return 'noPlan';
-    const result = addInboxItemToPlan(state.planDraft, item);
+    const estimatedItem = { ...item, estimatedMinutes: getInboxPlanningMinutes(item) };
+    const result = addInboxItemToPlan(state.planDraft, estimatedItem);
     if ('error' in result) return result.error;
     try {
       const document = createDailyPlanDocument(state.inputData, result.draft, language, activePlanDate, effectiveTimeZone);
       document.execution = { completedItemIds };
-      const saved = await savePlanAndScheduleInboxItemAtomic(user.uid, document, item);
+      const saved = await savePlanAndScheduleInboxItemAtomic(user.uid, document, estimatedItem);
       planRevision.current = saved.document.revision || 0;
       setCompletedItemIds(saved.document.execution?.completedItemIds || []);
       loadConfirmedPlan(planDraftFromDocument(saved.document), state.inputData);

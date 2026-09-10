@@ -16,6 +16,6 @@ if ("draft" in added) {
 const exceeded = addVisionCandidateToPlan({ ...draft, availableMinutes: 20 }, candidate);
 assert.equal("draft" in exceeded && exceeded.draft.ifCapacityRemains.length, 1);
 const unknownCap = addVisionCandidateToPlan({ ...draft, availableMinutes: undefined }, candidate);
-assert.equal("draft" in unknownCap && unknownCap.draft.laterToday.length, 1);
+assert.equal("draft" in unknownCap && unknownCap.draft.ifCapacityRemains.length, 1);
 assert.equal(draft.laterToday.length, 0);
 console.log("Vision candidate plan tests passed.");

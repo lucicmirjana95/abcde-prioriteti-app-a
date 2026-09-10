@@ -98,13 +98,13 @@ const tightDraft: DailyPlanDraft = {
 const exceededResult = addRolloverCandidateToPlan(tightDraft, candidate);
 assert.equal("draft" in exceededResult && exceededResult.draft.ifCapacityRemains.length, 1);
 
-// 5. Automatic capacity allows an explicit user addition
+// 5. Unknown capacity keeps an explicit addition visible without overcommitting the day
 const unknownCapDraft: DailyPlanDraft = {
   ...createBaseDraft(),
   availableMinutes: undefined,
 };
 const unknownResult = addRolloverCandidateToPlan(unknownCapDraft, candidate);
-assert.equal("draft" in unknownResult && unknownResult.draft.laterToday.length, 1);
+assert.equal("draft" in unknownResult && unknownResult.draft.ifCapacityRemains.length, 1);
 
 // 6. Placement in ifCapacityRemains when explicitly requested
 const optionalResult = addRolloverCandidateToPlan(initialDraft, candidate, "if_capacity_remains");

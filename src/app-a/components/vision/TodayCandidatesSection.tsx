@@ -19,7 +19,6 @@ const COPY = {
     retry: "Try again",
     error: "Vision steps could not be loaded.",
     duplicate: "This step is already in the plan.",
-    capacity_unknown: "Set your available time before adding this step.",
     capacity_exceeded: "Today’s plan is full. Keep this step here for later or adjust the plan.",
     invalid_plan: "This step could not be added. Try again.",
     editDuration: "Edit duration",
@@ -42,7 +41,6 @@ const COPY = {
     retry: "Pokušaj ponovo",
     error: "Koraci iz Vizije nisu učitani.",
     duplicate: "Ovaj korak je već u planu.",
-    capacity_unknown: "Unesite raspoloživo vreme pre dodavanja ovog koraka.",
     capacity_exceeded: "Današnji plan je popunjen. Sačuvajte ovaj korak za kasnije ili prilagodite plan.",
     invalid_plan: "Ovaj korak nije dodat. Pokušajte ponovo.",
     editDuration: "Izmeni trajanje",
@@ -65,7 +63,6 @@ const COPY = {
     retry: "Tekrar dene",
     error: "Vizyon adımları yüklenemedi.",
     duplicate: "Bu adım zaten planda.",
-    capacity_unknown: "Bu adımı eklemeden önce kullanılabilir sürenizi belirleyin.",
     capacity_exceeded: "Bugünün planı dolu. Bu adımı daha sonrası için burada tutun veya planı düzenleyin.",
     invalid_plan: "Bu adım eklenemedi. Tekrar deneyin.",
     editDuration: "Süreyi düzenle",
@@ -161,7 +158,7 @@ export default function TodayCandidatesSection({ userId, language, planState, on
 
   if (!userId || (!error && items.length === 0)) return null;
   const errorText = error ? (t[error as keyof typeof t] || t.error) : null;
-  const guidance = planState === "none" ? t.noPlan : planState === "draft" ? t.draftPlan : error === "capacity_unknown" ? t.capacity_unknown : error === "capacity_exceeded" ? t.capacity_exceeded : null;
+  const guidance = planState === "none" ? t.noPlan : planState === "draft" ? t.draftPlan : error === "capacity_exceeded" ? t.capacity_exceeded : null;
   const planAction = planState === "none" ? t.createPlan : t.reviewPlan;
 
   const primary = items.find(item => item.isCurrentFocus);
