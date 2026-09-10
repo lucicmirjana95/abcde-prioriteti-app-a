@@ -24,7 +24,7 @@ This runs TypeScript checks, every App A/shared contract and persistence test, a
 Before the first production deployment:
 
 1. Create the `GEMINI_API_KEY` secret in the Firebase/Google Cloud project used by App Hosting. Never expose it as a `VITE_` variable.
-2. Deploy `firestore.rules` to the same Firebase project.
+2. Deploy `firestore.rules` to the same Firebase project. The rules intentionally allow only authenticated, owner-scoped App A, Vision, and routine collections; retired public board paths remain denied.
 3. Enable Google as a Firebase Authentication provider.
 4. Add the final App Hosting domain to Firebase Authentication **Authorized domains**.
 5. Confirm App Hosting uses `apphosting.yaml`. The platform supplies `PORT`; the server binds it on `0.0.0.0`.
