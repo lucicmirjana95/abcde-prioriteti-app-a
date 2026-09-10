@@ -21,7 +21,7 @@ import { assessVisionFeasibility, createVisionStrategy, decomposeVisionStep } fr
 import type { AppALanguage } from "../../types";
 import { useAppAAuth } from "../../auth/useAppAAuth";
 import { createVisionStrategyId, type SavedVisionStrategy } from "../../../shared/domain/vision";
-import { getVisionSaveDiagnostic, saveVisionStrategy } from "../../../shared/persistence/vision";
+import { getVisionSaveDiagnostic, loadVisionLibrary, saveVisionStrategy } from "../../../shared/persistence/vision";
 
 const SHOW_DEV_DIAGNOSTICS = typeof window !== "undefined" &&
   (window.location.hostname === "localhost" || window.location.hostname.startsWith("ais-"));
@@ -188,6 +188,8 @@ export default function VisionStrategyBuilder({
   const [feasibilityDetails, setFeasibilityDetails] = useState(working?.feasibilityDetails || initialDocument?.planningContext?.clarificationDetails || "");
   const [saveDiagnostic, setSaveDiagnostic] = useState<string | null>(null);
   const [acceptedGoal, setAcceptedGoal] = useState(working?.acceptedGoal || initialDocument?.planningContext?.acceptedGoal || idea);
+  const [currentRevision, setCurrentRevision] = useState<number | undefined>(initialDocument?.revision);
+  const [versionConflict, setVersionConflict] = useState(false);
   useEffect(() => {
     writeSessionDraft(workingKey, { documentId, strategy, breakdowns, timeframe, acceptedGoal, feasibility, feasibilityDetails, questionAnswers, saved });
   }, [workingKey, documentId, strategy, breakdowns, timeframe, acceptedGoal, feasibility, feasibilityDetails, questionAnswers, saved]);
@@ -203,25 +205,35 @@ export default function VisionStrategyBuilder({
       stepBreakdowns: currentBreakdowns,
       createdAt: initialDocument?.createdAt || now,
       updatedAt: now,
+      revision: currentRevision,
       status: initialDocument?.status || "active",
       planningContext: { acceptedGoal: goal, ...(target.trim() ? { timeframe: target.trim() } : {}), ...(details.trim() ? { clarificationDetails: details.trim() } : {}) },
       ...(initialDocument?.archivedAt ? { archivedAt: initialDocument.archivedAt } : {}),
     };
     try {
-      await saveVisionStrategy(userId, document);
+      const savedDoc = await saveVisionStrategy(userId, document);
+      setCurrentRevision(savedDoc.revision);
+      setVersionConflict(false);
       setSaved(true);
       setAuthRequired(false);
       setError(false);
       setSaveDiagnostic(null);
-      onSaved?.(document);
+      onSaved?.(savedDoc);
       window.dispatchEvent(new Event("app-a-vision-candidates-changed"));
       return true;
     } catch (cause) {
       const diagnostic = getVisionSaveDiagnostic(cause);
       setSaved(false);
       setSaveDiagnostic(`${diagnostic.stage} / ${diagnostic.category} / ${diagnostic.firebaseCode}`);
-      if (diagnostic.category === "unauthenticated") setAuthRequired(true);
-      else setError(true);
+      if (diagnostic.category === "version_conflict" || diagnostic.firebaseCode === "vision_changed_elsewhere") {
+        setVersionConflict(true);
+        setError(false);
+        setAuthRequired(false);
+      } else if (diagnostic.category === "unauthenticated") {
+        setAuthRequired(true);
+      } else {
+        setError(true);
+      }
       if (SHOW_DEV_DIAGNOSTICS) console.error({ feature: "app_a_vision_save", ...diagnostic, projectId: "daily-reset-app-a", databaseId: "(default)", authReady, authPresent: Boolean(user), uidMatchesPath: user?.uid === userId });
       return false;
     }
@@ -657,6 +669,42 @@ export default function VisionStrategyBuilder({
             ) : null}
           </section>
 
+          {versionConflict ? (
+            <div role="alert" className="space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3.5 text-[13px] text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
+              <p className="font-semibold">
+                {language === "sr"
+                  ? "Ova vizija je promenjena na drugom mestu (druga kartica ili uređaj)."
+                  : language === "tr"
+                  ? "Bu vizyon başka bir yerde değiştirildi."
+                  : "This vision was modified elsewhere (another tab or device)."}
+              </p>
+              <p className="text-[12px] leading-relaxed opacity-90">
+                {language === "sr"
+                  ? "Vaše lokalne izmene su sačuvane ovde u uređivaču. Da biste sprečili nenamerno prepisivanje, sinhronizujte verziju pre ponovnog čuvanja."
+                  : language === "tr"
+                  ? "Yerel düzenlemeleriniz korundu. Üzerine yazmayı önlemek için lütfen tekrar kaydetmeden önce sürümü eşitleyin."
+                  : "Your local changes are retained in this editor. To prevent overwriting other changes, sync the latest version before saving again."}
+              </p>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const library = await loadVisionLibrary(userId);
+                    const latest = library.strategies.find((s) => s.id === documentId);
+                    if (latest) {
+                      setCurrentRevision(latest.revision);
+                      setVersionConflict(false);
+                    }
+                  } catch {
+                    // ignore
+                  }
+                }}
+                className="app-a-secondary-button app-a-focus-ring mt-1 px-3 py-1 text-[12px] font-semibold"
+              >
+                {language === "sr" ? "Sinhronizuj verziju" : language === "tr" ? "Sürümü eşitle" : "Sync latest version"}
+              </button>
+            </div>
+          ) : null}
           {error ? (
             <div className="space-y-1 text-[13px] text-[#FF3B30]" role="alert">
               <p>{t.saveError}</p>

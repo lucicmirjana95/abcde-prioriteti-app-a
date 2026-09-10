@@ -3,12 +3,12 @@ import { db } from "../../../lib/firebase";
 import { auth } from "../../../lib/firebase";
 import { isSavedVisionStrategy, type SavedVisionStrategy } from "../../domain/vision";
 
-export type VisionPersistenceCategory = "permission_denied" | "unauthenticated" | "unavailable" | "network" | "invalid_data" | "unknown";
+export type VisionPersistenceCategory = "permission_denied" | "unauthenticated" | "unavailable" | "network" | "invalid_data" | "version_conflict" | "unknown";
 export interface VisionPersistenceDiagnostic { stage: "set_doc"; firebaseCode: string; category: VisionPersistenceCategory }
 
 export class VisionPersistenceError extends Error {
   constructor(readonly diagnostic: VisionPersistenceDiagnostic, readonly cause?: unknown) {
-    super("vision_strategy_save_failed");
+    super(diagnostic.category === "version_conflict" ? "vision_changed_elsewhere" : "vision_strategy_save_failed");
     this.name = "VisionPersistenceError";
   }
 }
@@ -21,13 +21,41 @@ function safeFirebaseCode(error: unknown): string {
 export function getVisionSaveDiagnostic(error: unknown): VisionPersistenceDiagnostic {
   const firebaseCode = error instanceof VisionPersistenceError ? error.diagnostic.firebaseCode : safeFirebaseCode(error);
   const normalized = firebaseCode.toLowerCase().replace(/_/g, "-");
-  const category: VisionPersistenceCategory = normalized.includes("permission-denied") ? "permission_denied"
+  const rawMsg = typeof error === "object" && error && "message" in error ? String((error as { message?: unknown }).message || "") : "";
+  const isConflict = normalized.includes("vision-changed-elsewhere") || rawMsg === "vision_changed_elsewhere";
+  const category: VisionPersistenceCategory = isConflict ? "version_conflict"
+    : normalized.includes("permission-denied") ? "permission_denied"
     : normalized.includes("unauthenticated") || normalized.includes("authentication-required") ? "unauthenticated"
     : normalized.includes("unavailable") ? "unavailable"
     : normalized.includes("network") || normalized.includes("deadline-exceeded") || normalized.includes("timed-out") ? "network"
     : normalized.includes("invalid") || normalized.includes("failed-precondition") ? "invalid_data"
     : "unknown";
-  return { stage: "set_doc", firebaseCode, category };
+  return { stage: "set_doc", firebaseCode: isConflict ? "vision_changed_elsewhere" : firebaseCode, category };
+}
+
+export type VisionRevisionCheckResult =
+  | { valid: true; nextRevision: number }
+  | { valid: false; error: "vision_changed_elsewhere" | "vision_deleted"; existingRevision?: number; incomingRevision?: number };
+
+export function checkVisionStrategyRevision(
+  existingDoc: { revision?: number; deleted?: boolean } | null | undefined,
+  incomingStrategy: SavedVisionStrategy
+): VisionRevisionCheckResult {
+  if (existingDoc?.deleted === true) {
+    return { valid: false, error: "vision_deleted" };
+  }
+  if (!existingDoc) {
+    return {
+      valid: true,
+      nextRevision: typeof incomingStrategy.revision === "number" && incomingStrategy.revision > 0 ? incomingStrategy.revision : 1,
+    };
+  }
+  const existingRevision = typeof existingDoc.revision === "number" ? existingDoc.revision : 0;
+  const incomingRevision = typeof incomingStrategy.revision === "number" ? incomingStrategy.revision : 0;
+  if (existingRevision !== incomingRevision) {
+    return { valid: false, error: "vision_changed_elsewhere", existingRevision, incomingRevision };
+  }
+  return { valid: true, nextRevision: existingRevision + 1 };
 }
 
 async function requireUser(userId: string) {
@@ -36,16 +64,45 @@ async function requireUser(userId: string) {
   if (!auth.currentUser || auth.currentUser.uid !== userId) throw Object.assign(new Error("authentication_required"), { code: "auth/unauthenticated" });
 }
 
-export async function saveVisionStrategy(userId: string, strategy: SavedVisionStrategy) {
+export async function saveVisionStrategy(
+  userId: string,
+  strategy: SavedVisionStrategy,
+): Promise<SavedVisionStrategy> {
   try {
     await requireUser(userId);
     if (!isSavedVisionStrategy(strategy)) throw Object.assign(new Error("invalid_vision_strategy"), { code: "invalid-data" });
     const reference = doc(db, "users", userId, "visionStrategies", strategy.id);
+    let nextRevision = 1;
+    const now = new Date().toISOString();
     await runTransaction(db, async transaction => {
       const existing = await transaction.get(reference);
-      if (existing.data()?.deleted === true) throw Object.assign(new Error('vision_deleted'), { code: 'failed-precondition' });
-      transaction.set(reference, JSON.parse(JSON.stringify(strategy)));
+      const existingData = existing.data() as { revision?: number; deleted?: boolean } | undefined;
+      const revisionCheck = checkVisionStrategyRevision(existingData, strategy);
+      if (revisionCheck.valid === false) {
+        const failure = revisionCheck;
+        if (failure.error === "vision_deleted") {
+          throw Object.assign(new Error("vision_deleted"), { code: "failed-precondition" });
+        }
+        throw Object.assign(new Error("vision_changed_elsewhere"), {
+          code: "vision_changed_elsewhere",
+          existingRevision: failure.existingRevision,
+          expectedRevision: failure.incomingRevision,
+        });
+      }
+      nextRevision = revisionCheck.nextRevision;
+      const documentToSave: SavedVisionStrategy = {
+        ...strategy,
+        revision: nextRevision,
+        updatedAt: now,
+      };
+      transaction.set(reference, JSON.parse(JSON.stringify(documentToSave)));
     });
+
+    return {
+      ...strategy,
+      revision: nextRevision,
+      updatedAt: now,
+    };
   } catch (error) {
     if (error instanceof VisionPersistenceError) throw error;
     throw new VisionPersistenceError(getVisionSaveDiagnostic(error), error);

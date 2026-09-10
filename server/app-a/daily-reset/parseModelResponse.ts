@@ -6,6 +6,7 @@ import {
   validateClarificationResponse,
   validatePlanDraft,
   recalculatePlanTotals,
+  normalizePlanDraftChronology,
   ClarificationQuestion,
   DailyPlanDraft,
   ClassifiedBrainDumpItem,
@@ -337,6 +338,13 @@ export function parseModelResponse(
         });
       };
 
+      // ARCHITECTURAL CONTRACT:
+      // a) PROMPT RULE: The prompt instructs the Gemini model to pick at most three high-leverage tasks for firstFocus.
+      // b) PARSER VALIDATION: The parser strictly validates this boundary (firstFocus.length <= 3).
+      //    It NEVER silently demotes or auto-moves surplus items into laterToday. If the model outputs 4+ items,
+      //    the parser rejects the draft with "Four or more First-focus items provided." to trigger route-level repair.
+      // c) ROUTE REPAIR & UI RETRY: The backend route sends a bounded one-shot repair prompt to fix the draft.
+      //    If repair still fails, it returns a normalized error so the UI can prompt user retry without silent data corruption.
       let firstFocus = processPlanItems(draft.firstFocus, "first_focus");
       if (firstFocus.length > 3) {
         throw new Error("Four or more First-focus items provided.");
@@ -398,6 +406,7 @@ export function parseModelResponse(
         availableMinutes: authoritativeInput ? (authoritativeInput.availableMinutes ?? explicitAvailableMinutes(authoritativeInput.brainDump || '')) : draft.availableMinutes !== undefined ? Number(draft.availableMinutes) : undefined
       };
 
+      planDraft = normalizePlanDraftChronology(planDraft);
       planDraft = recalculatePlanTotals(planDraft);
 
       const validation = validatePlanDraft(planDraft, knownQuestionIds ? knownQuestionIds.map(id => ({ id, question: "", context: "", relatedItemIds: [], materialImpact: "other" as const })) : undefined);

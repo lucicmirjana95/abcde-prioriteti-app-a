@@ -9,6 +9,7 @@ export interface SavedVisionStrategy {
   stepBreakdowns: Record<string, string[]>;
   createdAt: string;
   updatedAt: string;
+  revision?: number;
   status?: "active" | "archived";
   archivedAt?: string;
   planningContext?: {
@@ -31,6 +32,7 @@ export function isSavedVisionStrategy(value: unknown): value is SavedVisionStrat
     isVisionStrategyResult(item.strategy) && isValidBreakdowns(item.stepBreakdowns) &&
     typeof item.createdAt === "string" && !Number.isNaN(Date.parse(item.createdAt)) &&
     typeof item.updatedAt === "string" && !Number.isNaN(Date.parse(item.updatedAt)) &&
+    (item.revision === undefined || (typeof item.revision === "number" && Number.isInteger(item.revision) && item.revision >= 0)) &&
     (item.status === undefined || item.status === "active" || item.status === "archived") &&
     (item.archivedAt === undefined || (typeof item.archivedAt === "string" && !Number.isNaN(Date.parse(item.archivedAt)))) &&
     (item.planningContext === undefined || isPlanningContext(item.planningContext)) &&

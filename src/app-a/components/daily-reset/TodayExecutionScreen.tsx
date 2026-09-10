@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Check, Clock3, Pencil, Sparkles, Timer, Wind } from "lucide-react";
 import type { DailyPlanDraft, DailyPlanItem } from "../../domain/daily-reset/contracts";
+import { normalizeChronologicalOrder } from "../../domain/daily-reset/chronology";
 import { APP_A_TRANSLATIONS, type AppALanguage } from "../../types";
 import SafeInterventionCard from "./SafeInterventionCard";
 import { normalizeCompletedItemIds } from "../../screens/todayExecution";
@@ -38,10 +39,10 @@ export default function TodayExecutionScreen({
 }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
   const [focusItem, setFocusItem] = useState<DailyPlanItem | null>(null);
-  const requiredItems = [...draft.firstFocus, ...draft.laterToday];
-  const optionalItems = draft.ifCapacityRemains;
-  const todayItems = [...requiredItems, ...optionalItems];
   const completed = normalizeCompletedItemIds(draft, completedItemIds);
+  const requiredItems = normalizeChronologicalOrder([...draft.firstFocus, ...draft.laterToday], completed);
+  const optionalItems = normalizeChronologicalOrder(draft.ifCapacityRemains, completed);
+  const todayItems = [...requiredItems, ...optionalItems];
   const outsideCount =
     draft.deferredItems.length + draft.longTermIdeas.length + draft.nonActionItems.length;
   const summary = t.completedSummary
