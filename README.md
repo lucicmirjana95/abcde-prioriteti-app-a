@@ -14,9 +14,10 @@ Requirements: Node.js and pnpm.
 Before deployment, run:
 
 ```sh
-pnpm run lint
-pnpm run build
+pnpm run verify:app-a
 ```
+
+This runs TypeScript checks, every App A/shared contract and persistence test, and the production client/server build.
 
 ## Firebase App Hosting preflight
 
