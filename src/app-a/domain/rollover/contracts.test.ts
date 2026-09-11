@@ -99,7 +99,14 @@ const snoozedFutureKey = getRolloverDecisionId("2026-09-01", "snoozed-future");
 const snoozedDueKey = getRolloverDecisionId("2026-09-01", "snoozed-due-today");
 const snoozedPastKey = getRolloverDecisionId("2026-09-01", "snoozed-past");
 
+const thisWeekKey = getRolloverDecisionId("2026-09-01", "this-week-1");
+
 const decisions: Record<string, AppARolloverDecision> = {
+  [thisWeekKey]: {
+    sourceLocalDate: "2026-09-01",
+    sourcePlanItemId: "this-week-1",
+    status: "this_week",
+  },
   [carriedKey]: {
     sourceLocalDate: "2026-09-01",
     sourcePlanItemId: "carried-1",
@@ -130,6 +137,7 @@ const decisions: Record<string, AppARolloverDecision> = {
   },
 };
 
+assert.equal(isCandidateEligibleWithDecisions("2026-09-01", "this-week-1", activeDate, decisions), false);
 assert.equal(isCandidateEligibleWithDecisions("2026-09-01", "carried-1", activeDate, decisions), false);
 assert.equal(isCandidateEligibleWithDecisions("2026-09-01", "dismissed-1", activeDate, decisions), false);
 assert.equal(isCandidateEligibleWithDecisions("2026-09-01", "snoozed-future", activeDate, decisions), false);

@@ -1,3 +1,5 @@
+import { ReevaluationDialog } from "./ReevaluationDialog";
+import { StructuredReevaluationProposal } from "../../screens/planReview";
 import { useState } from "react";
 import { Check, Clock3, Pencil, Sparkles, Timer, Wind } from "lucide-react";
 import type { DailyPlanDraft, DailyPlanItem } from "../../domain/daily-reset/contracts";
@@ -5,6 +7,8 @@ import { normalizeChronologicalOrder } from "../../domain/daily-reset/chronology
 import { APP_A_TRANSLATIONS, type AppALanguage } from "../../types";
 import SafeInterventionCard from "./SafeInterventionCard";
 import { normalizeCompletedItemIds } from "../../screens/todayExecution";
+import { loadAppAPreferences, getEffectiveTimeZone } from "../../settings/preferences";
+import { getLocalDateKeyInTimeZone } from "../../persistence/dailyPlanDocument";
 import FocusTimer from "../focus/FocusTimer";
 import QuickAddTodayTask from "./QuickAddTodayTask";
 import type { QuickAddInput, QuickAddResult } from "./QuickAddTodayTask";
@@ -22,6 +26,7 @@ interface Props {
   onOpenReset: () => void;
   onQuickAddToday: (input: QuickAddInput) => Promise<QuickAddResult>;
   onQuickSaveLater: (title: string, minutes: number, capacityType: "flexible" | "fixed") => Promise<boolean>;
+  onReevaluatePriorities?: (draft: DailyPlanDraft) => void;
 }
 
 export default function TodayExecutionScreen({
@@ -36,6 +41,7 @@ export default function TodayExecutionScreen({
   onOpenReset,
   onQuickAddToday,
   onQuickSaveLater,
+  onReevaluatePriorities,
 }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
   const [focusItem, setFocusItem] = useState<DailyPlanItem | null>(null);
@@ -94,26 +100,172 @@ export default function TodayExecutionScreen({
               </span>
             )}
             {(item.deadlineText || item.deadlineIso) && (
-              <span className="ml-1 text-amber-700 dark:text-amber-400">
+              <span className="ml-1" style={{ color: "var(--app-a-warning)" }}>
                 · {item.deadlineText || item.deadlineIso}
               </span>
             )}
           </span>
         </span>
-        {!isComplete && <div className="flex shrink-0 flex-col gap-1.5 sm:flex-row">{item.capacityType !== "fixed" ? <button type="button" onClick={() => setFocusItem(item)} className={emphasized ? "app-a-primary-button app-a-focus-ring justify-center gap-1.5 px-3 text-[13px]" : "app-a-focus-ring rounded-xl border border-black/10 p-2.5 text-[#0071E3] dark:border-white/15 dark:text-[#0A84FF]"} aria-label={`Focus: ${item.title}`}><Timer className="h-4 w-4" />{emphasized ? <span>{language === "sr" ? "Pokreni fokus" : language === "tr" ? "Odağı başlat" : "Start focus"}</span> : null}</button> : null}<button type="button" onClick={onOpenReset} className="app-a-focus-ring rounded-xl border border-black/10 p-2.5 text-[#0071E3] dark:border-white/15 dark:text-[#0A84FF]" aria-label={language === "sr" ? `Predah pre: ${item.title}` : language === "tr" ? `${item.title} öncesi mola` : `Reset before: ${item.title}`}><Wind className="h-4 w-4" /></button></div>}
+        {!isComplete && <div className="flex shrink-0 flex-col gap-1.5 sm:flex-row">{item.capacityType !== "fixed" ? <button type="button" onClick={() => setFocusItem(item)} className={emphasized ? "app-a-primary-button app-a-focus-ring justify-center gap-1.5 px-3 text-[13px]" : "app-a-secondary-button app-a-focus-ring p-2.5"} aria-label={`Focus: ${item.title}`}><Timer className="h-4 w-4" />{emphasized ? <span>{language === "sr" ? "Pokreni fokus" : language === "tr" ? "Odağı başlat" : "Start focus"}</span> : null}</button> : null}<button type="button" onClick={onOpenReset} className="app-a-secondary-button app-a-focus-ring p-2.5" aria-label={language === "sr" ? `Predah pre: ${item.title}` : language === "tr" ? `${item.title} öncesi mola` : `Reset before: ${item.title}`}><Wind className="h-4 w-4" /></button></div>}
       </div>
     );
   };
 
+  const [previewDraft, setPreviewDraft] = useState<DailyPlanDraft | null>(null);
+
+  const effectiveTimeZone = getEffectiveTimeZone(loadAppAPreferences());
+  const localDate = draft.localDate || getLocalDateKeyInTimeZone(effectiveTimeZone);
+  const [isInterventionDismissed, setIsInterventionDismissed] = useState<boolean>(() => {
+    if (!draft.intervention) return false;
+    try {
+      const stored = localStorage.getItem(`app_a_dismissed_interventions_${localDate}`);
+      if (!stored) return false;
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        return parsed.includes(draft.intervention.title) || parsed.includes(draft.intervention.type);
+      }
+      return Boolean(parsed);
+    } catch {
+      return false;
+    }
+  });
+
+  const handleDismissIntervention = () => {
+    setIsInterventionDismissed(true);
+    if (!draft.intervention) return;
+    try {
+      const key = `app_a_dismissed_interventions_${localDate}`;
+      const stored = localStorage.getItem(key);
+      const existing = stored ? JSON.parse(stored) : [];
+      const updated = Array.isArray(existing) ? [...existing, draft.intervention.title] : [draft.intervention.title];
+      localStorage.setItem(key, JSON.stringify(updated));
+    } catch {
+      // ignore storage error
+    }
+  };
+
+  const isInterventionRelevant = (() => {
+    if (!draft.intervention || isInterventionDismissed) return false;
+    const intervention = draft.intervention;
+
+    if (intervention.targetTaskId) {
+      const targetTask = todayItems.find((i) => i.id === intervention.targetTaskId);
+      if (!targetTask) return false;
+      if (completed.includes(targetTask.id)) return false;
+    }
+
+    const allDone = todayItems.length > 0 && completed.length === todayItems.length;
+    if (allDone && (intervention.type === "environment" || intervention.type === "focus")) {
+      return false;
+    }
+
+    return true;
+  })();
+
+  const [showReevalDialog, setShowReevalDialog] = useState(false);
+
+  const handlePreviewSort = () => {
+    setShowReevalDialog(true);
+  };
+
+  const handleConfirmReeval = async (
+    proposal: StructuredReevaluationProposal,
+    modifications: {
+      approvedDelegationIds: string[];
+      approvedEliminationIds: string[];
+      approvedManualOverrideIds: string[];
+    }
+  ) => {
+    const { applyReevaluationProposal } = await import("../../screens/planReview");
+    const finalDraft = applyReevaluationProposal(draft, proposal, modifications);
+    if ((finalDraft as any).error) {
+      alert((finalDraft as any).error);
+      return; // Do not close modal or persist
+    }
+    if (onReevaluatePriorities) {
+      onReevaluatePriorities(finalDraft);
+    }
+    setShowReevalDialog(false);
+  };
+
   return (
-    <div className="mx-auto w-full max-w-[760px] px-5 pb-16 sm:px-6">
+    <div className="mx-auto w-full max-w-[760px] px-5 sm:px-6">
+      {showReevalDialog && (
+        <ReevaluationDialog
+          draft={draft}
+          language={language}
+          localDate={localDate}
+          onClose={() => setShowReevalDialog(false)}
+          onConfirm={handleConfirmReeval}
+        />
+      )}
+      {focusItem && <FocusTimer item={focusItem} onClose={() => setFocusItem(null)} language={language} defaultMinutes={defaultFocusMinutes} />}
+
+      {/* AI Re-evaluation Modal */}
+      {previewDraft && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="app-a-surface w-full max-w-lg rounded-3xl p-6 shadow-2xl">
+            <h3 className="mb-4 text-xl font-bold tracking-tight text-black dark:text-white">
+              {language === "sr" ? "Preispitaj prioritete" : language === "tr" ? "Öncelikleri yeniden değerlendir" : "Re-evaluate priorities"}
+            </h3>
+            <p className="mb-5 text-[15px] text-[#6E6E73] dark:text-[#AEAEB2]">
+              {language === "sr" 
+                ? "Novi redosled na osnovu ABCDE/80-20 AI principa. Da li želite da primenite promene?" 
+                : "New order based on the ABCDE/80-20 AI principle. Do you want to apply the changes?"}
+            </p>
+            <div className="mb-6 max-h-[50vh] overflow-y-auto space-y-2 rounded-2xl border border-black/5 dark:border-white/5 bg-[#F5F5F7] dark:bg-[#1C1C1E] p-3">
+              {[...previewDraft.firstFocus, ...previewDraft.laterToday, ...previewDraft.ifCapacityRemains].map((item, idx) => (
+                <div key={item.id} className="text-[14px] font-medium text-black dark:text-white flex items-start gap-2">
+                  <span className="shrink-0 opacity-50 font-semibold">{idx + 1}.</span>
+                  <span className="flex-1">{item.title}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setPreviewDraft(null)}
+                className="app-a-secondary-button app-a-focus-ring min-h-[44px] rounded-xl px-5 text-[15px] font-semibold"
+              >
+                {t.cancelBtn}
+              </button>
+              <button
+                type="button"
+                onClick={handlePreviewSort}
+                className="app-a-primary-button app-a-focus-ring min-h-[44px] rounded-xl px-5 text-[15px] font-semibold"
+              >
+                {language === "sr" ? "Primeni" : language === "tr" ? "Uygula" : "Apply"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {draft.manualPriorityOverride && (
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-[#0A84FF]/20 bg-[#0A84FF]/5 p-4 dark:border-[#0A84FF]/30 dark:bg-[#0A84FF]/10">
+          <div className="space-y-1">
+            <p className="text-[14px] text-[#0071E3] dark:text-[#0A84FF]">
+              {language === "sr" ? "Redosled je ručno izmenjen." : language === "tr" ? "Sıralama manuel olarak değiştirildi." : "Order manually modified."}
+            </p>
+            
+          </div>
+          <button
+            type="button"
+            onClick={handlePreviewSort}
+            className="app-a-primary-button app-a-focus-ring whitespace-nowrap min-h-[40px] px-4 text-[13px]"
+          >
+            {language === "sr" ? "Preispitaj prioritete uz AI" : language === "tr" ? "Yapay zeka ile öncelikleri yeniden değerlendir" : "Re-evaluate via AI"}
+          </button>
+        </div>
+      )}
+
       <header className="mb-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="mb-1.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#0071E3] dark:text-[#0A84FF]">
+            <p className="app-a-eyebrow">
               {t.today}
             </p>
-            <h1 className="text-[28px] font-bold leading-tight tracking-[-0.035em] text-black sm:text-[34px] dark:text-white">
+            <h1 className="app-a-page-title">
               {t.todayPlanTitle}
             </h1>
           </div>
@@ -130,8 +282,11 @@ export default function TodayExecutionScreen({
           <span className="shrink-0 font-medium">{summary}</span>
           <div className="h-1.5 min-w-16 max-w-40 flex-1 overflow-hidden rounded-full bg-black/[0.07] dark:bg-white/[0.1]">
           <div
-            className="h-full rounded-full bg-[#34C759] transition-[width]"
-            style={{ width: `${todayItems.length ? (completed.length / todayItems.length) * 100 : 0}%` }}
+            className="h-full rounded-full transition-[width]"
+            style={{
+              backgroundColor: "var(--app-a-success)",
+              width: `${todayItems.length ? (completed.length / todayItems.length) * 100 : 0}%`,
+            }}
           />
           </div>
           <span className="shrink-0">{draft.plannedRequiredMinutes} min</span>
@@ -142,15 +297,15 @@ export default function TodayExecutionScreen({
       <DailyLoadWarning draft={draft} language={language} completedItemIds={completed} onReview={onEditPlan} />
 
       {error && (
-        <div role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-[14px] font-medium text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+        <div role="alert" className="app-a-panel-danger mb-5 text-[14px] font-medium">
           {error}
         </div>
       )}
 
       {todayItems.length > 0 && completed.length === todayItems.length && (
-        <div className="mb-5 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
+        <div className="app-a-panel-success mb-5 flex items-center gap-3 text-[15px] font-medium">
           <Sparkles className="h-5 w-5 shrink-0" aria-hidden="true" />
-          <span className="text-[15px] font-medium">{t.allTodayComplete}</span>
+          <span>{t.allTodayComplete}</span>
         </div>
       )}
 
@@ -174,8 +329,8 @@ export default function TodayExecutionScreen({
         </details>
       )}
 
-      {draft.intervention && (
-        <SafeInterventionCard intervention={draft.intervention} language={language} onOpenReset={onOpenReset} />
+      {isInterventionRelevant && draft.intervention && (
+        <SafeInterventionCard intervention={draft.intervention} language={language} onOpenReset={onOpenReset} onDismiss={handleDismissIntervention} />
       )}
 
       <div className="mt-7 border-t border-black/[0.07] pt-5 dark:border-white/[0.08]">

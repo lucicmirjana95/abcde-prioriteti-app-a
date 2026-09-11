@@ -356,6 +356,7 @@ runTest("fixed commitments remain visible outside flexible capacity", () => {
   const fixedCommitment: DailyPlanItem = {
     ...validPlanItem,
     id: "fixed-1",
+    block: "later_today",
     estimatedMinutes: 240,
     capacityType: "fixed",
   };
@@ -368,8 +369,8 @@ runTest("fixed commitments remain visible outside flexible capacity", () => {
   };
   const draft = recalculatePlanTotals({
     ...baseDraft,
-    firstFocus: [fixedCommitment],
-    laterToday: [flexibleTask],
+    firstFocus: [],
+    laterToday: [fixedCommitment, flexibleTask],
     availableMinutes: 30,
   });
 
@@ -377,6 +378,16 @@ runTest("fixed commitments remain visible outside flexible capacity", () => {
   assert.strictEqual(draft.plannedFixedMinutes, 240);
   assert.strictEqual(draft.plannedFlexibleMinutes, 30);
   assert.strictEqual(validatePlanDraft(draft).valid, true);
+});
+
+runTest("fixed commitments cannot be in first focus", () => {
+  const draft = recalculatePlanTotals({
+    ...baseDraft,
+    firstFocus: [{ ...validPlanItem, block: "first_focus", capacityType: "fixed" }],
+  });
+  const result = validatePlanDraft(draft);
+  assert.strictEqual(result.valid, false);
+  assert.ok(result.errors.some((error) => error.includes("cannot be in first focus")));
 });
 
 runTest("fixed commitments cannot be optional", () => {

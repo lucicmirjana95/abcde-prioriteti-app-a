@@ -211,7 +211,7 @@ function TimeZoneCombobox({
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder={t.searchZone}
-                className="app-a-field w-full py-1.5 pl-9 pr-3 text-[14px]"
+                className="app-a-field w-full py-1.5 pl-9 pr-3 text-[16px]"
               />
             </div>
           </div>
@@ -290,7 +290,7 @@ export default function SettingsScreen({
   const activeZoneText = `${t.activeZone}: ${effectiveZone}`;
 
   return (
-    <div className="mx-auto w-full max-w-[680px] px-5 pb-8 sm:px-6">
+    <div className="mx-auto w-full max-w-[680px] px-5 sm:px-6">
       <header className="mb-7">
         <p className="app-a-eyebrow">{t.eyebrow}</p>
         <h1 className="app-a-page-title">{t.title}</h1>
@@ -318,16 +318,16 @@ export default function SettingsScreen({
         {/* Theme */}
         <section className="p-5">
           <p className="text-[15px] font-semibold text-black dark:text-white">{t.theme}</p>
-          <div className="mt-2 grid grid-cols-3 gap-2">
+          <div className="mt-2.5 flex rounded-[12px] p-1 bg-black/[0.06] dark:bg-white/[0.08]" role="group">
             {(["system", "light", "dark"] as const).map((theme) => (
               <button
                 key={theme}
                 type="button"
                 onClick={() => update("theme", theme)}
-                className={`app-a-focus-ring min-h-11 rounded-xl border text-[13px] font-semibold transition-colors ${
+                className={`app-a-focus-ring flex-1 min-h-[36px] rounded-[9px] text-[13px] font-semibold transition-all ${
                   preferences.theme === theme
-                    ? "border-[#0071E3] bg-[#0071E3] text-white"
-                    : "border-black/10 text-black hover:bg-black/5 dark:border-white/15 dark:text-white dark:hover:bg-white/5"
+                    ? "bg-white text-black shadow-sm dark:bg-[#3A3A3C] dark:text-white"
+                    : "text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white"
                 }`}
               >
                 {t[theme]}

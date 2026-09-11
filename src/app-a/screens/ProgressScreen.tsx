@@ -20,7 +20,7 @@ export default function ProgressScreen({ language }: { language: AppALanguage })
   if (history.error) return <PlanHistoryState language={language} state="error" onSignIn={history.user ? history.retry : () => void history.signIn()} />;
   if (!history.user) return <PlanHistoryState language={language} state="sign_in" onSignIn={() => void history.signIn()} />;
   const summary = getProgressSummary(history.plans);
-  return <div className="mx-auto w-full max-w-[760px] px-5 pb-8 sm:px-6">
+  return <div className="mx-auto w-full max-w-[760px] px-5 sm:px-6">
     <header className="mb-7"><p className="app-a-eyebrow">{t.eyebrow}</p><h1 className="app-a-page-title">{t.title}</h1><p className="app-a-page-intro">{t.intro}</p></header>
     {summary.plannedDays === 0 ? <div className="app-a-surface flex min-h-[220px] flex-col items-center justify-center gap-3 p-8 text-center"><TrendingUp className="h-6 w-6 text-[#34C759]" aria-hidden="true" /><p className="max-w-sm text-[15px] text-[#6E6E73] dark:text-[#AEAEB2]">{t.empty}</p></div> : <>
       <section className="grid grid-cols-2 gap-3" aria-label={t.title}>

@@ -3,6 +3,7 @@ import {
   DailyPlanDraft,
   DailyPlanItem,
   ClassifiedBrainDumpItem,
+  PlanBlock,
 } from "../domain/daily-reset/contracts";
 import { APP_A_TRANSLATIONS } from "../types";
 import {
@@ -16,7 +17,24 @@ import {
   restoreUndoSnapshot,
   groupOutsideTodayItems,
   ReviewState,
+  evaluateItemPriorityStructured,
+  reevaluatePrioritiesStructured,
+  reevaluatePrioritiesLocal,
+  applyReevaluationProposal,
+  reorderPlanItem,
 } from "./planReview";
+
+function createTestPlanItem(props: Partial<DailyPlanItem> & { id: string; title: string; block: PlanBlock }): DailyPlanItem {
+  return {
+    sourceItemIds: [props.id],
+    estimatedMinutes: 30,
+    requiredEnergy: 3,
+    timeSensitivity: "none",
+    needsCheck: false,
+    priority: { explanation: "test" },
+    ...props,
+  };
+}
 
 function createMockDraft(): DailyPlanDraft {
   const item1: DailyPlanItem = {
@@ -391,7 +409,248 @@ function runTests() {
   };
   assert.equal(resetInput.brainDump, "My original brain dump text");
 
-  console.log("✅ All 38 plan review tests passed successfully!");
+  // Test 39: Structured ABCDE semantics
+  const criticalTask: DailyPlanItem = createTestPlanItem({
+    id: "crit-1",
+    title: "Hitno platiti porez danas jer stiže kazna",
+    block: "later_today",
+    estimatedMinutes: 20,
+    requiredEnergy: 4,
+    timeSensitivity: "urgent",
+  });
+  const critPriority = evaluateItemPriorityStructured(criticalTask);
+  assert.equal(critPriority.consequence, 5, "Critical task must have consequence 5 (A)");
+  assert.equal(critPriority.recommendedDisposition, "do");
+
+  const pleasantTask: DailyPlanItem = createTestPlanItem({
+    id: "pleas-1",
+    title: "Prijatno čitanje iz zabave",
+    block: "if_capacity_remains",
+    estimatedMinutes: 30,
+    requiredEnergy: 1,
+    timeSensitivity: "none",
+  });
+  const pleasPriority = evaluateItemPriorityStructured(pleasantTask);
+  assert.equal(pleasPriority.consequence, 1, "Pleasant/hobby task must have consequence 1 (C)");
+
+  // Test 40: Delegable and eliminable items are proposed (D / E) and NOT silently deleted
+  const delegateTask: DailyPlanItem = createTestPlanItem({
+    id: "del-1",
+    title: "Prosledi asistentu tabelu da popuni",
+    block: "later_today",
+    estimatedMinutes: 15,
+    requiredEnergy: 2,
+    timeSensitivity: "none",
+  });
+  const delPriority = evaluateItemPriorityStructured(delegateTask);
+  assert.equal(delPriority.recommendedDisposition, "delegate", "Must recommend delegate (D)");
+
+  const eliminateTask: DailyPlanItem = createTestPlanItem({
+    id: "elim-1",
+    title: "Suvišno sortiranje starih računa",
+    block: "if_capacity_remains",
+    estimatedMinutes: 20,
+    requiredEnergy: 1,
+    timeSensitivity: "none",
+  });
+  const elimPriority = evaluateItemPriorityStructured(eliminateTask);
+  assert.equal(elimPriority.recommendedDisposition, "eliminate", "Must recommend eliminate (E)");
+
+  // Test 41: First Focus strict cap at 3 items
+  const testDraftWithMany: DailyPlanDraft = {
+    ...initialDraft,
+    firstFocus: [
+      createTestPlanItem({ id: "ff-1", title: "Zadatak 1", block: "first_focus", estimatedMinutes: 20, requiredEnergy: 3, timeSensitivity: "none" }),
+      createTestPlanItem({ id: "ff-2", title: "Zadatak 2", block: "first_focus", estimatedMinutes: 20, requiredEnergy: 3, timeSensitivity: "none" }),
+      createTestPlanItem({ id: "ff-3", title: "Zadatak 3", block: "first_focus", estimatedMinutes: 20, requiredEnergy: 3, timeSensitivity: "none" }),
+      createTestPlanItem({ id: "ff-4", title: "Zadatak 4", block: "first_focus", estimatedMinutes: 20, requiredEnergy: 3, timeSensitivity: "none" }),
+    ],
+    laterToday: [],
+    ifCapacityRemains: [],
+  };
+  const reevalResult = reevaluatePrioritiesStructured(testDraftWithMany);
+  assert.ok(reevalResult.proposedDraft.firstFocus.length <= 3, "First Focus cannot exceed 3 items");
+
+  // Test 42: Fixed commitments cannot be placed in First Focus
+  const testDraftWithFixed: DailyPlanDraft = {
+    ...initialDraft,
+    firstFocus: [
+      createTestPlanItem({ id: "fix-1", title: "Sastanak u 10:00", block: "first_focus", estimatedMinutes: 60, requiredEnergy: 3, timeSensitivity: "urgent", capacityType: "fixed" }),
+      createTestPlanItem({ id: "flex-1", title: "Hitno završiti izveštaj", block: "first_focus", estimatedMinutes: 30, requiredEnergy: 4, timeSensitivity: "urgent" }),
+    ],
+  };
+  const fixedReeval = reevaluatePrioritiesStructured(testDraftWithFixed);
+  const fixedInFf = fixedReeval.proposedDraft.firstFocus.find((i) => i.capacityType === "fixed");
+  assert.equal(fixedInFf, undefined, "Fixed commitments must never be in First Focus");
+  const fixedInLt = fixedReeval.proposedDraft.laterToday.find((i) => i.id === "fix-1");
+  assert.ok(fixedInLt, "Fixed commitment must be preserved in Later Today");
+
+  // Test 43: Waiting item without concrete active steps excluded from First Focus
+  const testDraftWithWaiting: DailyPlanDraft = {
+    ...initialDraft,
+    firstFocus: [],
+    laterToday: [
+      createTestPlanItem({ id: "wait-1", title: "Čekam odgovor od klijenta", block: "later_today", estimatedMinutes: 10, requiredEnergy: 1, timeSensitivity: "none" }),
+      createTestPlanItem({ id: "act-1", title: "Hitno pozovi klijenta za ugovor", block: "later_today", estimatedMinutes: 20, requiredEnergy: 3, timeSensitivity: "urgent" }),
+    ],
+  };
+  const waitingReeval = reevaluatePrioritiesStructured(testDraftWithWaiting);
+  const waitInFf = waitingReeval.proposedDraft.firstFocus.find((i) => i.id === "wait-1");
+  assert.equal(waitInFf, undefined, "Passive waiting item cannot be placed in First Focus");
+  const actInFf = waitingReeval.proposedDraft.firstFocus.find((i) => i.id === "act-1");
+  assert.ok(actInFf, "Actionable item can enter First Focus");
+
+  // Test 44: 80/20 Leverage criteria (unblocking, friction, rework)
+  const unblockTask: DailyPlanItem = createTestPlanItem({
+    id: "unb-1",
+    title: "Odblokira rad celog tima",
+    block: "later_today",
+    estimatedMinutes: 20,
+    requiredEnergy: 3,
+    timeSensitivity: "none",
+  });
+  const unbPriority = evaluateItemPriorityStructured(unblockTask);
+  assert.ok(unbPriority.leverage >= 4, "Task that unblocks team must have leverage >= 4");
+
+  // Test 45: Energy awareness in re-evaluation
+  const lowEnergyDraft: DailyPlanDraft = {
+    ...initialDraft,
+    firstFocus: [],
+    laterToday: [
+      createTestPlanItem({ id: "heavy-1", title: "Teška analiza bez roka", block: "later_today", estimatedMinutes: 120, requiredEnergy: 5, timeSensitivity: "none" }),
+      createTestPlanItem({ id: "light-1", title: "Reši blokadu na prijavi", block: "later_today", estimatedMinutes: 15, requiredEnergy: 2, timeSensitivity: "none" }),
+    ],
+  };
+  const lowEnergyReeval = reevaluatePrioritiesStructured(lowEnergyDraft, { energy: 1 });
+  assert.equal(lowEnergyReeval.proposedDraft.firstFocus[0].id, "light-1", "Low energy gives priority to lower mental load high-leverage work");
+
+  // Test 46: Completed items are locked in place
+  const completedTaskDraft: DailyPlanDraft = {
+    ...initialDraft,
+    firstFocus: [
+      createTestPlanItem({ id: "comp-1", title: "Završen zadatak", block: "first_focus", estimatedMinutes: 30, requiredEnergy: 3, timeSensitivity: "none" }),
+      createTestPlanItem({ id: "other-1", title: "Hitno deblokira sve", block: "later_today", estimatedMinutes: 30, requiredEnergy: 3, timeSensitivity: "urgent" }),
+    ],
+  };
+  const completedReeval = reevaluatePrioritiesStructured(completedTaskDraft, { completedItemIds: ["comp-1"] });
+  const compInFf = completedReeval.proposedDraft.firstFocus.find((i) => i.id === "comp-1");
+  assert.ok(compInFf, "Completed item must remain locked in its block");
+  assert.ok(completedReeval.lockedItemIds.includes("comp-1"), "comp-1 must be recorded as locked");
+
+  // Test 47: Manual reordering is local, deterministic, and sets manualPriorityOverride
+  const reorderDraft: DailyPlanDraft = {
+    ...initialDraft,
+    firstFocus: [
+      createTestPlanItem({ id: "m-1", title: "Zadatak 1", block: "first_focus", estimatedMinutes: 30, requiredEnergy: 3, timeSensitivity: "none" }),
+      createTestPlanItem({ id: "m-2", title: "Zadatak 2", block: "first_focus", estimatedMinutes: 30, requiredEnergy: 3, timeSensitivity: "none" }),
+    ],
+    manualPriorityOverride: false,
+  };
+  const reordered = reorderPlanItem(reorderDraft, "m-1", "down");
+  assert.equal(reordered.draft.firstFocus[0].id, "m-2");
+  assert.equal(reordered.draft.firstFocus[1].id, "m-1");
+  assert.equal(reordered.draft.manualPriorityOverride, true, "Manual move must set manualPriorityOverride");
+
+  // Test 48: User confirmation flow - apply with optional approved eliminations
+  const proposalWithElim: DailyPlanDraft = {
+    ...initialDraft,
+    firstFocus: [createTestPlanItem({ id: "f-1", title: "Focus", block: "first_focus", estimatedMinutes: 30, requiredEnergy: 3, timeSensitivity: "none" })],
+    laterToday: [
+      createTestPlanItem({ id: "elim-target", title: "Suvišan zadatak", block: "later_today", estimatedMinutes: 20, requiredEnergy: 1, timeSensitivity: "none" }),
+    ],
+    nonActionItems: [],
+  };
+  const prop = reevaluatePrioritiesStructured(proposalWithElim);
+  // Apply without approval: item stays in plan (moved to optional capacity, NOT deleted)
+  const appliedWithoutApproval = applyReevaluationProposal(proposalWithElim, prop);
+  assert.ok(appliedWithoutApproval.ifCapacityRemains.some((i) => i.id === "elim-target"), "Item remains in plan when user does not approve elimination");
+
+  // Apply WITH user approval of elimination: item moves to nonActionItems
+  const appliedWithApproval = applyReevaluationProposal(proposalWithElim, prop, {
+    approvedEliminationIds: ["elim-target"],
+  });
+  assert.ok(!appliedWithApproval.laterToday.some((i) => i.id === "elim-target"), "Eliminated item removed from active day");
+  assert.ok(appliedWithApproval.nonActionItems.some((i) => i.id === "elim-target"), "Eliminated item preserved in nonActionItems");
+
+  // Test 49: Diff summary does not contain banned jargon words ("pareto", "score", "model")
+  const summaryLower = prop.diff.summary.toLowerCase();
+  assert.ok(!summaryLower.includes("pareto"), "Summary must not mention Pareto");
+  assert.ok(!summaryLower.includes("score"), "Summary must not mention score");
+  assert.ok(!summaryLower.includes("model"), "Summary must not mention model");
+
+  // Test 50: reevaluatePrioritiesLocal clears manualPriorityOverride
+  const localReeval = reevaluatePrioritiesLocal(reordered.draft);
+  assert.equal(localReeval.manualPriorityOverride, false, "AI re-evaluation resets manualPriorityOverride to false");
+
+  console.log("✅ All 50 plan review tests passed successfully!");
 }
 
 runTests();
+
+
+function runParcijalniTest() {
+  const currentDraft: any = {
+    firstFocus: [
+      { id: "ff1", title: "F1", block: "first_focus", capacityType: "flexible", estimatedMinutes: 10 } as any,
+      { id: "ff2", title: "F2", block: "first_focus", capacityType: "flexible", estimatedMinutes: 10 } as any,
+    ],
+    laterToday: [
+      { id: "lt1", title: "L1", block: "later_today", capacityType: "flexible", estimatedMinutes: 10, manualPriorityOverride: true } as any,
+      { id: "lt2", title: "L2", block: "later_today", capacityType: "flexible", estimatedMinutes: 10, manualPriorityOverride: true } as any,
+    ],
+    ifCapacityRemains: [],
+    deferredItems: [],
+    plannedRequiredMinutes: 40,
+    plannedFlexibleMinutes: 40,
+    plannedFixedMinutes: 0,
+    plannedOptionalMinutes: 0
+  };
+
+  const proposal: any = {
+    evaluations: [],
+    proposedDraft: {
+      ...currentDraft,
+      firstFocus: [
+        currentDraft.firstFocus[0], 
+        currentDraft.firstFocus[1], 
+        currentDraft.laterToday[0], 
+        currentDraft.laterToday[1]
+      ],
+      laterToday: []
+    },
+    diff: {
+      firstFocusEntries: [],
+      movedToLaterToday: [],
+      movedToIfCapacity: [],
+      movedToDeferred: [],
+      proposedDelegations: [],
+      proposedEliminations: [],
+      summaryOfChanges: "Test",
+      manualOverrideConflicts: [
+        { id: "lt1", title: "L1", previousBlock: "later_today", proposedBlock: "first_focus", reason: "" },
+        { id: "lt2", title: "L2", previousBlock: "later_today", proposedBlock: "first_focus", reason: "" },
+      ]
+    }
+  };
+
+  // If user accepts BOTH manual overrides, it moves lt1 and lt2 to first focus.
+  // Then first focus has 4 items. It should return error.
+  const resultBoth = applyReevaluationProposal(currentDraft, proposal, {
+    approvedManualOverrideIds: ["lt1", "lt2"]
+  }) as any;
+  
+  assert.ok(resultBoth.error, "Expected error for exceeding first focus limit after partial choice");
+  assert.match(resultBoth.error, /First Focus ne može imati više od 3/);
+
+  // If user accepts only ONE, first focus has 3 items. It should succeed.
+  const resultOne = applyReevaluationProposal(currentDraft, proposal, {
+    approvedManualOverrideIds: ["lt1"]
+  }) as DailyPlanDraft;
+
+  assert.ok(!((resultOne as any).error), "Expected success for 3 items");
+  assert.equal(resultOne.firstFocus.length, 3);
+  assert.equal(resultOne.firstFocus[2].id, "lt1");
+  assert.equal(resultOne.laterToday.length, 1);
+  assert.equal(resultOne.laterToday[0].id, "lt2");
+}
+runParcijalniTest();

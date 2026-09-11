@@ -31,8 +31,25 @@ if (typeof globalThis.localStorage === "undefined") {
   };
 }
 
+if (typeof globalThis.sessionStorage === "undefined") {
+  const sessionStore = new Map<string, string>();
+  (globalThis as any).sessionStorage = {
+    getItem: (k: string) => sessionStore.get(k) ?? null,
+    setItem: (k: string, v: string) => sessionStore.set(k, String(v)),
+    removeItem: (k: string) => sessionStore.delete(k),
+    clear: () => sessionStore.clear(),
+  };
+}
+
+if (typeof globalThis.window === "undefined") {
+  (globalThis as any).window = globalThis;
+}
+
 async function runDataResetRepositoryTests() {
   console.log("Starting Bounded Data Reset Repository Tests...");
+
+  const { acquireResetLock, releaseResetLock } = await import("./resetGuard");
+  const bypassToken = acquireResetLock("user_repo_test");
 
   // 1. Exact scope allowlist test
   assert.strictEqual(SUPPORTED_REMOTE_COLLECTIONS.length, 7);
@@ -65,12 +82,12 @@ async function runDataResetRepositoryTests() {
   assert.strictEqual(validateUserId("user-12345"), "user-12345");
   console.log("✅ 2. Empty or invalid user ID rejected safely");
 
-  // 3. Default scope selection excludes shared Vision and Routines
+  // 3. Default scope selection includes all scopes for complete reset
   assert.strictEqual(DEFAULT_SCOPE_SELECTION.appADailyData, true);
-  assert.strictEqual(DEFAULT_SCOPE_SELECTION.appAPreferences, false);
-  assert.strictEqual(DEFAULT_SCOPE_SELECTION.sharedVisionData, false);
-  assert.strictEqual(DEFAULT_SCOPE_SELECTION.sharedRoutinesData, false);
-  console.log("✅ 3. Default scope selection verified (excludes shared scopes)");
+  assert.strictEqual(DEFAULT_SCOPE_SELECTION.appAPreferences, true);
+  assert.strictEqual(DEFAULT_SCOPE_SELECTION.sharedVisionData, true);
+  assert.strictEqual(DEFAULT_SCOPE_SELECTION.sharedRoutinesData, true);
+  console.log("✅ 3. Default scope selection verified (includes all scopes)");
 
   // 4. Select All includes every declared scope
   assert.strictEqual(ALL_SCOPES_SELECTION.appADailyData, true);
@@ -130,7 +147,7 @@ async function runDataResetRepositoryTests() {
       appAPreferences: false,
       sharedVisionData: false,
       sharedRoutinesData: false,
-    }, { adapter });
+    }, { bypassToken, adapter });
 
     assert.strictEqual(res.success, true);
     assert.strictEqual(res.totalDeletedDocuments, 0);
@@ -151,7 +168,7 @@ async function runDataResetRepositoryTests() {
       appAPreferences: false,
       sharedVisionData: false,
       sharedRoutinesData: false,
-    }, { adapter });
+    }, { bypassToken, adapter });
 
     assert.strictEqual(res.success, true);
     assert.strictEqual(res.totalDeletedDocuments, 1);
@@ -167,7 +184,7 @@ async function runDataResetRepositoryTests() {
       appAPreferences: false,
       sharedVisionData: false,
       sharedRoutinesData: false,
-    }, { adapter });
+    }, { bypassToken, adapter });
 
     assert.strictEqual(res.success, true);
     assert.strictEqual(res.totalDeletedDocuments, 400);
@@ -186,7 +203,7 @@ async function runDataResetRepositoryTests() {
       appAPreferences: false,
       sharedVisionData: false,
       sharedRoutinesData: false,
-    }, { adapter });
+    }, { bypassToken, adapter });
 
     assert.strictEqual(res.success, true);
     assert.strictEqual(res.totalDeletedDocuments, 401);
@@ -202,7 +219,7 @@ async function runDataResetRepositoryTests() {
       appAPreferences: false,
       sharedVisionData: false,
       sharedRoutinesData: false,
-    }, { adapter });
+    }, { bypassToken, adapter });
 
     assert.strictEqual(res.success, true);
     assert.strictEqual(res.totalDeletedDocuments, 800);
@@ -218,7 +235,7 @@ async function runDataResetRepositoryTests() {
       appAPreferences: false,
       sharedVisionData: false,
       sharedRoutinesData: false,
-    }, { adapter });
+    }, { bypassToken, adapter });
 
     assert.strictEqual(res.success, true);
     assert.strictEqual(res.totalDeletedDocuments, 850);
@@ -263,7 +280,7 @@ async function runDataResetRepositoryTests() {
       appAPreferences: false,
       sharedVisionData: false,
       sharedRoutinesData: false,
-    }, { adapter: failingAdapter });
+    }, { bypassToken, adapter: failingAdapter });
 
     assert.strictEqual(res1.success, false, "Must not claim false full success on page 2 failure");
     assert.strictEqual(res1.failedScopes.includes("app_a_daily"), true);
@@ -279,7 +296,7 @@ async function runDataResetRepositoryTests() {
       appAPreferences: false,
       sharedVisionData: false,
       sharedRoutinesData: false,
-    }, { adapter: failingAdapter });
+    }, { bypassToken, adapter: failingAdapter });
 
     assert.strictEqual(res2.success, true);
     assert.strictEqual(res2.totalDeletedDocuments, 450);
@@ -337,6 +354,7 @@ async function runDataResetRepositoryTests() {
     console.log("✅ 14. Preferences reset to defaults with automatic timezone and preserved abcde_language");
   }
 
+  releaseResetLock(bypassToken);
   console.log("All Bounded Data Reset Repository tests passed successfully! 🎉");
 }
 

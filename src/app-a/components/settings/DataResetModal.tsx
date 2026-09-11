@@ -24,6 +24,7 @@ import {
   type ResetProgressEvent,
 } from "../../persistence/dataResetRepository";
 import { resetAppAPreferencesToDefaults } from "../../settings/preferences";
+import { acquireResetLock, releaseResetLock, renewResetLease, updateResetLockStatus } from "../../persistence/resetGuard";
 
 export interface DataResetEventDetail {
   completedScopes: DataResetScopeKey[];
@@ -61,6 +62,22 @@ export default function DataResetModal({
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElementRef = useRef<HTMLElement | null>(null);
   const isExecutingRef = useRef(false);
+  const resetOperationIdRef = useRef<string | null>(null);
+  const heartbeatIntervalRef = useRef<any>(null);
+
+  const stopHeartbeat = () => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+  };
+
+  const startHeartbeat = (opId: string) => {
+    stopHeartbeat();
+    heartbeatIntervalRef.current = setInterval(() => {
+      renewResetLease(userId, opId);
+    }, 3000);
+  };
 
   // Store trigger button to restore focus when closed
   useEffect(() => {
@@ -82,7 +99,10 @@ export default function DataResetModal({
 
   // Focus trap and Escape key listener
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      stopHeartbeat();
+      return;
+    }
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -168,9 +188,42 @@ export default function DataResetModal({
     setStep("final_confirmation");
   };
 
+  const handleClose = () => {
+    if (isExecutingRef.current) return;
+    if (resetResult && !resetResult.success && resetResult.isPartial) {
+      const warning = language === "sr" 
+        ? "Brisanje podataka nije završeno na svim kolekcijama. Izlaskom iz ovog prozora izvršiće se osvežavanje aplikacije kako bi se sprečio upis zastarelih podataka."
+        : language === "tr"
+        ? "Veri sıfırlama tüm koleksiyonlarda tamamlanmadı. Eski verilerin yazılmasını önlemek için uygulamadan çıkarken sayfa yenilenecektir."
+        : "Data reset was not completed for all collections. Leaving this modal will refresh the application to prevent writing stale data.";
+      if (window.confirm(warning)) {
+        stopHeartbeat();
+        releaseResetLock(resetOperationIdRef.current || undefined, false);
+        onClose();
+        window.location.reload();
+      }
+      return;
+    }
+    stopHeartbeat();
+    releaseResetLock(resetOperationIdRef.current || undefined, resetResult?.success);
+    onClose();
+    if (resetResult && resetResult.success) {
+      window.location.reload();
+    }
+  };
+
   const handleStartExecution = async () => {
     if (isExecutingRef.current) return;
     if (!hasAnyScopeSelected) return;
+
+    let opId = "";
+    try {
+      opId = acquireResetLock(userId);
+      resetOperationIdRef.current = opId;
+      startHeartbeat(opId);
+    } catch (err) {
+      return;
+    }
 
     isExecutingRef.current = true;
     setStep("executing");
@@ -182,6 +235,7 @@ export default function DataResetModal({
 
     try {
       const result = await executeDataReset(userId, scopes, {
+        bypassToken: opId,
         onProgress: (evt) => {
           setProgress(evt);
         },
@@ -194,6 +248,14 @@ export default function DataResetModal({
           }
         },
       });
+
+      if (result.success) {
+        stopHeartbeat();
+        releaseResetLock(opId, true);
+        resetOperationIdRef.current = null;
+      } else {
+        updateResetLockStatus(userId, opId, "failed_pending_retry");
+      }
 
       setResetResult(result);
       setStep("result");
@@ -214,6 +276,7 @@ export default function DataResetModal({
         }
       }
     } catch (err: any) {
+      updateResetLockStatus(userId, opId, "failed_pending_retry");
       setResetResult({
         success: false,
         isPartial: false,
@@ -304,7 +367,7 @@ export default function DataResetModal({
           {step !== "executing" && (
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="app-a-focus-ring rounded-lg p-1.5 text-[#8E8E93] hover:bg-black/5 hover:text-black dark:hover:bg-white/10 dark:hover:text-white transition-colors"
               aria-label={t.cancel}
               id="danger-zone-close-btn"
@@ -462,7 +525,7 @@ export default function DataResetModal({
                   placeholder={t.confirmationPlaceholder}
                   autoComplete="off"
                   spellCheck="false"
-                  className="app-a-field app-a-focus-ring w-full p-3 font-mono text-[14px] tracking-wider"
+                  className="app-a-field app-a-focus-ring w-full p-3 font-mono text-[16px] tracking-wider"
                 />
                 {inputError && (
                   <p className="mt-1 text-[12px] text-[#FF3B30] dark:text-[#FF453A]" role="alert">
@@ -475,7 +538,7 @@ export default function DataResetModal({
               <div className="flex items-center justify-end gap-3 pt-3">
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="app-a-secondary-button app-a-focus-ring px-4 py-2.5 text-[13px] font-semibold"
                   id="danger-cancel-btn"
                 >
@@ -621,7 +684,7 @@ export default function DataResetModal({
                 )}
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="app-a-primary-button app-a-focus-ring px-5 py-2.5 text-[13px] font-semibold"
                   id="danger-done-btn"
                 >

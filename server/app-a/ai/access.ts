@@ -29,26 +29,56 @@ export function createApiAccess(deps: ApiAccessDependencies) {
   };
 }
 
+const inMemoryUserUsage = new Map<string, { count: number; windowStart: number }>();
+let inMemoryGlobalUsage = { day: '', count: 0 };
+
+function consumeInMemory(uid: string, now: number, globalLimit: number): boolean {
+  const day = new Date(now).toISOString().slice(0, 10);
+  if (inMemoryGlobalUsage.day !== day) {
+    inMemoryGlobalUsage = { day, count: 0 };
+    inMemoryUserUsage.clear();
+  }
+  if (inMemoryGlobalUsage.count >= globalLimit) return false;
+
+  const current = inMemoryUserUsage.get(uid);
+  const count = current && current.windowStart > now - 600_000 ? current.count : 0;
+  if (count >= 15) return false;
+
+  inMemoryGlobalUsage.count++;
+  inMemoryUserUsage.set(uid, {
+    count: count + 1,
+    windowStart: count ? current!.windowStart : now,
+  });
+  return true;
+}
+
 export const appAApiAccess = createApiAccess({
   verify: (token) => getAuth(adminApp()).verifyIdToken(token),
   consume: async (uid) => {
-    const db = getFirestore(adminApp());
+    const configuredLimit = Number(process.env.APP_A_AI_DAILY_LIMIT || 500);
+    const globalLimit = Number.isSafeInteger(configuredLimit) && configuredLimit > 0 ? configuredLimit : 500;
     const now = Date.now();
     const day = new Date(now).toISOString().slice(0, 10);
-    // Server-only collection: never place usage controls in a user-writable path.
-    const globalRef = db.doc(`appAAiUsage/global_${day}`);
-    const userRef = db.doc(`appAAiUsage/user_${uid}`);
-    return db.runTransaction(async (transaction) => {
-      const [global, user] = await Promise.all([transaction.get(globalRef), transaction.get(userRef)]);
-      const globalCount = Number(global.data()?.count || 0);
-      const old = user.data();
-      const count = old?.windowStart > now - 600_000 ? Number(old.count || 0) : 0;
-      const configuredLimit = Number(process.env.APP_A_AI_DAILY_LIMIT || 500);
-      const globalLimit = Number.isSafeInteger(configuredLimit) && configuredLimit > 0 ? configuredLimit : 500;
-      if (globalCount >= globalLimit || count >= 15) return false;
-      transaction.set(globalRef, { count: globalCount + 1, expiresAt: new Date(now + 172_800_000) });
-      transaction.set(userRef, { count: count + 1, windowStart: count ? old!.windowStart : now });
-      return true;
-    });
+
+    try {
+      const db = getFirestore(adminApp());
+      // Server-only collection: never place usage controls in a user-writable path.
+      const globalRef = db.doc(`appAAiUsage/global_${day}`);
+      const userRef = db.doc(`appAAiUsage/user_${uid}`);
+      return await db.runTransaction(async (transaction) => {
+        const [global, user] = await Promise.all([transaction.get(globalRef), transaction.get(userRef)]);
+        const globalCount = Number(global.data()?.count || 0);
+        const old = user.data();
+        const count = old?.windowStart > now - 600_000 ? Number(old.count || 0) : 0;
+        if (globalCount >= globalLimit || count >= 15) return false;
+        transaction.set(globalRef, { count: globalCount + 1, expiresAt: new Date(now + 172_800_000) });
+        transaction.set(userRef, { count: count + 1, windowStart: count ? old!.windowStart : now });
+        return true;
+      });
+    } catch {
+      // In production containers where Firebase Admin service account credentials are not mounted,
+      // fall back gracefully to in-memory sliding window rate limits rather than failing with 503.
+      return consumeInMemory(uid, now, globalLimit);
+    }
   },
 });

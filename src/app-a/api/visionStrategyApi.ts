@@ -1,4 +1,4 @@
-import type { VisionDecompositionResult, VisionFeasibilityResult, VisionStrategyResult } from "../../shared/domain/vision";
+import type { VisionDecompositionResult, VisionFeasibilityResult, VisionStepRefinementResult, VisionStrategyResult } from "../../shared/domain/vision";
 import type { AppALanguage } from "../types";
 import { appAAuthHeaders } from './authHeaders';
 
@@ -15,7 +15,10 @@ export async function createVisionStrategy(
     signal,
   });
   const body = await response.json().catch(() => null);
-  if (!response.ok || !body?.success || !body.strategy) throw new Error("vision_strategy_failed");
+  if (!response.ok || !body?.success || !body.strategy) {
+    if (response.status === 401 || body?.code === "authentication_required") throw new Error("authentication_required");
+    throw new Error("vision_strategy_failed");
+  }
   return body.strategy as VisionStrategyResult;
 }
 
@@ -32,7 +35,10 @@ export async function assessVisionFeasibility(
     signal,
   });
   const body = await response.json().catch(() => null);
-  if (!response.ok || !body?.success || !body.feasibility) throw new Error("vision_feasibility_failed");
+  if (!response.ok || !body?.success || !body.feasibility) {
+    if (response.status === 401 || body?.code === "authentication_required") throw new Error("authentication_required");
+    throw new Error("vision_feasibility_failed");
+  }
   return body.feasibility as VisionFeasibilityResult;
 }
 
@@ -44,6 +50,38 @@ export async function decomposeVisionStep(input: { idea: string; step: string; d
     signal,
   });
   const body = await response.json().catch(() => null);
-  if (!response.ok || !body?.success || !body.decomposition) throw new Error("vision_decomposition_failed");
+  if (!response.ok || !body?.success || !body.decomposition) {
+    if (response.status === 401 || body?.code === "authentication_required") throw new Error("authentication_required");
+    throw new Error("vision_decomposition_failed");
+  }
   return body.decomposition as VisionDecompositionResult;
+}
+
+export async function refineVisionStep(
+  input: {
+    idea: string;
+    step: string;
+    language: AppALanguage;
+    userFeedback?: string;
+    selectedIssues?: string[];
+    currentOutcome?: string;
+    timeframe?: string;
+    previousSteps?: string[];
+    nextSteps?: string[];
+    planningContext?: string;
+  },
+  signal?: AbortSignal
+): Promise<VisionStepRefinementResult> {
+  const response = await fetch("/api/app-a/vision-strategy", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...await appAAuthHeaders() },
+    body: JSON.stringify({ ...input, mode: "refine_step" }),
+    signal,
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok || !body?.success || !body.refinement) {
+    if (response.status === 401 || body?.code === "authentication_required") throw new Error("authentication_required");
+    throw new Error("vision_refinement_failed");
+  }
+  return body.refinement as VisionStepRefinementResult;
 }

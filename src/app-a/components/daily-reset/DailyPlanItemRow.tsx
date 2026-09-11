@@ -1,20 +1,27 @@
 import React, { useState } from "react";
+import { ChevronUp, ChevronDown } from "lucide-react";
 import { DailyPlanItem, PlanBlock, RequiredEnergy } from "../../domain/daily-reset/contracts";
 import { AppALanguage, APP_A_TRANSLATIONS } from "../../types";
 
 interface Props {
   item: DailyPlanItem;
   language: AppALanguage;
+  isFirst?: boolean;
+  isLast?: boolean;
   onMoveToBlock: (itemId: string, block: PlanBlock) => void;
   onMoveOutside: (itemId: string, targetHorizon: "this_week" | "later" | "long_term_idea" | "no_action") => void;
+  onReorder?: (itemId: string, direction: "up" | "down") => void;
   onEditSave: (itemId: string, updates: { title: string; description?: string; estimatedMinutes: number }) => { success: boolean; error?: string };
 }
 
 export default function DailyPlanItemRow({
   item,
   language,
+  isFirst,
+  isLast,
   onMoveToBlock,
   onMoveOutside,
+  onReorder,
   onEditSave,
 }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
@@ -271,11 +278,36 @@ export default function DailyPlanItemRow({
           )}
         </div>
 
-        {/* Action Menu Toggle */}
-        <div className="relative">
-          <button
-            type="button"
-            aria-label={t.actionsMenuLabel}
+        {/* Actions Row */}
+        <div className="flex shrink-0 items-center gap-2">
+          {onReorder && item.capacityType !== "fixed" && (
+            <div className="flex flex-col gap-0.5 mr-1">
+              <button
+                type="button"
+                disabled={isFirst}
+                onClick={() => onReorder(item.id, "up")}
+                className="app-a-focus-ring flex h-[21px] w-8 items-center justify-center rounded-t-lg transition-colors bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 disabled:opacity-30 text-[#8E8E93]"
+                aria-label={language === "sr" ? "Pomeri gore" : language === "tr" ? "Yukarı taşı" : "Move up"}
+              >
+                <ChevronUp className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                disabled={isLast}
+                onClick={() => onReorder(item.id, "down")}
+                className="app-a-focus-ring flex h-[21px] w-8 items-center justify-center rounded-b-lg transition-colors bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 disabled:opacity-30 text-[#8E8E93]"
+                aria-label={language === "sr" ? "Pomeri dole" : language === "tr" ? "Aşağı taşı" : "Move down"}
+              >
+                <ChevronDown className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Action Menu Toggle */}
+          <div className="relative">
+            <button
+              type="button"
+              aria-label={t.actionsMenuLabel}
             aria-expanded={showMenu}
             onClick={() => setShowMenu(!showMenu)}
             className="app-a-focus-ring min-h-[44px] min-w-[44px] rounded-xl px-3 py-2 text-[14px] font-medium transition-colors"
@@ -296,6 +328,37 @@ export default function DailyPlanItemRow({
                 boxShadow: "var(--app-a-shadow-lg)",
               }}
             >
+              
+              {onReorder && item.capacityType !== "fixed" && (
+                <>
+                  <button
+                    type="button"
+                    disabled={isFirst}
+                    onClick={() => {
+                      setShowMenu(false);
+                      onReorder(item.id, "up");
+                    }}
+                    className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors disabled:opacity-50"
+                    style={{ color: "var(--app-a-text)" }}
+                  >
+                    {language === "sr" ? "Premesti ranije" : language === "tr" ? "Daha erkene taşı" : "Move earlier"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isLast}
+                    onClick={() => {
+                      setShowMenu(false);
+                      onReorder(item.id, "down");
+                    }}
+                    className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors disabled:opacity-50"
+                    style={{ color: "var(--app-a-text)" }}
+                  >
+                    {language === "sr" ? "Premesti kasnije" : language === "tr" ? "Daha sonraya taşı" : "Move later"}
+                  </button>
+                  <hr className="my-1 border-t border-black/5 dark:border-white/5" />
+                </>
+              )}
+
               {item.block !== "first_focus" && (
                 <button
                   type="button"
@@ -308,7 +371,7 @@ export default function DailyPlanItemRow({
                   onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                 >
-                  {t.moveToFirstFocus}
+                  {language === "sr" ? "Postavi kao sledeće" : t.moveToFirstFocus}
                 </button>
               )}
 
@@ -340,7 +403,7 @@ export default function DailyPlanItemRow({
                   onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                 >
-                  {t.moveToIfCapacityRemains}
+                  {language === "sr" ? "Ako ostane kapaciteta" : t.moveToIfCapacityRemains}
                 </button>
               )}
 
@@ -420,6 +483,7 @@ export default function DailyPlanItemRow({
               </button>
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>

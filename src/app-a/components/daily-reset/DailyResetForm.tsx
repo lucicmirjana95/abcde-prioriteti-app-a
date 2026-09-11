@@ -214,7 +214,7 @@ export default function DailyResetForm({
                 onDraftChange?.({ stateNote: e.target.value });
               }}
               placeholder={t.stateNotePlaceholder}
-              className="app-a-field min-h-[44px] w-full px-3.5 text-[14px] sm:text-[15px] transition-shadow"
+              className="app-a-field min-h-[44px] w-full px-3.5 text-[16px] transition-shadow"
             />
           </div>
         ) : (

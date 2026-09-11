@@ -30,6 +30,11 @@ const COPY = {
     fromVision: "From",
     chooseFocus: "Choose a Vision focus",
     chooseFocusHelp: "No active vision currently guides Today.",
+    skipStep: "Skip this proposal",
+    muteVisionToday: "Don't suggest from this vision today",
+    closeSection: "Dismiss",
+    stepSkipped: "Proposal skipped",
+    showNextSuggestion: "Show next suggestion",
   },
   sr: {
     title: "Akcije iz Vizije",
@@ -54,6 +59,11 @@ const COPY = {
     fromVision: "Iz vizije",
     chooseFocus: "Izaberi fokus Vizije",
     chooseFocusHelp: "Trenutno nijedna aktivna vizija ne vodi Danas.",
+    skipStep: "Preskoči ovaj predlog",
+    muteVisionToday: "Ne predlaži iz ove vizije danas",
+    closeSection: "Zatvori",
+    stepSkipped: "Predlog je preskočen",
+    showNextSuggestion: "Prikaži sledeći predlog",
   },
   tr: {
     title: "Vizyondan eylemler",
@@ -78,6 +88,11 @@ const COPY = {
     fromVision: "Vizyon",
     chooseFocus: "Vizyon odağını seç",
     chooseFocusHelp: "Şu anda hiçbir aktif vizyon Bugün'ü yönlendirmiyor.",
+    skipStep: "Bu öneriyi geç",
+    muteVisionToday: "Bugün bu vizyondan önerme",
+    closeSection: "Kapat",
+    stepSkipped: "Öneri geçildi",
+    showNextSuggestion: "Sonraki öneriyi göster",
   },
 } as const;
 
@@ -108,13 +123,76 @@ export default function TodayCandidatesSection({ userId, language, localDate, pl
   const [editMinutesInput, setEditMinutesInput] = useState<string>("");
   const [showOthers, setShowOthers] = useState(false);
 
+  // Today dismissal states
+  const sectionClosedKey = `app_a_vision_section_closed_${localDate}`;
+  const mutedVisionsKey = `app_a_muted_visions_${localDate}`;
+  const skippedCandidatesKey = `app_a_skipped_candidates_${localDate}`;
+
+  const [isClosedToday, setIsClosedToday] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(`app_a_vision_section_closed_${localDate}`) === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const [mutedVisionIds, setMutedVisionIds] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(`app_a_muted_visions_${localDate}`);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [skippedIds, setSkippedIds] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(`app_a_skipped_candidates_${localDate}`);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [skippedCandidate, setSkippedCandidate] = useState<{ id: string; title: string } | null>(() => {
+    try {
+      const raw = localStorage.getItem(`app_a_last_skipped_unacknowledged_${localDate}`);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const t = COPY[language];
 
   useEffect(() => {
+    try {
+      setIsClosedToday(localStorage.getItem(sectionClosedKey) === "true");
+      const rawMuted = localStorage.getItem(mutedVisionsKey);
+      setMutedVisionIds(rawMuted ? JSON.parse(rawMuted) : []);
+      const rawSkipped = localStorage.getItem(skippedCandidatesKey);
+      setSkippedIds(rawSkipped ? JSON.parse(rawSkipped) : []);
+      
+      const rawUnack = localStorage.getItem(`app_a_last_skipped_unacknowledged_${localDate}`);
+      setSkippedCandidate(rawUnack ? JSON.parse(rawUnack) : null);
+    } catch {
+      // storage
+    }
+  }, [localDate, sectionClosedKey, mutedVisionsKey, skippedCandidatesKey]);
+
+  useEffect(() => {
     if (!userId) { setItems([]); setCurrentVisionId(null); return; }
+    if (typeof window !== 'undefined' && (window as any).__app_a_reset_in_progress) return;
     let active = true;
     setError(null);
-    void ensurePendingVisionCandidates(userId).then(() => loadPendingTodayCandidatesContext(userId)).then((value) => { if (active) { setItems(value.items); setCurrentVisionId(value.currentVisionId); } }).catch(() => { if (active) setError("error"); });
+    void ensurePendingVisionCandidates(userId).then(() => {
+      if (typeof window !== 'undefined' && (window as any).__app_a_reset_in_progress) return;
+      return loadPendingTodayCandidatesContext(userId);
+    }).then((value) => {
+      if (!value) return;
+      if (typeof window !== 'undefined' && (window as any).__app_a_reset_in_progress) return;
+      if (active) { setItems(value.items); setCurrentVisionId(value.currentVisionId); }
+    }).catch(() => { if (active) setError("error"); });
     return () => { active = false; };
   }, [userId, refreshVersion]);
 
@@ -132,12 +210,53 @@ export default function TodayCandidatesSection({ userId, language, localDate, pl
     return estimateVisionStepMinutes({ existingMinutes: item.estimatedMinutes });
   }
 
-  async function dismiss(item: TodayCandidate) {
+  function closeSectionForToday() {
+    try {
+      localStorage.setItem(sectionClosedKey, "true");
+    } catch {
+      // storage
+    }
+    setIsClosedToday(true);
+  }
+
+  async function skipCurrentProposal(item: TodayCandidate) {
     if (!userId) return;
     setBusyId(item.id); setError(null);
-    try { await dismissTodayCandidate(userId, item); setItems((current) => current.filter((entry) => entry.id !== item.id)); setRefreshVersion(value => value + 1); }
-    catch { setError("error"); }
-    finally { setBusyId(null); }
+    try {
+      const nextSkippedIds = Array.from(new Set([...skippedIds, item.id]));
+      setSkippedIds(nextSkippedIds);
+      try {
+        localStorage.setItem(skippedCandidatesKey, JSON.stringify(nextSkippedIds));
+        localStorage.setItem(`app_a_last_skipped_unacknowledged_${localDate}`, JSON.stringify({ id: item.id, title: item.title }));
+      } catch {
+        // storage
+      }
+      setSkippedCandidate({ id: item.id, title: item.title });
+    } catch {
+      setError("error");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function muteVisionToday(item: TodayCandidate) {
+    if (!userId) return;
+    setBusyId(item.id); setError(null);
+    try {
+      await dismissTodayCandidate(userId, item);
+      const updated = Array.from(new Set([...mutedVisionIds, item.sourceId]));
+      setMutedVisionIds(updated);
+      try {
+        localStorage.setItem(mutedVisionsKey, JSON.stringify(updated));
+      } catch {
+        // storage
+      }
+      setItems((current) => current.filter((entry) => entry.sourceId !== item.sourceId));
+    } catch {
+      setError("error");
+    } finally {
+      setBusyId(null);
+    }
   }
 
   async function add(item: TodayCandidate) {
@@ -148,6 +267,12 @@ export default function TodayCandidatesSection({ userId, language, localDate, pl
       if (result) { setError(result); return; }
       if (!userId) return;
       setItems((current) => current.filter((entry) => entry.id !== item.id));
+      setSkippedCandidate(null);
+      try {
+        localStorage.removeItem(`app_a_last_skipped_unacknowledged_${localDate}`);
+      } catch {
+        // ignore
+      }
     } catch { setError('invalid_plan'); } finally { setBusyId(null); }
   }
 
@@ -164,32 +289,161 @@ export default function TodayCandidatesSection({ userId, language, localDate, pl
     setEditingId(null);
   }
 
-  if (!userId || (!error && items.length === 0)) return null;
+  if (isClosedToday) return null;
+  if (!userId) return null;
+
+  const unmutedItems = items.filter((item) => !mutedVisionIds.includes(item.sourceId) && !skippedIds.includes(item.id));
+  if (!error && unmutedItems.length === 0 && !skippedCandidate) return null;
+
   const errorText = error ? (t[error as keyof typeof t] || t.error) : null;
   const guidance = planState === "none" ? t.noPlan : planState === "draft" ? t.draftPlan : error === "capacity_exceeded" ? t.capacity_exceeded : null;
   const planAction = planState === "none" ? t.createPlan : t.reviewPlan;
 
-  const primary = items.find(item => item.isCurrentFocus);
+  const primary = unmutedItems.find(item => item.isCurrentFocus);
   const others = currentVisionId && shouldSurfaceSecondaryVision(userId || "", localDate)
-    ? items.filter(item => item.sourceId !== currentVisionId).slice(0, 1)
+    ? unmutedItems.filter(item => item.sourceId !== currentVisionId).slice(0, 1)
     : [];
+
   const renderCandidate = (item: TodayCandidate, isPrimary = false) => {
     const minutes = getEffectiveMinutes(item);
     const isEditingThis = editingId === item.id;
     return (
-      <article key={item.id} className="app-a-surface flex items-start gap-3.5 rounded-xl border p-4 shadow-sm" style={{ borderColor: isPrimary ? "var(--app-a-accent)" : "var(--app-a-border)" }}>
-        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#AF52DE]/10 text-[#AF52DE]"><Compass className="h-5 w-5" /></span>
-        <div className="min-w-0 flex-1">{isPrimary ? <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--app-a-accent)" }}>{t.currentFocus}</p> : item.sourceTitle ? <p className="mb-1 line-clamp-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--app-a-text-secondary)" }}>{t.fromVision}: {item.sourceTitle}</p> : null}<h3 className="text-[15px] font-semibold leading-snug">{item.title}</h3>
-          {isEditingThis ? <div className="mt-2 flex flex-wrap items-center gap-2"><input type="number" min="1" max="480" value={editMinutesInput} onChange={e=>setEditMinutesInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")commitEditedDuration(item.id);if(e.key==="Escape")setEditingId(null)}} autoFocus className="app-a-field min-h-11 w-20 px-2"/><button type="button" onClick={()=>commitEditedDuration(item.id)} className="app-a-focus-ring min-h-11 px-1 text-[13px] font-semibold" style={{color:"var(--app-a-accent)"}}>{t.saveDuration}</button><button type="button" onClick={()=>setEditingId(null)} className="app-a-focus-ring min-h-11 px-1 text-[13px]">{t.cancelDuration}</button></div> : <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px]"><span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5"/>{formatEstimatedDuration(minutes,language)}</span><button type="button" onClick={()=>startEditingDuration(item)} className="app-a-focus-ring inline-flex min-h-11 items-center gap-1 text-[12px]"><Pencil className="h-3 w-3"/>{t.editDuration}</button></div>}
-          {planState==="confirmed"?<button disabled={busyId!==null} onClick={()=>void add(item)} className="app-a-primary-button mt-3 gap-2 px-3.5 text-[13px]"><CalendarPlus className="h-4 w-4"/>{t.add}</button>:null}
-        </div><button type="button" disabled={busyId!==null} onClick={()=>void dismiss(item)} className="app-a-focus-ring h-11 w-11 shrink-0 rounded-full" aria-label={t.dismiss}><X className="mx-auto h-4 w-4"/></button>
+      <article
+        key={item.id}
+        className="app-a-surface rounded-2xl border p-4 shadow-sm text-left transition-all w-full"
+        style={{ borderColor: "var(--app-a-border)" }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#AF52DE]">
+              <Compass className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="truncate">
+                {isPrimary ? t.currentFocus : item.sourceTitle ? `${t.fromVision}: ${item.sourceTitle}` : t.title}
+              </span>
+            </div>
+            <h3 className="text-[15px] font-semibold leading-snug break-words text-black dark:text-white">
+              {item.title}
+            </h3>
+
+            {isEditingThis ? (
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  max="480"
+                  value={editMinutesInput}
+                  onChange={(e) => setEditMinutesInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitEditedDuration(item.id);
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                  autoFocus
+                  className="app-a-field min-h-11 w-20 px-2.5 text-[16px]"
+                />
+                <button
+                  type="button"
+                  onClick={() => commitEditedDuration(item.id)}
+                  className="app-a-focus-ring min-h-11 px-2 text-[13px] font-semibold text-[#0071E3] dark:text-[#0A84FF]"
+                >
+                  {t.saveDuration}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingId(null)}
+                  className="app-a-focus-ring min-h-11 px-2 text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]"
+                >
+                  {t.cancelDuration}
+                </button>
+              </div>
+            ) : (
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-[13px]">
+                <span className="inline-flex items-center gap-1 text-[#6E6E73] dark:text-[#AEAEB2]">
+                  <Clock3 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  {formatEstimatedDuration(minutes, language)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => startEditingDuration(item)}
+                  className="app-a-focus-ring inline-flex items-center gap-1 min-h-[36px] text-[12px] font-medium text-[#0071E3] dark:text-[#0A84FF]"
+                >
+                  <Pencil className="h-3 w-3 shrink-0" aria-hidden="true" />
+                  {t.editDuration}
+                </button>
+              </div>
+            )}
+
+            {planState === "confirmed" ? (
+              <button
+                type="button"
+                disabled={busyId !== null}
+                onClick={() => void add(item)}
+                className="app-a-primary-button mt-3.5 flex min-h-[44px] w-full items-center justify-center gap-2 whitespace-nowrap px-4 text-[13px] font-semibold sm:w-auto"
+              >
+                <CalendarPlus className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>{t.add}</span>
+              </button>
+            ) : null}
+
+            {/* Granular dismissal action options */}
+            <div className="mt-3.5 flex flex-wrap items-center gap-2 border-t border-black/5 pt-3 dark:border-white/10">
+              <button
+                type="button"
+                disabled={busyId !== null}
+                onClick={() => void skipCurrentProposal(item)}
+                className="app-a-focus-ring min-h-[36px] rounded-lg px-2.5 text-[12px] font-medium text-[#6E6E73] hover:bg-black/5 dark:text-[#AEAEB2] dark:hover:bg-white/5 transition-colors"
+              >
+                {t.skipStep}
+              </button>
+              <button
+                type="button"
+                disabled={busyId !== null}
+                onClick={() => void muteVisionToday(item)}
+                className="app-a-focus-ring min-h-[36px] rounded-lg px-2.5 text-[12px] font-medium text-[#6E6E73] hover:bg-black/5 dark:text-[#AEAEB2] dark:hover:bg-white/5 transition-colors"
+              >
+                {t.muteVisionToday}
+              </button>
+              <button
+                type="button"
+                disabled={busyId !== null}
+                onClick={closeSectionForToday}
+                className="app-a-focus-ring min-h-[36px] rounded-lg px-2.5 text-[12px] font-medium text-[#6E6E73] hover:bg-black/5 dark:text-[#AEAEB2] dark:hover:bg-white/5 transition-colors"
+              >
+                {t.dismiss}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={busyId !== null}
+            onClick={closeSectionForToday}
+            aria-label={t.closeSection}
+            className="app-a-focus-ring flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full text-[#86868B] transition-colors hover:bg-black/5 dark:hover:bg-white/5 active:opacity-60"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
       </article>
     );
   };
+
   return (
-    <section className="mx-auto mt-7 w-full max-w-[760px] px-5 pb-2 sm:px-6" aria-labelledby="today-vision-heading">
-      <h2 id="today-vision-heading" className="text-[19px] font-semibold">{t.title}</h2>
-      <p className="mt-1 text-[14px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>{t.intro}</p>
+    <section className="mx-auto mt-6 w-full max-w-[760px] px-5 pb-2 sm:px-6" aria-labelledby="today-vision-heading">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 id="today-vision-heading" className="text-[19px] font-semibold">{t.title}</h2>
+          <p className="mt-1 text-[14px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>{t.intro}</p>
+        </div>
+        <button
+          type="button"
+          onClick={closeSectionForToday}
+          aria-label={t.closeSection}
+          className="app-a-focus-ring flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full text-[#86868B] transition-colors hover:bg-black/5 dark:hover:bg-white/5 active:opacity-60"
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
+
       {errorText ? (
         <div role="alert" className="app-a-panel-danger mt-3 flex flex-wrap items-center justify-between gap-2 text-[13px]">
           <span>{errorText}</span>
@@ -200,6 +454,7 @@ export default function TodayCandidatesSection({ userId, language, localDate, pl
           ) : null}
         </div>
       ) : null}
+
       {guidance ? (
         <div className="mt-3 rounded-[14px] border p-3.5" style={{ backgroundColor: "var(--app-a-surface-secondary)", borderColor: "var(--app-a-border)" }}>
           <p className="text-[14px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>{guidance}</p>
@@ -209,114 +464,55 @@ export default function TodayCandidatesSection({ userId, language, localDate, pl
           </button>
         </div>
       ) : null}
+
       <div className="mt-3 space-y-2.5">
-        {primary ? renderCandidate(primary, true) : null}
-        {!currentVisionId&&items.length>0?<div className="app-a-panel-warning"><p className="text-[13px] leading-relaxed">{t.chooseFocusHelp}</p><button type="button" onClick={onOpenVision} className="app-a-secondary-button app-a-focus-ring mt-3 px-4 text-[13px]"><Compass className="h-4 w-4"/>{t.chooseFocus}</button></div>:null}
-        {others.length ? <div className="rounded-xl border p-3" style={{borderColor:"var(--app-a-border)",backgroundColor:"var(--app-a-surface-secondary)"}}><button type="button" onClick={()=>setShowOthers(value=>!value)} aria-expanded={showOthers} className="app-a-focus-ring flex min-h-11 w-full items-center justify-between gap-3 text-left"><span><span className="block text-[14px] font-semibold">{t.otherVisions}</span><span className="mt-0.5 block text-[12px] font-normal leading-relaxed" style={{color:"var(--app-a-text-secondary)"}}>{t.otherVisionsHelp}</span></span><span className="inline-flex shrink-0 items-center gap-1 text-[12px]">{others.length}<ChevronDown className={`h-4 w-4 transition-transform ${showOthers?"rotate-180":""}`}/></span></button>{showOthers ? <div className="mt-3 space-y-2.5">{others.map(item=>renderCandidate(item))}</div> : null}</div> : null}
-        {false && items.map((item) => {
-          const minutes = getEffectiveMinutes(item);
-          const isEditingThis = editingId === item.id;
+        {skippedCandidate ? (
+          <article className="app-a-surface rounded-2xl border p-4 shadow-sm text-left transition-all w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" style={{ borderColor: "var(--app-a-border)" }}>
+            <div>
+              <p className="text-[12px] font-semibold uppercase tracking-wide text-[#8E8E93]">{t.stepSkipped}</p>
+              <p className="text-[14px] font-medium text-black dark:text-white mt-0.5">{skippedCandidate.title}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setSkippedCandidate(null);
+                try {
+                  localStorage.removeItem(`app_a_last_skipped_unacknowledged_${localDate}`);
+                } catch {
+                  // ignore
+                }
+              }}
+              className="app-a-secondary-button app-a-focus-ring min-h-[44px] px-4 text-[13px] font-semibold whitespace-nowrap"
+            >
+              {t.showNextSuggestion}
+            </button>
+          </article>
+        ) : null}
 
-          return (
-            <article key={item.id} className="app-a-surface flex items-start gap-3.5 p-4 rounded-xl border transition-shadow shadow-sm" style={{ borderColor: "var(--app-a-border)" }}>
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#AF52DE]/10 text-[#AF52DE] mt-0.5">
-                <Compass className="h-5 w-5" aria-hidden="true" />
+        {!skippedCandidate && primary ? renderCandidate(primary, true) : null}
+
+        {!currentVisionId && unmutedItems.length > 0 ? (
+          <div className="app-a-panel-warning">
+            <p className="text-[13px] leading-relaxed">{t.chooseFocusHelp}</p>
+            <button type="button" onClick={onOpenVision} className="app-a-secondary-button app-a-focus-ring mt-3 px-4 text-[13px]">
+              <Compass className="h-4 w-4"/>
+              {t.chooseFocus}
+            </button>
+          </div>
+        ) : null}
+
+        {!skippedCandidate && others.length > 0 ? (
+          <div className="rounded-xl border p-3" style={{borderColor:"var(--app-a-border)",backgroundColor:"var(--app-a-surface-secondary)"}}>
+            <button type="button" onClick={()=>setShowOthers(value=>!value)} aria-expanded={showOthers} className="app-a-focus-ring flex min-h-11 w-full items-center justify-between gap-3 text-left">
+              <span>
+                <span className="block text-[14px] font-semibold">{t.otherVisions}</span>
+                <span className="mt-0.5 block text-[12px] font-normal leading-relaxed" style={{color:"var(--app-a-text-secondary)"}}>{t.otherVisionsHelp}</span>
               </span>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-[15px] font-semibold leading-snug" style={{ color: "var(--app-a-text)" }}>
-                  {item.title}
-                </h3>
-
-                {/* Duration display / editing */}
-                {isEditingThis ? (
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <div className="inline-flex items-center gap-1.5">
-                      <input
-                        type="number"
-                        min="1"
-                        max="480"
-                        value={editMinutesInput}
-                        onChange={(e) => setEditMinutesInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            commitEditedDuration(item.id);
-                          } else if (e.key === "Escape") {
-                            setEditingId(null);
-                          }
-                        }}
-                        autoFocus
-                        className="app-a-field min-h-[36px] w-20 px-2.5 text-[14px] font-medium"
-                      />
-                      <span className="text-[13px]" style={{ color: "var(--app-a-text-secondary)" }}>
-                        {language === "tr" ? "dk" : "min"}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => commitEditedDuration(item.id)}
-                      className="app-a-focus-ring inline-flex min-h-[36px] items-center gap-1 rounded-lg px-2.5 text-[13px] font-semibold transition-colors"
-                      style={{ color: "var(--app-a-accent)" }}
-                    >
-                      <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                      {t.saveDuration}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditingId(null)}
-                      className="app-a-focus-ring min-h-[36px] rounded-lg px-2 text-[13px] transition-colors"
-                      style={{ color: "var(--app-a-text-tertiary)" }}
-                    >
-                      {t.cancelDuration}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px]">
-                    <span className="inline-flex items-center gap-1.5 font-medium" style={{ color: "var(--app-a-text-secondary)" }}>
-                      <Clock3 className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden="true" />
-                      <span>{formatEstimatedDuration(minutes, language)}</span>
-                    </span>
-                    <span className="opacity-40" aria-hidden="true">·</span>
-                    <button
-                      type="button"
-                      onClick={() => startEditingDuration(item)}
-                      className="app-a-focus-ring inline-flex min-h-[28px] items-center gap-1 text-[12px] font-medium transition-colors hover:underline"
-                      style={{ color: "var(--app-a-text-secondary)" }}
-                    >
-                      <Pencil className="h-3 w-3 opacity-70" aria-hidden="true" />
-                      {t.editDuration}
-                    </button>
-                  </div>
-                )}
-
-                {/* Primary action */}
-                {planState === "confirmed" ? (
-                  <button
-                    type="button"
-                    disabled={busyId !== null}
-                    onClick={() => void add(item)}
-                    className="app-a-primary-button app-a-focus-ring mt-3 gap-2 px-3.5 py-1.5 text-[13px] font-semibold transition-all shadow-sm"
-                  >
-                    <CalendarPlus className="h-4 w-4" aria-hidden="true" />
-                    {t.add}
-                  </button>
-                ) : null}
-              </div>
-
-              {/* Dismiss button */}
-              <button
-                type="button"
-                disabled={busyId !== null}
-                onClick={() => void dismiss(item)}
-                className="app-a-focus-ring flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-                style={{ color: "var(--app-a-text-tertiary)" }}
-                aria-label={t.dismiss}
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </article>
-          );
-        })}
+              <span className="inline-flex shrink-0 items-center gap-1 text-[12px]">{others.length}<ChevronDown className={`h-4 w-4 transition-transform ${showOthers?"rotate-180":""}`}/></span>
+            </button>
+            {showOthers ? <div className="mt-3 space-y-2.5">{others.map(item=>renderCandidate(item))}</div> : null}
+          </div>
+        ) : null}
       </div>
     </section>
   );

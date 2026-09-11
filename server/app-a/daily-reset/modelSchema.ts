@@ -15,8 +15,13 @@ export interface ModelPriorityFactors {
   consequence?: number;
   urgency?: number;
   goalContribution?: number;
+  leverage?: number;
   mentalLoad?: number;
   dependencyPressure?: number;
+  confidence?: string;
+  recommendedDisposition?: string;
+  conciseExplanation?: string;
+  evidenceFromInput?: string;
   explanation: string;
 }
 
@@ -118,6 +123,24 @@ const Type = {
   BOOLEAN: "BOOLEAN",
 };
 
+const prioritySchema = {
+  type: Type.OBJECT,
+  properties: {
+    consequence: { type: Type.INTEGER, description: "Integer 1-5" },
+    urgency: { type: Type.INTEGER, description: "Integer 1-5" },
+    goalContribution: { type: Type.INTEGER, description: "Integer 1-5" },
+    leverage: { type: Type.INTEGER, description: "Integer 1-5" },
+    mentalLoad: { type: Type.INTEGER, description: "Integer 1-5" },
+    dependencyPressure: { type: Type.INTEGER, description: "Integer 1-5" },
+    confidence: { type: Type.STRING, enum: ["low", "medium", "high"] },
+    recommendedDisposition: { type: Type.STRING, enum: ["do", "delegate", "defer", "eliminate", "clarify"] },
+    conciseExplanation: { type: Type.STRING },
+    evidenceFromInput: { type: Type.STRING },
+    explanation: { type: Type.STRING }
+  },
+  required: ["explanation"]
+};
+
 export const modelSchema = {
   type: Type.OBJECT,
   properties: {
@@ -180,18 +203,7 @@ export const modelSchema = {
               isAmbiguous: { type: Type.BOOLEAN },
               needsCheck: { type: Type.BOOLEAN },
               relatedQuestionId: { type: Type.STRING },
-              priority: {
-                type: Type.OBJECT,
-                properties: {
-                  consequence: { type: Type.INTEGER, description: "Integer 1-5" },
-                  urgency: { type: Type.INTEGER, description: "Integer 1-5" },
-                  goalContribution: { type: Type.INTEGER, description: "Integer 1-5" },
-                  mentalLoad: { type: Type.INTEGER, description: "Integer 1-5" },
-                  dependencyPressure: { type: Type.INTEGER, description: "Integer 1-5" },
-                  explanation: { type: Type.STRING }
-                },
-                required: ["explanation"]
-              },
+              priority: prioritySchema,
               goalRelationship: {
                 type: Type.OBJECT,
                 properties: {
@@ -228,18 +240,7 @@ export const modelSchema = {
               },
               deadlineText: { type: Type.STRING },
               deadlineIso: { type: Type.STRING },
-              priority: {
-                type: Type.OBJECT,
-                properties: {
-                  consequence: { type: Type.INTEGER, description: "Integer 1-5" },
-                  urgency: { type: Type.INTEGER, description: "Integer 1-5" },
-                  goalContribution: { type: Type.INTEGER, description: "Integer 1-5" },
-                  mentalLoad: { type: Type.INTEGER, description: "Integer 1-5" },
-                  dependencyPressure: { type: Type.INTEGER, description: "Integer 1-5" },
-                  explanation: { type: Type.STRING }
-                },
-                required: ["explanation"]
-              },
+              priority: prioritySchema,
               goalRelationship: {
                 type: Type.OBJECT,
                 properties: {
@@ -277,18 +278,7 @@ export const modelSchema = {
               },
               deadlineText: { type: Type.STRING },
               deadlineIso: { type: Type.STRING },
-              priority: {
-                type: Type.OBJECT,
-                properties: {
-                  consequence: { type: Type.INTEGER, description: "Integer 1-5" },
-                  urgency: { type: Type.INTEGER, description: "Integer 1-5" },
-                  goalContribution: { type: Type.INTEGER, description: "Integer 1-5" },
-                  mentalLoad: { type: Type.INTEGER, description: "Integer 1-5" },
-                  dependencyPressure: { type: Type.INTEGER, description: "Integer 1-5" },
-                  explanation: { type: Type.STRING }
-                },
-                required: ["explanation"]
-              },
+              priority: prioritySchema,
               goalRelationship: {
                 type: Type.OBJECT,
                 properties: {
@@ -326,18 +316,7 @@ export const modelSchema = {
               },
               deadlineText: { type: Type.STRING },
               deadlineIso: { type: Type.STRING },
-              priority: {
-                type: Type.OBJECT,
-                properties: {
-                  consequence: { type: Type.INTEGER, description: "Integer 1-5" },
-                  urgency: { type: Type.INTEGER, description: "Integer 1-5" },
-                  goalContribution: { type: Type.INTEGER, description: "Integer 1-5" },
-                  mentalLoad: { type: Type.INTEGER, description: "Integer 1-5" },
-                  dependencyPressure: { type: Type.INTEGER, description: "Integer 1-5" },
-                  explanation: { type: Type.STRING }
-                },
-                required: ["explanation"]
-              },
+              priority: prioritySchema,
               goalRelationship: {
                 type: Type.OBJECT,
                 properties: {
@@ -385,18 +364,7 @@ export const modelSchema = {
               isAmbiguous: { type: Type.BOOLEAN },
               needsCheck: { type: Type.BOOLEAN },
               relatedQuestionId: { type: Type.STRING },
-              priority: {
-                type: Type.OBJECT,
-                properties: {
-                  consequence: { type: Type.INTEGER },
-                  urgency: { type: Type.INTEGER },
-                  goalContribution: { type: Type.INTEGER },
-                  mentalLoad: { type: Type.INTEGER },
-                  dependencyPressure: { type: Type.INTEGER },
-                  explanation: { type: Type.STRING }
-                },
-                required: ["explanation"]
-              },
+              priority: prioritySchema,
               goalRelationship: {
                 type: Type.OBJECT,
                 properties: {
@@ -442,18 +410,7 @@ export const modelSchema = {
               isAmbiguous: { type: Type.BOOLEAN },
               needsCheck: { type: Type.BOOLEAN },
               relatedQuestionId: { type: Type.STRING },
-              priority: {
-                type: Type.OBJECT,
-                properties: {
-                  consequence: { type: Type.INTEGER },
-                  urgency: { type: Type.INTEGER },
-                  goalContribution: { type: Type.INTEGER },
-                  mentalLoad: { type: Type.INTEGER },
-                  dependencyPressure: { type: Type.INTEGER },
-                  explanation: { type: Type.STRING }
-                },
-                required: ["explanation"]
-              },
+              priority: prioritySchema,
               goalRelationship: {
                 type: Type.OBJECT,
                 properties: {
@@ -499,18 +456,7 @@ export const modelSchema = {
               isAmbiguous: { type: Type.BOOLEAN },
               needsCheck: { type: Type.BOOLEAN },
               relatedQuestionId: { type: Type.STRING },
-              priority: {
-                type: Type.OBJECT,
-                properties: {
-                  consequence: { type: Type.INTEGER },
-                  urgency: { type: Type.INTEGER },
-                  goalContribution: { type: Type.INTEGER },
-                  mentalLoad: { type: Type.INTEGER },
-                  dependencyPressure: { type: Type.INTEGER },
-                  explanation: { type: Type.STRING }
-                },
-                required: ["explanation"]
-              },
+              priority: prioritySchema,
               goalRelationship: {
                 type: Type.OBJECT,
                 properties: {
@@ -546,3 +492,120 @@ export const modelSchema = {
   },
   required: ["phase"]
 };
+
+export interface ModelItemEvaluation {
+  sourceItemId: string;
+  consequence: number;
+  urgency: number;
+  goalContribution: number;
+  leverage: number;
+  mentalLoad: number;
+  dependencyPressure: number;
+  confidence: "low" | "medium" | "high";
+  recommendedDisposition: "do" | "delegate" | "defer" | "eliminate" | "clarify";
+  proposedBlock: "first_focus" | "later_today" | "if_capacity_remains" | "deferred";
+  conciseExplanation: string;
+  evidenceFromInput: string;
+  conflictsWithManualOverride: boolean;
+}
+
+export interface ModelReevaluatePlan {
+  firstFocusItemIds: string[];
+  laterTodayItemIds: string[];
+  ifCapacityRemainsItemIds: string[];
+  deferredItemIds: string[];
+  summaryOfChanges: string;
+}
+
+export interface ModelReevaluateResponseShape {
+  evaluations: ModelItemEvaluation[];
+  plan: ModelReevaluatePlan;
+}
+
+export const reevaluateModelSchema = {
+  type: Type.OBJECT,
+  properties: {
+    evaluations: {
+      type: Type.ARRAY,
+      description: "Structured priority and leverage evaluations for each unfinished flexible task",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          sourceItemId: { type: Type.STRING },
+          consequence: { type: Type.INTEGER, description: "Integer 1-5" },
+          urgency: { type: Type.INTEGER, description: "Integer 1-5" },
+          goalContribution: { type: Type.INTEGER, description: "Integer 1-5" },
+          leverage: { type: Type.INTEGER, description: "Integer 1-5" },
+          mentalLoad: { type: Type.INTEGER, description: "Integer 1-5" },
+          dependencyPressure: { type: Type.INTEGER, description: "Integer 1-5" },
+          confidence: { type: Type.STRING, enum: ["low", "medium", "high"] },
+          recommendedDisposition: {
+            type: Type.STRING,
+            enum: ["do", "delegate", "defer", "eliminate", "clarify"],
+          },
+          proposedBlock: {
+            type: Type.STRING,
+            enum: ["first_focus", "later_today", "if_capacity_remains", "deferred"],
+          },
+          conciseExplanation: { type: Type.STRING },
+          evidenceFromInput: { type: Type.STRING },
+          conflictsWithManualOverride: { type: Type.BOOLEAN },
+        },
+        required: [
+          "sourceItemId",
+          "consequence",
+          "urgency",
+          "goalContribution",
+          "leverage",
+          "mentalLoad",
+          "dependencyPressure",
+          "confidence",
+          "recommendedDisposition",
+          "proposedBlock",
+          "conciseExplanation",
+          "evidenceFromInput",
+          "conflictsWithManualOverride",
+        ],
+      },
+    },
+    plan: {
+      type: Type.OBJECT,
+      description: "Proposed plan arrangement respecting all constraints",
+      properties: {
+        firstFocusItemIds: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "At most 3 flexible item IDs for First Focus, strictly ordered by priority",
+        },
+        laterTodayItemIds: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "Flexible item IDs ordered for later today",
+        },
+        ifCapacityRemainsItemIds: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "Item IDs placed in optional capacity",
+        },
+        deferredItemIds: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "Item IDs proposed for deferral",
+        },
+        summaryOfChanges: {
+          type: Type.STRING,
+          description: "Short concise explanation of proposed adjustments without technical jargon",
+        },
+      },
+      required: [
+        "firstFocusItemIds",
+        "laterTodayItemIds",
+        "ifCapacityRemainsItemIds",
+        "deferredItemIds",
+        "summaryOfChanges",
+      ],
+    },
+  },
+  required: ["evaluations", "plan"],
+};
+

@@ -8,29 +8,48 @@ import type {
   TimeSensitivity,
 } from "../daily-reset/contracts";
 
-export type RolloverDecisionStatus = "carried" | "snoozed" | "dismissed";
+export type RolloverDecisionStatus =
+  | "carried"
+  | "snoozed"
+  | "dismissed"
+  | "scheduled"
+  | "inbox"
+  | "this_week";
 
 export interface AppARolloverDecision {
   sourceLocalDate: string;
   sourcePlanItemId: string;
   status: RolloverDecisionStatus;
   snoozedUntilLocalDate?: string;
+  scheduledLocalDate?: string;
   updatedAt?: unknown;
 }
 
 export interface UnfinishedRolloverCandidate {
   id: string; // source plan item ID
   sourceLocalDate: string; // e.g. "2026-09-01"
+  originalPlanDate?: string; // root creation plan date
+  originalPlanItemId?: string; // root item ID
   title: string;
   description?: string;
   estimatedMinutes: number;
+  capacityType?: "flexible" | "fixed";
   originalBlock: PlanBlock;
   requiredEnergy: RequiredEnergy;
   timeSensitivity: TimeSensitivity;
+  scheduledTime?: string;
   deadlineText?: string;
   deadlineIso?: string;
+  isPastDeadline?: boolean;
+  isPastFixedObligation?: boolean;
+  kind?: "task" | "fixed_obligation" | "waiting_for" | "idea" | "worry";
   priority: PriorityFactors;
   goalRelationship?: GoalRelationship;
+  sourceItemId?: string;
+  sourceItemIds?: string[];
+  visionId?: string;
+  visionStepId?: string;
+  inboxItemId?: string;
   reasoning?: string;
 }
 
@@ -165,7 +184,12 @@ export function isCandidateEligibleWithDecisions(
   const decision = decisions[decisionId];
   if (!decision) return true;
 
-  if (decision.status === "carried" || decision.status === "dismissed") {
+  if (
+    decision.status === "carried" ||
+    decision.status === "dismissed" ||
+    decision.status === "inbox" ||
+    decision.status === "this_week"
+  ) {
     return false;
   }
 
@@ -175,6 +199,15 @@ export function isCandidateEligibleWithDecisions(
       return false;
     }
     // If snoozed until today or earlier, snooze has expired -> show it!
+    return true;
+  }
+
+  if (decision.status === "scheduled") {
+    // If scheduled for a future date, hide it.
+    if (decision.scheduledLocalDate && decision.scheduledLocalDate > activeLocalDate) {
+      return false;
+    }
+    // If scheduled for today or earlier, show it!
     return true;
   }
 

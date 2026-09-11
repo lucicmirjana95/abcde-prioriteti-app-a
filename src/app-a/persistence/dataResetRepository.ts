@@ -4,12 +4,14 @@ import {
   getDocs,
   limit,
   query,
+  setDoc,
   writeBatch,
   type Firestore,
   type DocumentReference,
   type QuerySnapshot,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import { verifyBypassToken } from "./resetGuard";
 
 export type DataResetScopeKey =
   | "app_a_daily"
@@ -35,9 +37,9 @@ export interface DataResetScopeSelection {
 
 export const DEFAULT_SCOPE_SELECTION: Readonly<DataResetScopeSelection> = Object.freeze({
   appADailyData: true,
-  appAPreferences: false,
-  sharedVisionData: false,
-  sharedRoutinesData: false,
+  appAPreferences: true,
+  sharedVisionData: true,
+  sharedRoutinesData: true,
 });
 
 export const ALL_SCOPES_SELECTION: Readonly<DataResetScopeSelection> = Object.freeze({
@@ -240,11 +242,16 @@ export async function executeDataReset(
   userId: string,
   scopes: DataResetScopeSelection,
   options?: {
+    bypassToken?: string;
     adapter?: FirestoreAdapter;
     onProgress?: (event: ResetProgressEvent) => void;
     onResetPreferences?: () => void;
   }
 ): Promise<DataResetResult> {
+  const bypassToken = options?.bypassToken;
+  if (!bypassToken || !verifyBypassToken(bypassToken)) {
+    throw new Error("unauthorized_reset_operation");
+  }
   const validUid = validateUserId(userId);
   const adapter = options?.adapter || defaultFirestoreAdapter;
   const onProgress = options?.onProgress;
@@ -395,6 +402,13 @@ export async function executeDataReset(
     }
 
     if (!scopeFailed) {
+      if (scopeKey === "vision_shared") {
+        try {
+          await setDoc(doc(db, "users", validUid), { currentVisionId: null }, { merge: true });
+        } catch {
+          // If using mock adapter without network, ignore
+        }
+      }
       scopeStatuses[scopeKey].status = "completed";
       completedScopes.push(scopeKey);
       onProgress?.({

@@ -1,3 +1,5 @@
+import { isResetBlockedGeneric } from "./resetGuard";
+
 export const DRAFT_PREFIX = 'app_a_session_draft:';
 export function readSessionDraft<T>(key: string, fallback: T, valid: (value: unknown) => boolean): T {
   try {
@@ -7,6 +9,9 @@ export function readSessionDraft<T>(key: string, fallback: T, valid: (value: unk
   } catch { return fallback; }
 }
 export function writeSessionDraft(key: string, value: unknown): void {
+  if (isResetBlockedGeneric()) {
+    return;
+  }
   try { sessionStorage.setItem(DRAFT_PREFIX + key, JSON.stringify({ updatedAt: Date.now(), value })); } catch { /* Memory state remains available. */ }
 }
 export function clearSessionDrafts(kinds?: string[]): void {

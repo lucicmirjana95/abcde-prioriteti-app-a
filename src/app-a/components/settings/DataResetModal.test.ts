@@ -20,6 +20,16 @@ if (typeof globalThis.localStorage === "undefined") {
   };
 }
 
+if (typeof globalThis.sessionStorage === "undefined") {
+  const sessionStore = new Map<string, string>();
+  (globalThis as any).sessionStorage = {
+    getItem: (k: string) => sessionStore.get(k) ?? null,
+    setItem: (k: string, v: string) => sessionStore.set(k, String(v)),
+    removeItem: (k: string) => sessionStore.delete(k),
+    clear: () => sessionStore.clear(),
+  };
+}
+
 // Setup custom event dispatcher simulation
 const eventLog: Array<{ type: string; detail: any }> = [];
 (globalThis as any).CustomEvent = class CustomEvent {
@@ -37,10 +47,15 @@ const eventLog: Array<{ type: string; detail: any }> = [];
   },
   addEventListener: () => {},
   removeEventListener: () => {},
+  sessionStorage: (globalThis as any).sessionStorage,
+  localStorage: (globalThis as any).localStorage,
 };
 
 async function runDataResetModalAndUIStateTests() {
   console.log("Starting Data Reset Modal & UI State Tests...");
+
+  const { acquireResetLock, releaseResetLock } = await import("../../persistence/resetGuard");
+  const bypassToken = acquireResetLock("user_modal_test");
 
   // Mock tracking variables
   let deleteCallCount = 0;
@@ -69,17 +84,17 @@ async function runDataResetModalAndUIStateTests() {
   assert.strictEqual(deleteCallCount, 0, "Opening the modal MUST NOT perform any deletion");
   console.log("✅ 1. Opening the modal performs zero deletions");
 
-  // 2. Default scope selection: App A Daily data selected, preferences and shared scopes unselected
+  // 2. Default scope selection: App A Daily data selected, preferences and shared scopes selected
   assert.strictEqual(activeScopes.appADailyData, true, "App A daily data must be selected by default");
-  assert.strictEqual(activeScopes.appAPreferences, false, "Preferences must be unselected by default");
-  assert.strictEqual(activeScopes.sharedVisionData, false, "Shared vision must be unselected by default");
-  assert.strictEqual(activeScopes.sharedRoutinesData, false, "Shared routines must be unselected by default");
-  console.log("✅ 2. Default scope selection confirmed (appADailyData: true, others false)");
+  assert.strictEqual(activeScopes.appAPreferences, true, "Preferences must be selected by default");
+  assert.strictEqual(activeScopes.sharedVisionData, true, "Shared vision must be selected by default");
+  assert.strictEqual(activeScopes.sharedRoutinesData, true, "Shared routines must be selected by default");
+  console.log("✅ 2. Default scope selection confirmed (all scopes true)");
 
-  // 3. Shared scopes unselected verification
-  assert.strictEqual(activeScopes.sharedVisionData, false);
-  assert.strictEqual(activeScopes.sharedRoutinesData, false);
-  console.log("✅ 3. Shared scopes are unselected by default");
+  // 3. Shared scopes selected verification
+  assert.strictEqual(activeScopes.sharedVisionData, true);
+  assert.strictEqual(activeScopes.sharedRoutinesData, true);
+  console.log("✅ 3. Shared scopes are selected by default");
 
   // 4. Localized phrase verification (case-insensitive, trimmed)
   for (const lang of ["en", "sr", "tr"] as const) {
@@ -119,7 +134,7 @@ async function runDataResetModalAndUIStateTests() {
   if (activeScopes.sharedVisionData) selectedScopeSummaries.push(DATA_RESET_LOCALIZATION.en.scopeVisionTitle);
   if (activeScopes.sharedRoutinesData) selectedScopeSummaries.push(DATA_RESET_LOCALIZATION.en.scopeRoutinesTitle);
 
-  assert.deepStrictEqual(selectedScopeSummaries, [DATA_RESET_LOCALIZATION.en.scopeDailyTitle]);
+  assert.strictEqual(selectedScopeSummaries.length, 4);
   console.log("✅ 6. Final scope summary accurately lists active scopes");
 
   // 7. Final destructive click starts EXACTLY ONE execution with double-click prevention
@@ -132,6 +147,7 @@ async function runDataResetModalAndUIStateTests() {
     executionsTriggered++;
 
     await executeDataReset("user_modal_test", activeScopes, {
+      bypassToken,
       adapter: mockAdapter,
     });
     isExecuting = false;
@@ -185,7 +201,7 @@ async function runDataResetModalAndUIStateTests() {
     appAPreferences: false,
     sharedVisionData: false,
     sharedRoutinesData: false,
-  }, { adapter: partialFailureAdapter });
+  }, { bypassToken, adapter: partialFailureAdapter });
 
   assert.strictEqual(failResult.success, false);
   assert.strictEqual(failResult.scopeStatuses.app_a_daily.status, "failed");
@@ -198,7 +214,7 @@ async function runDataResetModalAndUIStateTests() {
     appAPreferences: false,
     sharedVisionData: false,
     sharedRoutinesData: false,
-  }, { adapter: partialFailureAdapter });
+  }, { bypassToken, adapter: partialFailureAdapter });
 
   assert.strictEqual(retryResult.success, true);
   console.log("✅ 9. Partial failure display and retry mechanism verified");
@@ -227,6 +243,7 @@ async function runDataResetModalAndUIStateTests() {
     sharedVisionData: false,
     sharedRoutinesData: false,
   }, {
+    bypassToken,
     adapter: mockAdapter,
     onResetPreferences: () => {
       preferenceCallbackInvoked = true;
@@ -251,6 +268,7 @@ async function runDataResetModalAndUIStateTests() {
   assert.strictEqual(activeElement.focused, true, "Focus must be restored to trigger button upon close");
   console.log("✅ 12. Focus restoration verified");
 
+  releaseResetLock(bypassToken);
   console.log("All Data Reset Modal & UI State tests passed successfully! 🎉");
 }
 

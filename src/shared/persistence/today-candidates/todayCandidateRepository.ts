@@ -5,8 +5,12 @@ import { createSequencedVisionCandidate, getVisionStepSequence, nextVisionCandid
 import type { AppADailyPlanDocument } from '../../../app-a/persistence/dailyPlanDocument';
 import { mergePlanAddition } from '../../../app-a/persistence/planMutations';
 import { isSavedVisionStrategy, type SavedVisionStrategy } from "../../domain/vision";
+import { isResetBlocked } from "../../../app-a/persistence/resetGuard";
 
 async function requireUser(userId: string) {
+  if (isResetBlocked(userId)) {
+    throw new Error("reset_in_progress");
+  }
   if (!userId.trim()) throw new Error("authentication_required");
   await auth.authStateReady();
   if (!auth.currentUser || auth.currentUser.uid !== userId) throw new Error("authentication_required");

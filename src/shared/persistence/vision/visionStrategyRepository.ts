@@ -2,6 +2,7 @@ import { collection, doc, getDoc, getDocs, runTransaction } from "firebase/fires
 import { db } from "../../../lib/firebase";
 import { auth } from "../../../lib/firebase";
 import { isSavedVisionStrategy, type SavedVisionStrategy } from "../../domain/vision";
+import { isResetBlocked } from "../../../app-a/persistence/resetGuard";
 
 export type VisionPersistenceCategory = "permission_denied" | "unauthenticated" | "unavailable" | "network" | "invalid_data" | "version_conflict" | "unknown";
 export interface VisionPersistenceDiagnostic { stage: "set_doc"; firebaseCode: string; category: VisionPersistenceCategory }
@@ -59,6 +60,9 @@ export function checkVisionStrategyRevision(
 }
 
 async function requireUser(userId: string) {
+  if (isResetBlocked(userId)) {
+    throw Object.assign(new Error("reset_in_progress"), { code: "failed-precondition" });
+  }
   if (!userId.trim()) throw Object.assign(new Error("authentication_required"), { code: "auth/unauthenticated" });
   await auth.authStateReady();
   if (!auth.currentUser || auth.currentUser.uid !== userId) throw Object.assign(new Error("authentication_required"), { code: "auth/unauthenticated" });

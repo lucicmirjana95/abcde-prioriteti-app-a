@@ -39,7 +39,7 @@ export default function BrainDumpInput({ value, onChange, t, language, error }: 
           placeholder={t.brainDumpPlaceholder}
           aria-invalid={!!error}
           aria-errormessage={error ? "brain-dump-error" : undefined}
-          className="app-a-field h-[170px] min-h-[160px] max-h-[240px] w-full resize-y p-3.5 pb-7 text-[15px] sm:text-[16px] leading-relaxed transition-shadow"
+          className="app-a-field h-[170px] min-h-[160px] max-h-[240px] w-full resize-y p-3.5 pb-7 text-[16px] leading-relaxed transition-shadow"
           style={{
             borderColor: error ? "var(--app-a-danger)" : "var(--app-a-border)",
           }}

@@ -31,6 +31,7 @@ export function addRolloverCandidateToPlan(
 ): AddRolloverCandidateResult {
   const sourceId = `rollover_source_${candidate.sourceLocalDate}_${candidate.id}`;
   const planItemId = `rollover_plan_${candidate.sourceLocalDate}_${candidate.id}`;
+  const rootId = candidate.originalPlanItemId || candidate.id;
   const allToday = [
     ...draft.firstFocus,
     ...draft.laterToday,
@@ -42,14 +43,17 @@ export function addRolloverCandidateToPlan(
       (item) =>
         item.id === sourceId ||
         item.id === candidate.id ||
+        item.id === rootId ||
         item.originalText.trim().toLowerCase() === candidate.title.trim().toLowerCase(),
     ) ||
     allToday.some(
       (item) =>
         item.id === planItemId ||
         item.id === candidate.id ||
+        item.id === rootId ||
         item.sourceItemIds.includes(sourceId) ||
         item.sourceItemIds.includes(candidate.id) ||
+        item.sourceItemIds.includes(rootId) ||
         item.title.trim().toLowerCase() === candidate.title.trim().toLowerCase(),
     );
 
@@ -62,8 +66,11 @@ export function addRolloverCandidateToPlan(
       ? "if_capacity_remains"
       : targetBlock;
 
-  const priority = candidate.priority || {
+  // Manual priority override from previous day is NOT carried over as today's override.
+  // A fresh, neutral priority assessment is assigned for today's plan.
+  const priority = {
     explanation: `Carried forward from unfinished plan on ${candidate.sourceLocalDate}.`,
+    ...(candidate.priority?.consequence ? { consequence: candidate.priority.consequence } : {}),
   };
 
   const classified: ClassifiedBrainDumpItem = {

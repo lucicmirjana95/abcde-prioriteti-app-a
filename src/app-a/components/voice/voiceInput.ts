@@ -12,27 +12,51 @@ export const VOICE_INPUT_COPY = {
     stop: "Stop listening",
     listening: "Listening… Speak naturally.",
     unavailable: "Voice input is not supported in this browser. You can continue typing.",
-    denied: "Microphone access was not allowed. Enable it in browser settings or continue typing.",
-    noSpeech: "I didn’t hear anything. Try again or continue typing.",
-    error: "Voice input could not start. Try again or continue typing.",
+    denied: "Microphone access is not enabled.",
+    deniedDetails: "Tap 'Enable microphone' to grant access, or check your phone/browser settings if previously blocked.",
+    enableMic: "Enable microphone",
+    howToSettings: "How to enable in Settings",
+    safariGuideTitle: "iPhone / iPad (Safari):",
+    safariGuideText: "Tap the page icon (AA) in the address bar ➔ Website Settings ➔ Microphone ➔ Set to 'Allow'. Or go to iOS Settings ➔ Safari ➔ Microphone.",
+    chromeGuideTitle: "Android / Chrome:",
+    chromeGuideText: "Tap the lock/tune icon beside the web address ➔ Permissions ➔ Microphone ➔ Allow.",
+    noSpeech: "No speech was detected. Try speaking again.",
+    error: "Voice input could not start. Try again.",
+    close: "Got it",
   },
   sr: {
     start: "Koristi glas",
     stop: "Zaustavi slušanje",
     listening: "Slušam… Govorite prirodno.",
-    unavailable: "Ovaj pregledač ne podržava glasovni unos. Možete nastaviti da kucate.",
-    denied: "Pristup mikrofonu nije dozvoljen. Omogućite ga u podešavanjima pregledača ili nastavite da kucate.",
-    noSpeech: "Nisam čuo/la govor. Pokušajte ponovo ili nastavite da kucate.",
-    error: "Glasovni unos nije mogao da se pokrene. Pokušajte ponovo ili nastavite da kucate.",
+    unavailable: "Ovaj pregledač ne podržava glasovni unos. Možete nastaviti sa kucanjem.",
+    denied: "Pristup mikrofonu nije omogućen.",
+    deniedDetails: "Dodirnite 'Omogući mikrofon' da biste odobrili pristup, ili proverite podešavanja telefona ako je mikrofon ranije blokiran.",
+    enableMic: "Omogući mikrofon",
+    howToSettings: "Kako podesiti u telefonu",
+    safariGuideTitle: "iPhone / iPad (Safari):",
+    safariGuideText: "1. Dodirnite ikonicu (AA) u adresnoj traci ➔ Podešavanja veb-sajta (Website Settings) ➔ Mikrofon ➔ 'Dozvoli' (Allow).\n2. Ili otvorite Podešavanja telefona (Settings) ➔ Safari ➔ Mikrofon ➔ Dozvoli.",
+    chromeGuideTitle: "Android / Chrome:",
+    chromeGuideText: "Dodirnite ikonicu pored adrese sajta ➔ Dozvole (Permissions) ➔ Mikrofon ➔ Uključi / Dozvoli.",
+    noSpeech: "Nije detektovan govor. Pokušajte ponovo.",
+    error: "Glasovni unos nije mogao da se pokrene. Pokušajte ponovo.",
+    close: "U redu",
   },
   tr: {
     start: "Sesle yaz",
     stop: "Dinlemeyi durdur",
     listening: "Dinliyorum… Doğal biçimde konuşun.",
     unavailable: "Bu tarayıcı sesli girişi desteklemiyor. Yazmaya devam edebilirsiniz.",
-    denied: "Mikrofon erişimine izin verilmedi. Tarayıcı ayarlarından etkinleştirin veya yazmaya devam edin.",
-    noSpeech: "Herhangi bir konuşma duymadım. Tekrar deneyin veya yazmaya devam edin.",
-    error: "Sesli giriş başlatılamadı. Tekrar deneyin veya yazmaya devam edin.",
+    denied: "Mikrofon erişimi etkin değil.",
+    deniedDetails: "Erişim vermek için 'Mikrofonu etkinleştir'e dokunun veya daha önce engellendiyse telefon ayarlarınızı kontrol edin.",
+    enableMic: "Mikrofonu etkinleştir",
+    howToSettings: "Ayarlardan nasıl açılır",
+    safariGuideTitle: "iPhone / iPad (Safari):",
+    safariGuideText: "Adres çubuğundaki (AA) simgesine dokunun ➔ Web Sitesi Ayarları ➔ Mikrofon ➔ 'İzin Ver' seçin. Veya iOS Ayarları ➔ Safari ➔ Mikrofon.",
+    chromeGuideTitle: "Android / Chrome:",
+    chromeGuideText: "Adres yanındaki kilit/ayar simgesine dokunun ➔ İzinler ➔ Mikrofon ➔ İzin Ver.",
+    noSpeech: "Herhangi bir konuşma algılanmadı. Tekrar konuşmayı deneyin.",
+    error: "Sesli giriş başlatılamadı. Tekrar deneyin.",
+    close: "Tamam",
   },
 } as const;
 
@@ -44,7 +68,7 @@ export function appendVoiceTranscript(current: string, transcript: string, maxLe
 }
 
 export function voiceErrorMessageKey(error: string): "denied" | "noSpeech" | "error" {
-  if (error === "not-allowed" || error === "service-not-allowed") return "denied";
+  if (error === "not-allowed" || error === "service-not-allowed" || error === "permission-denied") return "denied";
   if (error === "no-speech") return "noSpeech";
   return "error";
 }

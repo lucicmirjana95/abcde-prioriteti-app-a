@@ -35,10 +35,11 @@ export function getLocalDateKey(date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
-export function getLocalDateKeyInTimeZone(timezone: string, date = new Date()): string {
+export function getLocalDateKeyInTimeZone(timezone?: string, date = new Date()): string {
+  const effectiveZone = timezone && timezone.trim() ? timezone : getLocalTimezone();
   try {
     const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: timezone,
+      timeZone: effectiveZone,
       year: "numeric",
       month: "2-digit",
       day: "2-digit",

@@ -14,6 +14,7 @@ import {
   arrayRemove,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import { isResetBlocked } from "./resetGuard";
 import { normalizeCompletedItemIds } from '../screens/todayExecution';
 import { validatePlanDraft } from '../domain/daily-reset/validation';
 import {
@@ -134,6 +135,9 @@ export async function saveConfirmedDailyPlan(
   userId: string,
   document: AppADailyPlanDocument,
 ): Promise<AppADailyPlanDocument> {
+  if (isResetBlocked(userId)) {
+    throw new Error("reset_in_progress");
+  }
   if (!userId) {
     const diag: PersistenceSaveDiagnostic = {
       stage: "set_doc",
@@ -147,12 +151,14 @@ export async function saveConfirmedDailyPlan(
   try {
     if (!isAppADailyPlanDocument(document) || !validatePlanDraft(document.plan).valid) throw new Error('invalid_plan');
     return await runTransaction(db, async (transaction) => {
+      if (isResetBlocked(userId)) throw new Error("reset_in_progress");
       const snapshot = await transaction.get(reference);
       const current = snapshot.data();
       if (snapshot.exists() && (current?.revision || 0) !== (document.revision || 0)) throw new Error('plan_changed_elsewhere');
       // A stale review must not resurrect a completion undone on another screen/device.
       const completionIds = snapshot.exists() ? current?.execution?.completedItemIds || [] : document.execution?.completedItemIds || [];
       const saved: AppADailyPlanDocument = { ...document, revision: (current?.revision || 0) + 1, execution: { completedItemIds: normalizeCompletedItemIds(document.plan, completionIds) } };
+      if (isResetBlocked(userId)) throw new Error("reset_in_progress");
       transaction.set(reference, { ...saved, updatedAt: serverTimestamp() });
       return saved;
     });
@@ -179,6 +185,9 @@ export async function saveDailyPlanCompletion(
   completedItemIds: string[],
   change?: { itemId: string; completed: boolean },
 ): Promise<void> {
+  if (isResetBlocked(userId)) {
+    throw new Error("reset_in_progress");
+  }
   if (!userId) throw new Error("authentication_required");
   await updateDoc(dailyPlanRef(userId, localDate), {
     "execution.completedItemIds": change ? (change.completed ? arrayUnion(change.itemId) : arrayRemove(change.itemId)) : Array.from(new Set(completedItemIds)),

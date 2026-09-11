@@ -1,4 +1,6 @@
 import type { AppAPreferences, AppATimeZoneSetting } from "../types";
+import { clearSessionDrafts } from "../persistence/sessionDraft";
+import { isResetBlockedGeneric } from "../persistence/resetGuard";
 
 export const APP_A_PREFERENCES_KEY = "app_a_preferences_v1";
 
@@ -189,6 +191,9 @@ export function loadAppAPreferences(): AppAPreferences {
 }
 
 export function saveAppAPreferences(value: AppAPreferences): AppAPreferences {
+  if (isResetBlockedGeneric()) {
+    return normalizeAppAPreferences(value);
+  }
   const normalized = normalizeAppAPreferences(value);
   try {
     localStorage.setItem(APP_A_PREFERENCES_KEY, JSON.stringify(normalized));
@@ -199,19 +204,39 @@ export function saveAppAPreferences(value: AppAPreferences): AppAPreferences {
   return normalized;
 }
 
+export function clearAllAppAStorage(): void {
+  try {
+    localStorage.removeItem(APP_A_PREFERENCES_KEY);
+    localStorage.removeItem("app_a_vision_guide_seen_v1");
+    localStorage.removeItem("app_a_today_onboarding_v1");
+    for (const key of Object.keys(localStorage)) {
+      if (
+        key.startsWith("app_a_") &&
+        key !== "app_a_active_reset" &&
+        key !== "app_a_reset_generation"
+      ) {
+        localStorage.removeItem(key);
+      }
+    }
+  } catch {
+    // storage error
+  }
+  try {
+    clearSessionDrafts();
+  } catch {
+    // storage error
+  }
+}
+
 /**
  * Resets App A preferences to fresh defaults:
- * - Removes ONLY app_a_preferences_v1 from localStorage
+ * - Removes app_a_preferences_v1 and App A cached items from localStorage & sessionStorage
  * - Preserves abcde_language key (shared across applications)
  * - Sets timezone mode to automatic
  * - Preserves user authentication
  */
 export function resetAppAPreferencesToDefaults(): AppAPreferences {
-  try {
-    localStorage.removeItem(APP_A_PREFERENCES_KEY);
-  } catch {
-    // storage error
-  }
+  clearAllAppAStorage();
   const defaults = getDefaultAppAPreferences();
   defaults.timeZoneSetting = { mode: "automatic" };
   try {

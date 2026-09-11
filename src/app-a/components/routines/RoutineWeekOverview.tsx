@@ -9,10 +9,10 @@ const COPY = {
 } as const;
 
 const STATUS_STYLE = {
-  full: "bg-emerald-500 text-white",
-  minimum: "bg-blue-500 text-white",
-  skipped: "bg-slate-400 text-white",
-  paused: "border border-slate-400 bg-transparent text-slate-500 dark:text-slate-300",
+  full: "bg-[#34C759] text-white",
+  minimum: "bg-[#0071E3] text-white",
+  skipped: "bg-[#8E8E93] text-white",
+  paused: "border border-[#8E8E93] bg-transparent text-[#6E6E73] dark:text-[#AEAEB2]",
 } as const;
 
 export default function RoutineWeekOverview({ userId, language }: { userId: string; language: AppALanguage }) {
@@ -30,7 +30,7 @@ export default function RoutineWeekOverview({ userId, language }: { userId: stri
             {state.dates.map((date) => <time key={date} dateTime={date} className="text-center text-[11px] font-semibold uppercase text-[#6E6E73] dark:text-[#AEAEB2]">{new Intl.DateTimeFormat(locale, { weekday: "short" }).format(new Date(`${date}T12:00:00`)).slice(0, 2)}</time>)}
           </div>
           <div className="divide-y divide-black/[0.06] dark:divide-white/10">
-            {state.routines.map((routine) => <div key={routine.id} className="grid grid-cols-[minmax(150px,1fr)_repeat(7,36px)] items-center gap-2 py-3"><div className="flex min-w-0 items-center gap-2"><Leaf className="h-4 w-4 shrink-0 text-emerald-500" /><span className="truncate text-[14px] font-medium text-black dark:text-white">{routine.title}</span></div>{state.dates.map((date) => { const completion = state.completions.find((item) => item.routineId === routine.id && item.localDate === date); const label = completion ? t[completion.status] : t.empty; return <span key={date} role="img" aria-label={`${date}: ${label}`} title={label} className={`mx-auto h-7 w-7 rounded-full ${completion ? STATUS_STYLE[completion.status] : "border border-black/10 bg-transparent dark:border-white/15"}`} />; })}</div>)}
+            {state.routines.map((routine) => <div key={routine.id} className="grid grid-cols-[minmax(150px,1fr)_repeat(7,36px)] items-center gap-2 py-3"><div className="flex min-w-0 items-center gap-2"><Leaf className="h-4 w-4 shrink-0 text-[#34C759] dark:text-[#30D158]" /><span className="truncate text-[14px] font-medium text-black dark:text-white">{routine.title}</span></div>{state.dates.map((date) => { const completion = state.completions.find((item) => item.routineId === routine.id && item.localDate === date); const label = completion ? t[completion.status] : t.empty; return <span key={date} role="img" aria-label={`${date}: ${label}`} title={label} className={`mx-auto h-7 w-7 rounded-full ${completion ? STATUS_STYLE[completion.status] : "border border-black/10 bg-transparent dark:border-white/15"}`} />; })}</div>)}
           </div>
         </div>
       </div>

@@ -9,6 +9,7 @@ interface Props {
   language: AppALanguage;
   onMoveToBlock: (itemId: string, block: PlanBlock) => void;
   onMoveOutside: (itemId: string, targetHorizon: "this_week" | "later" | "long_term_idea" | "no_action") => void;
+  onReorder?: (itemId: string, direction: "up" | "down") => void;
   onEditSave: (itemId: string, updates: { title: string; description?: string; estimatedMinutes: number }) => { success: boolean; error?: string };
 }
 
@@ -18,6 +19,7 @@ export default function DailyPlanBlock({
   language,
   onMoveToBlock,
   onMoveOutside,
+  onReorder,
   onEditSave,
 }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
@@ -101,13 +103,16 @@ export default function DailyPlanBlock({
       )}
 
       <div className="space-y-2 mt-3">
-        {items.map((item) => (
+        {items.map((item, index) => (
           <DailyPlanItemRow
             key={item.id}
             item={item}
             language={language}
+            isFirst={index === 0}
+            isLast={index === items.length - 1}
             onMoveToBlock={onMoveToBlock}
             onMoveOutside={onMoveOutside}
+            onReorder={onReorder}
             onEditSave={onEditSave}
           />
         ))}

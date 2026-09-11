@@ -477,13 +477,13 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
           </button>
         </div>
         {selectedExperience === "guided_rest" && soundEnabled && soundStatus !== "idle" ? (
-          <p role="status" className={`mb-3 text-[12px] ${soundStatus === "playing" ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>
+          <p role="status" className={`mb-3 text-[12px] ${soundStatus === "playing" ? "text-[#34C759] dark:text-[#30D158]" : "text-[#FF9500] dark:text-[#FF9F0A]"}`}>
             {soundStatus === "playing"
               ? tCommon.restSoundPlaying
               : tCommon.restSoundFailed}
           </p>
         ) : soundEnabled && soundStatus === "blocked" ? (
-          <p role="status" className="mb-3 text-[12px] text-amber-700 dark:text-amber-300">
+          <p role="status" className="mb-3 text-[12px] text-[#FF9500] dark:text-[#FF9F0A]">
             {tCommon.audioBlockedNotice}
           </p>
         ) : null}

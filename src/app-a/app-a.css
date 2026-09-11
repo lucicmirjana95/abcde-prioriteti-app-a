@@ -1,74 +1,96 @@
 .app-a-root {
-  /* Light Theme Tokens */
-  --app-a-bg: #f5f5f7;
-  --app-a-sidebar: rgba(255, 255, 255, 0.75);
+  /* Apple HIG Light Theme Tokens */
+  --app-a-bg: #f2f2f7;
+  --app-a-header-bg: rgba(249, 249, 249, 0.85);
+  --app-a-tabbar-bg: rgba(249, 249, 249, 0.85);
+  --app-a-sidebar: rgba(255, 255, 255, 0.85);
   --app-a-surface: #ffffff;
   --app-a-surface-secondary: #f2f2f7;
   --app-a-surface-elevated: #ffffff;
-  --app-a-text: #1d1d1f;
-  --app-a-text-secondary: #555558;
-  --app-a-text-tertiary: #76767b;
-  --app-a-border: rgba(0, 0, 0, 0.12);
-  --app-a-border-strong: rgba(0, 0, 0, 0.22);
-  --app-a-accent: #0071e3;
-  --app-a-accent-hover: #0077ed;
-  --app-a-accent-soft: rgba(0, 113, 227, 0.10);
+  --app-a-text: #000000;
+  --app-a-text-secondary: #636366;
+  --app-a-text-tertiary: #8e8e93;
+  --app-a-border: rgba(60, 60, 67, 0.18);
+  --app-a-border-strong: rgba(60, 60, 67, 0.29);
+  --app-a-accent: #007aff;
+  --app-a-accent-hover: #0062cc;
+  --app-a-accent-soft: rgba(0, 122, 255, 0.12);
   --app-a-on-accent: #ffffff;
-  --app-a-danger: #d70015;
-  --app-a-danger-soft: rgba(215, 0, 21, 0.10);
-  --app-a-danger-text: #b80012;
-  --app-a-warning: #9e5900;
-  --app-a-warning-soft: rgba(158, 89, 0, 0.10);
-  --app-a-warning-text: #824700;
-  --app-a-success: #1a7f37;
-  --app-a-success-soft: rgba(26, 127, 55, 0.10);
-  --app-a-success-text: #146c2e;
-  --app-a-disabled-bg: rgba(0, 0, 0, 0.05);
-  --app-a-disabled-text: rgba(0, 0, 0, 0.38);
-  --app-a-focus-ring: rgba(0, 113, 227, 0.40);
-  --app-a-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --app-a-shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.10);
-  --app-a-radius: 18px;
+  --app-a-danger: #ff3b30;
+  --app-a-danger-soft: rgba(255, 59, 48, 0.12);
+  --app-a-danger-text: #d70015;
+  --app-a-warning: #ff9500;
+  --app-a-warning-soft: rgba(255, 149, 0, 0.12);
+  --app-a-warning-text: #c97500;
+  --app-a-success: #34c759;
+  --app-a-success-soft: rgba(52, 199, 89, 0.12);
+  --app-a-success-text: #248a3d;
+  --app-a-disabled-bg: rgba(120, 120, 128, 0.08);
+  --app-a-disabled-text: rgba(60, 60, 67, 0.38);
+  --app-a-focus-ring: rgba(0, 122, 255, 0.35);
+  --app-a-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --app-a-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --app-a-radius: 16px;
+  --app-a-tab-inactive: #8e8e93;
 
   color-scheme: light dark;
   color: var(--app-a-text);
   background-color: var(--app-a-bg);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   min-height: 100dvh;
 }
 
 .app-a-root.dark {
-    /* Dark Theme Tokens */
-    --app-a-bg: #121214;
-    --app-a-sidebar: rgba(22, 22, 26, 0.88);
-    --app-a-surface: #1c1c20;
-    --app-a-surface-secondary: #26262b;
-    --app-a-surface-elevated: #2c2c32;
-    --app-a-text: #f5f5f7;
-    --app-a-text-secondary: #a1a1a6;
-    --app-a-text-tertiary: #7c7c82;
-    --app-a-border: rgba(255, 255, 255, 0.12);
-    --app-a-border-strong: rgba(255, 255, 255, 0.22);
-    --app-a-accent: #2997ff;
-    --app-a-accent-hover: #40a9ff;
-    --app-a-accent-soft: rgba(41, 151, 255, 0.16);
-    --app-a-on-accent: #ffffff;
-    --app-a-danger: #ff453a;
-    --app-a-danger-soft: rgba(255, 69, 58, 0.16);
-    --app-a-danger-text: #ff6961;
-    --app-a-warning: #ff9f0a;
-    --app-a-warning-soft: rgba(255, 159, 10, 0.16);
-    --app-a-warning-text: #ffb340;
-    --app-a-success: #30d158;
-    --app-a-success-soft: rgba(48, 209, 88, 0.16);
-    --app-a-success-text: #5ee07e;
-    --app-a-disabled-bg: rgba(255, 255, 255, 0.06);
-    --app-a-disabled-text: rgba(255, 255, 255, 0.38);
-    --app-a-focus-ring: rgba(41, 151, 255, 0.45);
-    --app-a-shadow: 0 2px 6px rgba(0, 0, 0, 0.40);
-    --app-a-shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.50);
+  /* Apple HIG Dark Theme Tokens */
+  --app-a-bg: #000000;
+  --app-a-header-bg: rgba(28, 28, 30, 0.85);
+  --app-a-tabbar-bg: rgba(28, 28, 30, 0.85);
+  --app-a-sidebar: rgba(28, 28, 30, 0.90);
+  --app-a-surface: #1c1c1e;
+  --app-a-surface-secondary: #2c2c2e;
+  --app-a-surface-elevated: #2c2c2e;
+  --app-a-text: #ffffff;
+  --app-a-text-secondary: #8e8e93;
+  --app-a-text-tertiary: #636366;
+  --app-a-border: rgba(84, 84, 88, 0.36);
+  --app-a-border-strong: rgba(84, 84, 88, 0.50);
+  --app-a-accent: #0a84ff;
+  --app-a-accent-hover: #409cff;
+  --app-a-accent-soft: rgba(10, 132, 255, 0.18);
+  --app-a-on-accent: #ffffff;
+  --app-a-danger: #ff453a;
+  --app-a-danger-soft: rgba(255, 69, 58, 0.18);
+  --app-a-danger-text: #ff6961;
+  --app-a-warning: #ff9f0a;
+  --app-a-warning-soft: rgba(255, 159, 10, 0.18);
+  --app-a-warning-text: #ffb340;
+  --app-a-success: #30d158;
+  --app-a-success-soft: rgba(48, 209, 88, 0.18);
+  --app-a-success-text: #5ee07e;
+  --app-a-disabled-bg: rgba(120, 120, 128, 0.16);
+  --app-a-disabled-text: rgba(235, 235, 245, 0.30);
+  --app-a-focus-ring: rgba(10, 132, 255, 0.45);
+  --app-a-shadow: 0 1px 3px rgba(0, 0, 0, 0.30);
+  --app-a-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --app-a-radius: 16px;
+  --app-a-tab-inactive: #8e8e93;
+}
+
+/* Apple HIG Translucent Materials */
+.app-a-tabbar {
+  background-color: var(--app-a-tabbar-bg) !important;
+  border-top: 0.5px solid var(--app-a-border) !important;
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  backdrop-filter: blur(25px) saturate(180%);
+}
+
+.app-a-header-bar {
+  background-color: var(--app-a-header-bg) !important;
+  border-bottom: 0.5px solid var(--app-a-border) !important;
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  backdrop-filter: blur(25px) saturate(180%);
 }
 
 /* Surface containers */
@@ -119,13 +141,25 @@
   .app-a-rest-orb, .app-a-rest-ring { animation: none; }
 }
 
-/* Form Fields */
+/* Apple HIG Mobile Input Zoom Prevention */
+input,
+textarea,
+select,
+.app-a-field {
+  font-size: 16px !important;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", "Helvetica Neue", sans-serif;
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
+}
+
+/* Apple HIG Inset Form Fields */
 .app-a-field {
   border: 1px solid var(--app-a-border);
   background-color: var(--app-a-surface);
   border-radius: 12px;
   color: var(--app-a-text);
   caret-color: var(--app-a-accent);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .app-a-field::placeholder {
@@ -135,24 +169,32 @@
 
 .app-a-field:focus {
   border-color: var(--app-a-accent);
-  box-shadow: 0 0 0 3px var(--app-a-focus-ring);
+  box-shadow: 0 0 0 3.5px var(--app-a-focus-ring);
   outline: none;
 }
 
-/* Buttons */
+/* Apple HIG Buttons */
 .app-a-primary-button {
   min-height: 48px;
-  border-radius: 12px;
+  border-radius: 14px;
   background-color: var(--app-a-accent);
   color: var(--app-a-on-accent);
   font-size: 16px;
   font-weight: 600;
-  border: 1px solid transparent;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.10);
+  letter-spacing: -0.2px;
+  border: none;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), opacity 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.app-a-primary-button:active:not(:disabled) {
+  transform: scale(0.98);
+  opacity: 0.85;
 }
 
 .app-a-primary-button:hover:not(:disabled) {
@@ -161,25 +203,39 @@
 
 .app-a-primary-button:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+  opacity: 0.45;
 }
 
 .app-a-secondary-button {
   min-height: 48px;
-  border-radius: 12px;
+  border-radius: 14px;
   background-color: var(--app-a-surface-secondary);
   color: var(--app-a-text);
   border: 1px solid var(--app-a-border);
   font-size: 15px;
   font-weight: 600;
+  letter-spacing: -0.2px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), background-color 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.app-a-secondary-button:active:not(:disabled) {
+  transform: scale(0.98);
+  opacity: 0.85;
 }
 
 .app-a-secondary-button:hover:not(:disabled) {
   background-color: var(--app-a-border);
+}
+
+.app-a-secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .app-a-focus-ring:focus-visible {

@@ -239,14 +239,25 @@ export function validatePlanDraft(draft: DailyPlanDraft, knownQuestions?: Clarif
         if (!isValidPriorityFactor(item.priority.consequence)) errors.push(`Classified item ${item.id} has invalid priority consequence.`);
         if (!isValidPriorityFactor(item.priority.urgency)) errors.push(`Classified item ${item.id} has invalid priority urgency.`);
         if (!isValidPriorityFactor(item.priority.goalContribution)) errors.push(`Classified item ${item.id} has invalid priority goalContribution.`);
+        if (!isValidPriorityFactor(item.priority.leverage)) errors.push(`Classified item ${item.id} has invalid priority leverage.`);
         if (!isValidPriorityFactor(item.priority.mentalLoad)) errors.push(`Classified item ${item.id} has invalid priority mentalLoad.`);
         if (!isValidPriorityFactor(item.priority.dependencyPressure)) errors.push(`Classified item ${item.id} has invalid priority dependencyPressure.`);
+        if (item.priority.confidence !== undefined && !["low", "medium", "high"].includes(item.priority.confidence)) {
+          errors.push(`Classified item ${item.id} has invalid priority confidence.`);
+        }
+        if (item.priority.recommendedDisposition !== undefined && !["do", "delegate", "defer", "eliminate", "clarify"].includes(item.priority.recommendedDisposition)) {
+          errors.push(`Classified item ${item.id} has invalid priority recommendedDisposition.`);
+        }
       }
     }
   }
 
   const planItemIds = new Set<string>();
   
+  if (draft.firstFocus && draft.firstFocus.length > 3) {
+    errors.push("First focus cannot contain more than 3 items.");
+  }
+
   const validateBlock = (items: any[], expectedBlock: string) => {
     if (!items) return;
     for (const item of items) {
@@ -260,6 +271,24 @@ export function validatePlanDraft(draft: DailyPlanDraft, knownQuestions?: Clarif
 
       if (item.block !== expectedBlock) {
         errors.push(`Plan item ${item.id} is in wrong array. Expected ${expectedBlock}, got ${item.block}`);
+      }
+
+      if (expectedBlock === "first_focus") {
+        if (item.capacityType === "fixed") {
+          errors.push(`Fixed commitment ${item.id} cannot be in first focus.`);
+        }
+        if (item.sourceItemIds && draft.classifiedItems) {
+          for (const sid of item.sourceItemIds) {
+            const classified = draft.classifiedItems.find(c => c.id === sid);
+            if (classified && classified.kind === "waiting_for") {
+              const isConcreteAction = (item.title && /^(send|pošalji|pozovi|proveri|follow up|remind|kontaktiraj|call|ask|pitaj)/i.test(item.title.trim())) ||
+                (classified.suggestedAction && classified.suggestedAction.trim().length > 0 && !/^wait|^čekaj/i.test(classified.suggestedAction.trim()));
+              if (!isConcreteAction) {
+                errors.push(`Waiting-for item ${item.title || item.id} cannot enter first focus without a concrete active step.`);
+              }
+            }
+          }
+        }
       }
 
       if (item.sourceItemIds) {
@@ -289,8 +318,15 @@ export function validatePlanDraft(draft: DailyPlanDraft, knownQuestions?: Clarif
         if (!isValidPriorityFactor(item.priority.consequence)) errors.push(`Plan item ${item.id} has invalid priority consequence.`);
         if (!isValidPriorityFactor(item.priority.urgency)) errors.push(`Plan item ${item.id} has invalid priority urgency.`);
         if (!isValidPriorityFactor(item.priority.goalContribution)) errors.push(`Plan item ${item.id} has invalid priority goalContribution.`);
+        if (!isValidPriorityFactor(item.priority.leverage)) errors.push(`Plan item ${item.id} has invalid priority leverage.`);
         if (!isValidPriorityFactor(item.priority.mentalLoad)) errors.push(`Plan item ${item.id} has invalid priority mentalLoad.`);
         if (!isValidPriorityFactor(item.priority.dependencyPressure)) errors.push(`Plan item ${item.id} has invalid priority dependencyPressure.`);
+        if (item.priority.confidence !== undefined && !["low", "medium", "high"].includes(item.priority.confidence)) {
+          errors.push(`Plan item ${item.id} has invalid priority confidence.`);
+        }
+        if (item.priority.recommendedDisposition !== undefined && !["do", "delegate", "defer", "eliminate", "clarify"].includes(item.priority.recommendedDisposition)) {
+          errors.push(`Plan item ${item.id} has invalid priority recommendedDisposition.`);
+        }
       }
 
       if (item.needsCheck && !item.isAmbiguous && item.needsCheck === true) {

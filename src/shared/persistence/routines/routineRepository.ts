@@ -8,6 +8,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
+import { isResetBlocked } from "../../../app-a/persistence/resetGuard";
 import type { RoutineCompletion, SharedRoutine } from "../../domain/routines";
 import {
   getRoutineCompletionDocumentId,
@@ -20,6 +21,9 @@ import {
 } from "./routineDocument";
 
 function requireUserId(userId: string): void {
+  if (isResetBlocked(userId)) {
+    throw new Error("reset_in_progress");
+  }
   if (!userId.trim()) throw new Error("authentication_required");
 }
 

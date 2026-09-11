@@ -164,8 +164,8 @@ const candidates = extractUnfinishedCandidatesFromPlans(allPlans, activeDate, de
 // Plan from today (2026-09-02) MUST NOT be in rollover candidates
 assert.ok(!candidates.some((c) => c.sourceLocalDate === "2026-09-02"));
 
-// Plan from 8 days ago (2026-08-25) MUST NOT be in candidates (strictly bounded to 7 calendar days)
-assert.ok(!candidates.some((c) => c.sourceLocalDate === "2026-08-25"));
+// Plan from 8 days ago (2026-08-25) MUST be in candidates (no arbitrary 7-day cutoff loss)
+assert.ok(candidates.some((c) => c.sourceLocalDate === "2026-08-25"));
 
 // Completed tasks MUST NOT be in candidates
 assert.ok(!candidates.some((c) => c.id === "yest-done"));
@@ -176,8 +176,8 @@ assert.ok(!candidates.some((c) => c.id === "idea-1"));
 assert.ok(!candidates.some((c) => c.id === "worry-1"));
 assert.ok(!candidates.some((c) => c.id === "waiting-1"));
 
-// Unfinished tasks from 2026-09-01, 2026-08-30, and 2026-08-26 MUST be present
-assert.equal(candidates.length, 5); // 3 from yesterday, 1 from 3-days-ago, 1 from 7-days-ago
+// Unfinished tasks from 2026-09-01, 2026-08-30, 2026-08-26, and 2026-08-25 MUST be present
+assert.equal(candidates.length, 6); // 3 from yesterday, 1 from 3-days-ago, 1 from 7-days-ago, 1 from 8-days-ago
 
 // 3. Newest-first ordering verification
 assert.equal(candidates[0]?.sourceLocalDate, "2026-09-01");
@@ -208,16 +208,17 @@ const updatedDecisions: Record<string, AppARolloverDecision> = {
 };
 
 const filteredCandidates = extractUnfinishedCandidatesFromPlans(allPlans, activeDate, updatedDecisions);
-assert.equal(filteredCandidates.length, 2);
+assert.equal(filteredCandidates.length, 3);
 assert.equal(filteredCandidates[0]?.id, "yest-unfinished-2");
 assert.equal(filteredCandidates[1]?.id, "day7-unfinished");
+assert.equal(filteredCandidates[2]?.id, "day8-expired");
 
 // 5. Timezone transition near midnight (e.g. crossing midnight to 2026-09-03)
 const nextActiveDate = "2026-09-03";
 const midnightCandidates = extractUnfinishedCandidatesFromPlans(allPlans, nextActiveDate, decisions);
 // Now 2026-09-02 becomes eligible as a previous day
 assert.ok(midnightCandidates.some((c) => c.sourceLocalDate === "2026-09-02" && c.id === "today-1"));
-// And 2026-08-26 is now 8 days prior relative to 2026-09-03, so it is cleanly excluded!
-assert.ok(!midnightCandidates.some((c) => c.sourceLocalDate === "2026-08-26"));
+// Historical tasks remain available without arbitrary drop
+assert.ok(midnightCandidates.some((c) => c.sourceLocalDate === "2026-08-26"));
 
 console.log("Rollover Repository Candidate Extraction Tests passed successfully.");

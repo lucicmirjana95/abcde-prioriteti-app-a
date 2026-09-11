@@ -29,12 +29,29 @@ export type RequiredEnergy = 1 | 2 | 3 | 4 | 5;
 
 export type TimeSensitivity = "none" | "soft" | "deadline" | "urgent";
 
+export type PriorityConfidence = "low" | "medium" | "high";
+
+export type RecommendedDisposition = "do" | "delegate" | "defer" | "eliminate" | "clarify";
+
+export type ItemStatusState =
+  | "actionable"
+  | "waiting_for"
+  | "note_needs_clarification"
+  | "fixed"
+  | "deferred"
+  | "eliminated";
+
 export interface PriorityFactors {
   consequence?: 1 | 2 | 3 | 4 | 5;
   urgency?: 1 | 2 | 3 | 4 | 5;
   goalContribution?: 1 | 2 | 3 | 4 | 5;
+  leverage?: 1 | 2 | 3 | 4 | 5;
   mentalLoad?: 1 | 2 | 3 | 4 | 5;
   dependencyPressure?: 1 | 2 | 3 | 4 | 5;
+  confidence?: PriorityConfidence;
+  recommendedDisposition?: RecommendedDisposition;
+  conciseExplanation?: string;
+  evidenceFromInput?: string;
   explanation: string;
 }
 
@@ -102,6 +119,9 @@ export interface DailyPlanItem {
   goalRelationship?: GoalRelationship;
   reasoning?: string;
   needsCheck: boolean;
+  manualPriorityOverride?: boolean;
+  itemStatusState?: ItemStatusState;
+  dependsOnItemIds?: string[];
 }
 
 export interface SafeIntervention {
@@ -110,9 +130,11 @@ export interface SafeIntervention {
   description: string;
   estimatedMinutes: number;
   reason: string;
+  targetTaskId?: string;
 }
 
 export interface DailyPlanDraft {
+  localDate?: string;
   classifiedItems: ClassifiedBrainDumpItem[];
   firstFocus: DailyPlanItem[];
   laterToday: DailyPlanItem[];
@@ -127,6 +149,7 @@ export interface DailyPlanDraft {
   plannedFlexibleMinutes?: number; // Required work competing for selected flexible capacity
   plannedFixedMinutes?: number; // Explicitly unavoidable commitments kept visible separately
   plannedOptionalMinutes: number; // Sum of ifCapacityRemains
+  manualPriorityOverride?: boolean; // Indicates if the user manually reordered tasks
 }
 
 export interface PlanReadyResponse {

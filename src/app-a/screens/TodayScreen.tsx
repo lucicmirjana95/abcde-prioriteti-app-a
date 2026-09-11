@@ -36,11 +36,14 @@ import UnfinishedTasksSection from '../components/rollover/UnfinishedTasksSectio
 import {
   loadUnfinishedRolloverCandidates,
   markHistoricalTaskComplete,
+  saveDailyPlanWithMultipleRolloverDecisionsAtomic,
   saveDailyPlanWithRolloverDecisionAtomic,
+  saveInboxItemWithRolloverDecisionAtomic,
   saveRolloverDecision,
 } from '../persistence/rolloverRepository';
-import { shiftLocalDate, type UnfinishedRolloverCandidate } from '../domain/rollover/contracts';
+import { shiftLocalDate, type AppARolloverDecision, type UnfinishedRolloverCandidate } from '../domain/rollover/contracts';
 import { addRolloverCandidateToPlan } from './rolloverCandidatePlan';
+import { ReevaluationDialog } from '../components/daily-reset/ReevaluationDialog';
 import type { DataResetEventDetail } from '../components/settings/DataResetModal';
 import { createInboxItemAndAddToPlanAtomic, createInboxItemAndReplacePlanAtomic, saveConfirmedPlanAndInboxAtomic, saveDailyPlanCompletionAndInboxStatusAtomic, saveInboxItem, savePlanAndScheduleInboxItemAtomic } from '../persistence/inboxRepository';
 import { createManualInboxItemId, type AppAInboxItem } from '../domain/inbox/contracts';
@@ -96,6 +99,8 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [activePlanDate, setActivePlanDate] = useState(() => getLocalDateKeyInTimeZone(effectiveTimeZone));
   const [rolloverCandidates, setRolloverCandidates] = useState<UnfinishedRolloverCandidate[]>([]);
+  const [selectedExecutionRolloverIds, setSelectedExecutionRolloverIds] = useState<string[]>([]);
+  const [reevaluationCandidates, setReevaluationCandidates] = useState<UnfinishedRolloverCandidate[] | null>(null);
   const [isLoadingRollover, setIsLoadingRollover] = useState(false);
   const [resetSessionsOpen, setResetSessionsOpen] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(readOnboardingCompleted);
@@ -451,9 +456,88 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     }
   };
 
-  const handleRemindTomorrow = async (candidate: UnfinishedRolloverCandidate): Promise<void> => {
+  const handleBulkAddToToday = async (candidatesToAdd: UnfinishedRolloverCandidate[]): Promise<void> => {
+    if (!user || !state.planDraft) return;
+    let currentDraft = state.planDraft;
+    const handledCandidates: UnfinishedRolloverCandidate[] = [];
+
+    for (const candidate of candidatesToAdd) {
+      const result = addRolloverCandidateToPlan(currentDraft, candidate);
+      if ('draft' in result) {
+        currentDraft = result.draft;
+        handledCandidates.push(candidate);
+      }
+    }
+
+    if (handledCandidates.length === 0) return;
+
+    try {
+      const document = createDailyPlanDocument(state.inputData, currentDraft, language, activePlanDate, effectiveTimeZone);
+      document.execution = { completedItemIds };
+      // Save last decision atomically with plan document
+      const last = handledCandidates[handledCandidates.length - 1];
+      const saved = await saveDailyPlanWithRolloverDecisionAtomic(user.uid, document, {
+        sourceLocalDate: last.sourceLocalDate,
+        sourcePlanItemId: last.id,
+        status: 'carried',
+      });
+      // Save remaining decisions
+      for (const cand of handledCandidates.slice(0, -1)) {
+        await saveRolloverDecision(user.uid, {
+          sourceLocalDate: cand.sourceLocalDate,
+          sourcePlanItemId: cand.id,
+          status: 'carried',
+        });
+      }
+      planRevision.current = saved.revision || 0;
+      setCompletedItemIds(saved.execution?.completedItemIds || []);
+      loadConfirmedPlan(planDraftFromDocument(saved), state.inputData);
+      const handledKeys = new Set(handledCandidates.map((c) => `${c.sourceLocalDate}_${c.id}`));
+      setRolloverCandidates((prev) =>
+        prev.filter((item) => !handledKeys.has(`${item.sourceLocalDate}_${item.id}`)),
+      );
+      setViewMode('execution');
+      setSaveStatus('saved');
+    } catch (err) {
+      console.error("Bulk add rollover failed:", err);
+    }
+  };
+
+  const handleMoveToInbox = async (candidate: UnfinishedRolloverCandidate): Promise<void> => {
     if (!user) return;
-    const nextDate = shiftLocalDate(activePlanDate, 1);
+    const nowIso = new Date().toISOString();
+    const inboxItem: AppAInboxItem = {
+      id: createManualInboxItemId(),
+      title: candidate.title,
+      details: candidate.description,
+      kind: candidate.kind === 'waiting_for' ? 'waiting_for' : 'task',
+      horizon: 'this_week',
+      status: 'inbox',
+      estimatedMinutes: candidate.estimatedMinutes,
+      capacityType: candidate.capacityType === 'fixed' ? 'fixed' : 'flexible',
+      source: 'rollover',
+      sourceLocalDate: candidate.sourceLocalDate,
+      sourceItemId: candidate.id,
+      language,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    await saveInboxItemWithRolloverDecisionAtomic(user.uid, inboxItem, {
+      sourceLocalDate: candidate.sourceLocalDate,
+      sourcePlanItemId: candidate.id,
+      status: 'inbox',
+    });
+
+    window.dispatchEvent(new Event('app-a-inbox-changed'));
+    setRolloverCandidates((prev) =>
+      prev.filter((item) => !(item.sourceLocalDate === candidate.sourceLocalDate && item.id === candidate.id)),
+    );
+  };
+
+  const handleSnoozeThisWeek = async (candidate: UnfinishedRolloverCandidate): Promise<void> => {
+    if (!user) return;
+    const nextDate = shiftLocalDate(activePlanDate, 7);
     await saveRolloverDecision(user.uid, {
       sourceLocalDate: candidate.sourceLocalDate,
       sourcePlanItemId: candidate.id,
@@ -463,6 +547,31 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     setRolloverCandidates((prev) =>
       prev.filter((item) => !(item.sourceLocalDate === candidate.sourceLocalDate && item.id === candidate.id)),
     );
+  };
+
+  const handleScheduleDate = async (candidate: UnfinishedRolloverCandidate, targetDate: string): Promise<void> => {
+    if (!user || !targetDate) return;
+    await saveRolloverDecision(user.uid, {
+      sourceLocalDate: candidate.sourceLocalDate,
+      sourcePlanItemId: candidate.id,
+      status: 'scheduled',
+      scheduledLocalDate: targetDate,
+    });
+    setRolloverCandidates((prev) =>
+      prev.filter((item) => !(item.sourceLocalDate === candidate.sourceLocalDate && item.id === candidate.id)),
+    );
+  };
+
+  const handleSendReminder = async (candidate: UnfinishedRolloverCandidate): Promise<void> => {
+    if (!user || !state.planDraft) return;
+    const reminderCandidate: UnfinishedRolloverCandidate = {
+      ...candidate,
+      id: `reminder_${candidate.id}`,
+      title: language === 'sr' ? `Pošalji podsetnik: ${candidate.title}` : language === 'tr' ? `Hatırlatıcı gönder: ${candidate.title}` : `Send reminder: ${candidate.title}`,
+      estimatedMinutes: Math.min(candidate.estimatedMinutes, 15),
+      kind: 'task',
+    };
+    await handleAddRolloverCandidate(reminderCandidate);
   };
 
   const handleMarkComplete = async (candidate: UnfinishedRolloverCandidate): Promise<void> => {
@@ -541,6 +650,10 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
         onOpenReset={() => setResetSessionsOpen(true)}
         onQuickAddToday={handleQuickAddToday}
         onQuickSaveLater={handleQuickSaveLater}
+        onReevaluatePriorities={(draft) => {
+          updateReviewDraft(draft);
+          void handleConfirm(draft);
+        }}
       />
     ) : (
       <DailyPlanReview
@@ -568,6 +681,50 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
           <h1 className="mb-3 text-[32px] font-bold leading-[1.08] tracking-[-0.035em] text-black sm:text-[38px] dark:text-white">{t.dailyResetTitle}</h1>
           <p className="max-w-[620px] text-[17px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">{t.dailyResetIntro}</p>
         </div>
+        {rolloverCandidates.length > 0 && (
+          <div className="mb-6">
+            <UnfinishedTasksSection
+              candidates={rolloverCandidates}
+              language={language}
+              hasConfirmedPlanToday={false}
+              isLoading={isLoadingRollover}
+              mode="form_selection"
+              onAddToToday={handleAddRolloverCandidate}
+              onBulkAddToToday={handleBulkAddToToday}
+              onMoveToInbox={handleMoveToInbox}
+              onSnoozeThisWeek={handleSnoozeThisWeek}
+              onScheduleDate={handleScheduleDate}
+              onSendReminder={handleSendReminder}
+              onMarkComplete={handleMarkComplete}
+              onDismiss={handleDismiss}
+              onSelectForReset={(candidate) => {
+                const line = candidate.deadlineText
+                  ? `• ${candidate.title} (${candidate.estimatedMinutes} min, rok: ${candidate.deadlineText})`
+                  : `• ${candidate.title} (${candidate.estimatedMinutes} min)`;
+                const current = state.inputData.brainDump || '';
+                if (!current.includes(candidate.title)) {
+                  const updated = current.trim() ? `${current.trim()}\n${line}` : line;
+                  updateInputData({ brainDump: updated });
+                }
+              }}
+              onSelectAllForReset={(list) => {
+                let updated = state.inputData.brainDump || '';
+                for (const cand of list) {
+                  if (!updated.includes(cand.title)) {
+                    const line = cand.deadlineText
+                      ? `• ${cand.title} (${cand.estimatedMinutes} min, rok: ${cand.deadlineText})`
+                      : `• ${cand.title} (${cand.estimatedMinutes} min)`;
+                    updated = updated.trim() ? `${updated.trim()}\n${line}` : line;
+                  }
+                }
+                updateInputData({ brainDump: updated });
+              }}
+              selectedForResetIds={rolloverCandidates
+                .filter((c) => state.inputData.brainDump?.includes(c.title))
+                .map((c) => c.id)}
+            />
+          </div>
+        )}
         <DailyResetForm
           key={formVersion}
           onDraftChange={updateInputData}
@@ -607,8 +764,28 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
             language={language}
             hasConfirmedPlanToday={Boolean(state.planDraft && viewMode === 'execution')}
             isLoading={isLoadingRollover}
+            mode="execution"
+            selectedForResetIds={selectedExecutionRolloverIds}
+            onSelectForReset={(candidate) => {
+              setSelectedExecutionRolloverIds((prev) =>
+                prev.includes(candidate.id)
+                  ? prev.filter((id) => id !== candidate.id)
+                  : [...prev, candidate.id]
+              );
+            }}
+            onSelectAllForReset={(list) => {
+              const ids = list.map((c) => c.id);
+              setSelectedExecutionRolloverIds((prev) => Array.from(new Set([...prev, ...ids])));
+            }}
+            onReevaluateWithSelected={(selectedList) => {
+              setReevaluationCandidates(selectedList);
+            }}
             onAddToToday={handleAddRolloverCandidate}
-            onRemindTomorrow={handleRemindTomorrow}
+            onBulkAddToToday={handleBulkAddToToday}
+            onMoveToInbox={handleMoveToInbox}
+            onSnoozeThisWeek={handleSnoozeThisWeek}
+            onScheduleDate={handleScheduleDate}
+            onSendReminder={handleSendReminder}
             onMarkComplete={handleMarkComplete}
             onDismiss={handleDismiss}
           />
@@ -626,6 +803,44 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
           />
           <DueInboxItemsSection userId={user?.uid} localDate={activePlanDate} language={language} canAddToPlan={Boolean(state.planDraft && viewMode === 'execution')} onAddToPlan={handleAddInboxItem} />
         </>
+      )}
+      {reevaluationCandidates && state.planDraft && (
+        <ReevaluationDialog
+          draft={state.planDraft}
+          language={language}
+          localDate={activePlanDate}
+          additionalCandidates={reevaluationCandidates}
+          onClose={() => setReevaluationCandidates(null)}
+          onConfirm={async (proposal, modifications) => {
+            const { applyReevaluationProposal } = await import('./planReview');
+            const finalDraft = applyReevaluationProposal(state.planDraft!, proposal, modifications);
+            if ((finalDraft as any).error) return;
+            if (user && !demoConfig) {
+              const document = createDailyPlanDocument(state.inputData, finalDraft, language, activePlanDate, effectiveTimeZone);
+              document.execution = { completedItemIds };
+              const decisions: AppARolloverDecision[] = reevaluationCandidates.map((c) => ({
+                sourceLocalDate: c.sourceLocalDate,
+                sourcePlanItemId: c.id,
+                status: 'carried',
+              }));
+              const saved = await saveDailyPlanWithMultipleRolloverDecisionsAtomic(user.uid, document, decisions);
+              planRevision.current = saved.revision || 0;
+              setCompletedItemIds(saved.execution?.completedItemIds || []);
+              loadConfirmedPlan(planDraftFromDocument(saved), state.inputData);
+              setRolloverCandidates((prev) =>
+                prev.filter((c) => !decisions.some((d) => d.sourceLocalDate === c.sourceLocalDate && d.sourcePlanItemId === c.id))
+              );
+              setSelectedExecutionRolloverIds([]);
+            } else if (demoConfig) {
+              loadConfirmedPlan(finalDraft, state.inputData);
+              setRolloverCandidates((prev) =>
+                prev.filter((c) => !reevaluationCandidates.some((rc) => rc.id === c.id))
+              );
+              setSelectedExecutionRolloverIds([]);
+            }
+            setReevaluationCandidates(null);
+          }}
+        />
       )}
       {resetSessionsOpen ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={language === 'sr' ? 'Sesije za predah' : language === 'tr' ? 'Mola oturumları' : 'Reset sessions'} onMouseDown={(event) => { if (event.target === event.currentTarget) setResetSessionsOpen(false); }}>

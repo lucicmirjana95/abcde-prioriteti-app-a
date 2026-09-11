@@ -1,10 +1,12 @@
 {
   "projectId": "daily-reset-app-a",
-  "appId": "1:741831340602:web:813f9193eaf4a85505bb03",
+  "appId": "1:741831340602:web:1ce6e1cec10fa82605bb03",
   "apiKey": "AIzaSyCEn612mP0bPQmu5gCHzOYp3B_bVXDzyEk",
   "authDomain": "daily-reset-app-a.firebaseapp.com",
-  "firestoreDatabaseId": "(default)",
+  "firestoreDatabaseId": "ai-studio-abcdeprioritetia-4b6fc001-9d99-4af3-b752-980403a02ecb",
   "storageBucket": "daily-reset-app-a.firebasestorage.app",
   "messagingSenderId": "741831340602",
-  "measurementId": ""
+  "measurementId": "",
+  "oAuthClientId": "741831340602-g4q6qdbuq609ughri6c8r9rsjrft7s2j.apps.googleusercontent.com",
+  "recaptchaSiteKey": ""
 }

@@ -119,7 +119,7 @@ export default function InboxScreen({ language, preferences }: { language: AppAL
   };
   const taskFilters: Array<[Exclude<Filter, "notes">, string]> = [["all", t.active], ["this_week", t.week], ["later", t.later], ["waiting", t.waiting], ["scheduled", t.scheduled], ["completed", t.completed], ["archived", t.archived]];
 
-  return <div className="mx-auto w-full max-w-[760px] px-4 pb-10 sm:px-6">
+  return <div className="mx-auto w-full max-w-[760px] px-4 sm:px-6">
     <header className="mb-5">
       <p className="app-a-eyebrow">{t.eyebrow}</p>
       <h1 className="app-a-page-title">{t.title}</h1>
@@ -128,19 +128,43 @@ export default function InboxScreen({ language, preferences }: { language: AppAL
 
     <section className="app-a-surface mb-4 p-3" aria-label={t.add}>
       <div className="flex min-w-0 gap-2">
-        <input className="app-a-field app-a-focus-ring min-w-0 flex-1 px-3 py-2.5" maxLength={500} value={newTitle} onChange={(event) => setNewTitle(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void addManual(); }} placeholder={t.placeholder} />
+        <input className="app-a-field app-a-focus-ring min-w-0 flex-1 px-3 py-2.5 text-[16px]" maxLength={500} value={newTitle} onChange={(event) => setNewTitle(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void addManual(); }} placeholder={t.placeholder} />
         <button type="button" onClick={() => void addManual()} disabled={!newTitle.trim() || processing === "new"} className="app-a-primary-button app-a-focus-ring shrink-0 px-3.5"><Plus className="h-4 w-4" /><span className="hidden min-[360px]:inline">{t.add}</span></button>
       </div>
     </section>
 
     <div className="mb-4 grid gap-3">
-      <div className="grid grid-cols-2 gap-2" role="tablist">
-        <button type="button" role="tab" aria-selected={filter !== "notes"} onClick={() => setFilter("all")} className={`app-a-focus-ring min-h-11 rounded-xl px-3 text-[14px] font-semibold ${filter !== "notes" ? "app-a-primary-button" : "app-a-secondary-button"}`}>{t.all}</button>
-        <button type="button" role="tab" aria-selected={filter === "notes"} onClick={() => setFilter("notes")} className={`app-a-focus-ring min-h-11 rounded-xl px-3 text-[14px] font-semibold ${filter === "notes" ? "app-a-primary-button" : "app-a-secondary-button"}`}>{t.notes}</button>
+      <div className="flex rounded-[12px] p-1 bg-black/[0.06] dark:bg-white/[0.08]" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={filter !== "notes"}
+          onClick={() => setFilter("all")}
+          className={`app-a-focus-ring flex-1 min-h-[36px] rounded-[9px] text-[14px] font-semibold transition-all ${
+            filter !== "notes"
+              ? "bg-white text-black shadow-sm dark:bg-[#3A3A3C] dark:text-white"
+              : "text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white"
+          }`}
+        >
+          {t.all}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={filter === "notes"}
+          onClick={() => setFilter("notes")}
+          className={`app-a-focus-ring flex-1 min-h-[36px] rounded-[9px] text-[14px] font-semibold transition-all ${
+            filter === "notes"
+              ? "bg-white text-black shadow-sm dark:bg-[#3A3A3C] dark:text-white"
+              : "text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white"
+          }`}
+        >
+          {t.notes}
+        </button>
       </div>
       <div className="grid min-w-0 gap-2 min-[520px]:grid-cols-[1fr_auto]">
-        <label className="app-a-field flex min-w-0 items-center gap-2 px-3"><Search className="h-4 w-4 shrink-0" aria-hidden="true" /><input className="min-h-11 min-w-0 flex-1 bg-transparent outline-none" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t.search} /></label>
-        {filter !== "notes" ? <label className="app-a-field flex min-h-11 min-w-0 items-center gap-2 px-3 text-[13px] font-medium"><span className="shrink-0 text-[#86868B]">{t.filters}</span><select className="min-w-0 flex-1 bg-transparent font-semibold outline-none" value={filter} onChange={(event) => setFilter(event.target.value as Filter)}>{taskFilters.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label> : null}
+        <label className="app-a-field flex min-w-0 items-center gap-2 px-3"><Search className="h-4 w-4 shrink-0 opacity-60" aria-hidden="true" /><input className="min-h-11 min-w-0 flex-1 bg-transparent outline-none text-[16px]" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t.search} /></label>
+        {filter !== "notes" ? <label className="app-a-field flex min-h-11 min-w-0 items-center gap-2 px-3 text-[13px] font-medium"><span className="shrink-0 text-[#86868B]">{t.filters}</span><select className="min-w-0 flex-1 bg-transparent font-semibold outline-none text-[16px]" value={filter} onChange={(event) => setFilter(event.target.value as Filter)}>{taskFilters.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label> : null}
       </div>
     </div>
 
@@ -179,7 +203,7 @@ export default function InboxScreen({ language, preferences }: { language: AppAL
         </div> : null}
 
         {openActions === item.id ? <div className="mt-3 grid min-w-0 gap-2 border-t pt-3 min-[430px]:grid-cols-2" style={{ borderColor: "var(--app-a-border)" }}>
-          {!isNote && item.status === "inbox" ? <><div className="app-a-field flex min-h-11 min-w-0 items-center gap-2 px-2"><input type="date" min={getLocalDateKeyInTimeZone(effectiveTimeZone)} value={scheduleFor[item.id] || ""} onChange={(event) => setScheduleFor((all) => ({ ...all, [item.id]: event.target.value }))} className="min-w-0 flex-1 bg-transparent text-[13px]" aria-label={t.schedule} /><button type="button" className="shrink-0 text-[13px] font-semibold text-[#0071E3] dark:text-[#0A84FF]" disabled={!scheduleFor[item.id]} onClick={() => void update(item, "scheduled", { scheduledLocalDate: scheduleFor[item.id] })}>{t.schedule}</button></div><button type="button" onClick={() => void update(item, "waiting")} className="app-a-secondary-button app-a-focus-ring min-h-11 justify-start px-3 text-[13px]">{t.wait}</button></> : !isNote ? <button type="button" onClick={() => void update(item, "inbox")} className="app-a-secondary-button app-a-focus-ring min-h-11 justify-start px-3 text-[13px]"><Undo2 className="h-4 w-4" />{t.restore}</button> : null}
+          {!isNote && item.status === "inbox" ? <><div className="app-a-field flex min-h-11 min-w-0 items-center gap-2 px-2"><input type="date" min={getLocalDateKeyInTimeZone(effectiveTimeZone)} value={scheduleFor[item.id] || ""} onChange={(event) => setScheduleFor((all) => ({ ...all, [item.id]: event.target.value }))} className="min-w-0 flex-1 bg-transparent text-[16px]" aria-label={t.schedule} /><button type="button" className="shrink-0 text-[13px] font-semibold text-[#0071E3] dark:text-[#0A84FF]" disabled={!scheduleFor[item.id]} onClick={() => void update(item, "scheduled", { scheduledLocalDate: scheduleFor[item.id] })}>{t.schedule}</button></div><button type="button" onClick={() => void update(item, "waiting")} className="app-a-secondary-button app-a-focus-ring min-h-11 justify-start px-3 text-[13px]">{t.wait}</button></> : !isNote ? <button type="button" onClick={() => void update(item, "inbox")} className="app-a-secondary-button app-a-focus-ring min-h-11 justify-start px-3 text-[13px]"><Undo2 className="h-4 w-4" />{t.restore}</button> : null}
           {!isNote && item.status !== "completed" && item.status !== "archived" ? <><button type="button" onClick={() => void update(item, "completed")} className="app-a-secondary-button app-a-focus-ring min-h-11 justify-start px-3 text-[13px]"><Check className="h-4 w-4" />{t.complete}</button><button type="button" onClick={() => void update(item, "archived")} className="app-a-secondary-button app-a-focus-ring min-h-11 justify-start px-3 text-[13px]"><Archive className="h-4 w-4" />{t.archive}</button></> : null}
           {deleteConfirm === item.id ? <><button type="button" onClick={() => void run(item.id, async () => { await deleteInboxItem(user.uid, item.id); setItems((all) => all.filter((entry) => entry.id !== item.id)); setDeleteConfirm(null); })} className="app-a-focus-ring min-h-11 rounded-xl px-3 text-left text-[13px] font-semibold" style={{ color: "var(--app-a-danger)", background: "var(--app-a-danger-soft)" }}><Trash2 className="mr-1 inline h-4 w-4" />{t.confirmDelete}</button><button type="button" onClick={() => setDeleteConfirm(null)} className="app-a-secondary-button app-a-focus-ring min-h-11 justify-start px-3 text-[13px]">{t.cancel}</button></> : <button type="button" onClick={() => setDeleteConfirm(item.id)} className="app-a-focus-ring min-h-11 rounded-xl px-3 text-left text-[13px] font-semibold" style={{ color: "var(--app-a-danger)" }}><Trash2 className="mr-1 inline h-4 w-4" />{t.delete}</button>}
         </div> : null}

@@ -1,6 +1,9 @@
+import { ReevaluationDialog } from "./ReevaluationDialog";
 import React, { useEffect, useState } from "react";
 import { DailyPlanDraft, PlanBlock } from "../../domain/daily-reset/contracts";
 import { AppALanguage, APP_A_TRANSLATIONS } from "../../types";
+import { loadAppAPreferences, getEffectiveTimeZone } from "../../settings/preferences";
+import { getLocalDateKeyInTimeZone } from "../../persistence/dailyPlanDocument";
 import {
   movePlanItem,
   movePlanItemOutside,
@@ -97,6 +100,20 @@ export default function DailyPlanReview({
     });
   };
 
+  const handleReorderItem = (itemId: string, direction: "up" | "down") => {
+    const snapshot = createUndoSnapshot(reviewState);
+    const res = import("../../screens/planReview").then(({ reorderPlanItem }) => {
+      const result = reorderPlanItem(snapshot.currentDraft, itemId, direction);
+      if (result.error) return;
+      markDirty();
+      setReviewState({
+        currentDraft: result.draft,
+        undoDraft: snapshot.undoDraft,
+        error: null,
+      });
+    });
+  };
+
   const handleMoveItemOutside = (
     itemId: string,
     targetHorizon: "this_week" | "later" | "long_term_idea" | "no_action"
@@ -182,8 +199,48 @@ export default function DailyPlanReview({
 
   const groupedOutside = groupOutsideTodayItems(draft);
 
+  const [showReevalDialog, setShowReevalDialog] = useState(false);
+
+  const handlePreviewSort = () => {
+    setShowReevalDialog(true);
+  };
+
+  const handleConfirmReeval = async (
+    proposal: import("../../screens/planReview").StructuredReevaluationProposal,
+    modifications: {
+      approvedDelegationIds: string[];
+      approvedEliminationIds: string[];
+      approvedManualOverrideIds: string[];
+    }
+  ) => {
+    const { applyReevaluationProposal } = await import("../../screens/planReview");
+    const snapshot = createUndoSnapshot(reviewState);
+    const finalDraft = applyReevaluationProposal(draft, proposal, modifications);
+    if ((finalDraft as any).error) {
+      alert((finalDraft as any).error);
+      return; // Do not close modal or persist
+    }
+
+    markDirty();
+    setReviewState({
+      currentDraft: finalDraft,
+      undoDraft: snapshot.undoDraft,
+      error: null,
+    });
+    setShowReevalDialog(false);
+  };
+
   return (
-    <div className="mx-auto w-full max-w-[760px] px-5 pb-16 sm:px-6">
+    <div className="mx-auto w-full max-w-[760px] px-5 sm:px-6">
+      {showReevalDialog && (
+        <ReevaluationDialog
+          draft={draft}
+          language={language}
+          localDate={(draft as any).localDate || getLocalDateKeyInTimeZone(getEffectiveTimeZone(loadAppAPreferences()))}
+          onClose={() => setShowReevalDialog(false)}
+          onConfirm={handleConfirmReeval}
+        />
+      )}
       <header className="mb-7">
         <p className="app-a-eyebrow">{t.today}</p>
         <h1 className="app-a-page-title">
@@ -193,6 +250,22 @@ export default function DailyPlanReview({
           {t.reviewIntro}
         </p>
       </header>
+
+      {draft.manualPriorityOverride && (
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-[#0A84FF]/20 bg-[#0A84FF]/5 p-4 dark:border-[#0A84FF]/30 dark:bg-[#0A84FF]/10">
+          <p className="text-[14px] text-[#0071E3] dark:text-[#0A84FF]">
+            {language === "sr" ? "Redosled je ručno izmenjen." : language === "tr" ? "Sıralama manuel olarak değiştirildi." : "Order manually modified."}
+          </p>
+          <button
+            type="button"
+            onClick={handlePreviewSort}
+            className="app-a-primary-button app-a-focus-ring whitespace-nowrap min-h-[40px] px-4 text-[13px]"
+          >
+            {language === "sr" ? "Preispitaj prioritete uz AI" : language === "tr" ? "Yapay zeka ile öncelikleri yeniden değerlendir" : "Re-evaluate via AI"}
+          </button>
+        </div>
+      )}
+
       {draft.availableMinutes !== undefined && plannedFlexible > draft.availableMinutes ? <p role="status" className="app-a-panel-danger mb-4">{language === 'sr' ? 'Fleksibilni zadaci prelaze izabrano vreme. Pomeri neki za kasnije ili povećaj vreme.' : language === 'tr' ? 'Esnek görevler seçilen süreyi aşıyor. Bazılarını sonraya taşı veya süreyi artır.' : 'Flexible tasks exceed your selected time. Move one to later or increase the time.'}</p> : null}
       <DailyLoadWarning draft={draft} language={language} />
       {/* Undo Header Banner */}
@@ -277,6 +350,7 @@ export default function DailyPlanReview({
         language={language}
         onMoveToBlock={handleMoveItemToBlock}
         onMoveOutside={handleMoveItemOutside}
+        onReorder={handleReorderItem}
         onEditSave={handleEditSave}
       />
 
@@ -287,6 +361,7 @@ export default function DailyPlanReview({
         language={language}
         onMoveToBlock={handleMoveItemToBlock}
         onMoveOutside={handleMoveItemOutside}
+        onReorder={handleReorderItem}
         onEditSave={handleEditSave}
       />
 
@@ -297,6 +372,7 @@ export default function DailyPlanReview({
         language={language}
         onMoveToBlock={handleMoveItemToBlock}
         onMoveOutside={handleMoveItemOutside}
+        onReorder={handleReorderItem}
         onEditSave={handleEditSave}
       />
 

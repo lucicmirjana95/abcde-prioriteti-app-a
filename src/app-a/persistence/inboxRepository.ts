@@ -21,7 +21,12 @@ import { mergePlanAddition } from './planMutations';
 import { validatePlanDraft } from '../domain/daily-reset/validation';
 import { normalizeCompletedItemIds } from '../screens/todayExecution';
 
+import { isResetBlocked } from "./resetGuard";
+
 function requireUserId(userId: string): string {
+  if (isResetBlocked(userId)) {
+    throw new Error("reset_in_progress");
+  }
   const value = userId.trim();
   if (!value || value.length > 128 || value.includes("/")) throw new Error("authentication_required");
   return value;

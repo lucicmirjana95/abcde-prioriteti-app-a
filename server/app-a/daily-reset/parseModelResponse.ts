@@ -18,7 +18,9 @@ import {
   TimeHorizon,
   TimeSensitivity,
   PlanBlock,
-  RequiredEnergy
+  RequiredEnergy,
+  PriorityConfidence,
+  RecommendedDisposition,
 } from "../../../src/app-a/domain/daily-reset";
 import { ModelResponseShape } from "./modelSchema";
 import { explicitAvailableMinutes } from './availableTime';
@@ -44,17 +46,56 @@ function isPopulatedDraft(draft: any): boolean {
   );
 }
 
+function validateRating(val: any, fieldName: string): 1 | 2 | 3 | 4 | 5 | undefined {
+  if (val === undefined || val === null) return undefined;
+  const num = Number(val);
+  if (!Number.isInteger(num) || num < 1 || num > 5) {
+    throw new Error(`invalid_rating_${fieldName}: expected integer 1-5, got ${val}`);
+  }
+  return num as 1 | 2 | 3 | 4 | 5;
+}
+
 function parsePriority(priority: any): PriorityFactors {
   if (!priority || typeof priority !== "object") {
     return { explanation: "" };
   }
+  const consequence = validateRating(priority.consequence, "consequence");
+  const urgency = validateRating(priority.urgency, "urgency");
+  const goalContribution = validateRating(priority.goalContribution, "goalContribution");
+  const leverage = validateRating(priority.leverage, "leverage");
+  const mentalLoad = validateRating(priority.mentalLoad, "mentalLoad");
+  const dependencyPressure = validateRating(priority.dependencyPressure, "dependencyPressure");
+
+  let confidence: PriorityConfidence | undefined;
+  if (priority.confidence !== undefined && priority.confidence !== null) {
+    if (["low", "medium", "high"].includes(priority.confidence)) {
+      confidence = priority.confidence as PriorityConfidence;
+    } else {
+      throw new Error(`invalid_confidence: ${priority.confidence}`);
+    }
+  }
+
+  let recommendedDisposition: RecommendedDisposition | undefined;
+  if (priority.recommendedDisposition !== undefined && priority.recommendedDisposition !== null) {
+    if (["do", "delegate", "defer", "eliminate", "clarify"].includes(priority.recommendedDisposition)) {
+      recommendedDisposition = priority.recommendedDisposition as RecommendedDisposition;
+    } else {
+      throw new Error(`invalid_disposition: ${priority.recommendedDisposition}`);
+    }
+  }
+
   return {
-    consequence: priority.consequence !== undefined ? Number(priority.consequence) as any : undefined,
-    urgency: priority.urgency !== undefined ? Number(priority.urgency) as any : undefined,
-    goalContribution: priority.goalContribution !== undefined ? Number(priority.goalContribution) as any : undefined,
-    mentalLoad: priority.mentalLoad !== undefined ? Number(priority.mentalLoad) as any : undefined,
-    dependencyPressure: priority.dependencyPressure !== undefined ? Number(priority.dependencyPressure) as any : undefined,
-    explanation: String(priority.explanation || "")
+    consequence,
+    urgency,
+    goalContribution,
+    leverage,
+    mentalLoad,
+    dependencyPressure,
+    confidence,
+    recommendedDisposition,
+    conciseExplanation: priority.conciseExplanation !== undefined ? String(priority.conciseExplanation) : undefined,
+    evidenceFromInput: priority.evidenceFromInput !== undefined ? String(priority.evidenceFromInput) : undefined,
+    explanation: String(priority.explanation || priority.conciseExplanation || "")
   };
 }
 
@@ -348,6 +389,22 @@ export function parseModelResponse(
       let firstFocus = processPlanItems(draft.firstFocus, "first_focus");
       if (firstFocus.length > 3) {
         throw new Error("Four or more First-focus items provided.");
+      }
+      for (const item of firstFocus) {
+        if (item.capacityType === "fixed") {
+          throw new Error(`Plan item ${item.title || item.id} in first_focus cannot be a fixed commitment.`);
+        }
+        for (const srcId of item.sourceItemIds) {
+          const src = classifiedItems.find((c) => c.id === srcId);
+          if (src && src.kind === "waiting_for") {
+            const isConcreteAction =
+              (item.title && /^(send|pošalji|pozovi|proveri|follow up|remind|kontaktiraj|call|ask|pitaj)/i.test(item.title.trim())) ||
+              (src.suggestedAction && src.suggestedAction.trim().length > 0 && !/^wait|^čekaj/i.test(src.suggestedAction.trim()));
+            if (!isConcreteAction) {
+              throw new Error(`Waiting-for item ${item.title} cannot enter first_focus without a concrete active step.`);
+            }
+          }
+        }
       }
       
       let laterToday = processPlanItems(draft.laterToday, "later_today");

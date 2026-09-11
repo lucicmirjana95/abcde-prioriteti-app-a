@@ -23,6 +23,21 @@ export interface VisionFeasibilityResult {
   adjustedTimeframe?: string;
 }
 
+export interface VisionStepRefinementResult {
+  refinedStep: string;
+  smallerFirstMove?: string;
+  substeps?: string[];
+  neededResources?: string[];
+  estimatedDuration?: string;
+  alignmentReason?: string;
+  missingInfoWarning?: string;
+  suggestedDownstreamChanges?: Array<{
+    originalStep: string;
+    suggestedChange: string;
+    reason: string;
+  }>;
+}
+
 function isText(value: unknown, max = 500): value is string {
   return typeof value === "string" && value.trim().length > 0 && value.length <= max;
 }
@@ -67,3 +82,21 @@ export function isVisionFeasibilityResult(value: unknown): value is VisionFeasib
   if ((item.status === "not_a_vision" || item.status === "safety_sensitive") && (item.questions.length > 0 || item.adjustedGoal || item.adjustedTimeframe)) return false;
   return true;
 }
+
+export function isVisionStepRefinementResult(value: unknown): value is VisionStepRefinementResult {
+  if (!value || typeof value !== "object") return false;
+  const item = value as Record<string, unknown>;
+  if (!isText(item.refinedStep, 300)) return false;
+  if (item.smallerFirstMove !== undefined && !isText(item.smallerFirstMove, 300)) return false;
+  if (item.substeps !== undefined && (!Array.isArray(item.substeps) || item.substeps.length > 5 || !item.substeps.every((s) => isText(s, 240)))) return false;
+  if (item.neededResources !== undefined && (!Array.isArray(item.neededResources) || item.neededResources.length > 5 || !item.neededResources.every((r) => isText(r, 240)))) return false;
+  if (item.estimatedDuration !== undefined && !isText(item.estimatedDuration, 200)) return false;
+  if (item.alignmentReason !== undefined && !isText(item.alignmentReason, 500)) return false;
+  if (item.missingInfoWarning !== undefined && !isText(item.missingInfoWarning, 500)) return false;
+  if (item.suggestedDownstreamChanges !== undefined) {
+    if (!Array.isArray(item.suggestedDownstreamChanges)) return false;
+    if (!item.suggestedDownstreamChanges.every((c) => c && typeof c === "object" && isText(c.originalStep, 300) && isText(c.suggestedChange, 300) && isText(c.reason, 500))) return false;
+  }
+  return true;
+}
+

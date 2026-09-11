@@ -63,16 +63,16 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
     dangerZoneDescription: "Permanently delete selected data without signing out.",
     primaryAction: "Reset app data",
 
-    modalTitle: "Reset App A data",
+    modalTitle: "Delete all app data?",
     modalIntro:
-      "Select the data categories you wish to permanently delete. Your account will remain signed in.",
+      "This will delete plans, Inbox, visions, routines, and history. This action cannot be undone. Your account will remain active.",
 
     selectAll: "Select all",
     deselectAll: "Deselect all",
     cancel: "Cancel",
     back: "Back",
     continueToConfirm: "Review & confirm",
-    finalDestructiveAction: "Permanently reset selected data",
+    finalDestructiveAction: "Delete all data",
     retryAction: "Retry remaining scopes",
     doneAction: "Done",
 
@@ -126,16 +126,16 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
     dangerZoneDescription: "Trajno obrišite izabrane podatke bez odjavljivanja sa naloga.",
     primaryAction: "Resetuj podatke aplikacije",
 
-    modalTitle: "Resetovanje podataka App A",
+    modalTitle: "Obriši sve podatke aplikacije?",
     modalIntro:
-      "Izaberite kategorije podataka koje želite trajno obrisati. Vaš nalog ostaje prijavljen.",
+      "Biće obrisani planovi, Inbox, vizije, rutine i istorija. Ovu radnju nije moguće poništiti. Nalog će ostati aktivan.",
 
     selectAll: "Izaberi sve",
     deselectAll: "Poništi izbor",
     cancel: "Otkaži",
     back: "Nazad",
     continueToConfirm: "Pregledaj i potvrdi",
-    finalDestructiveAction: "Trajno resetuj izabrane podatke",
+    finalDestructiveAction: "Obriši sve podatke",
     retryAction: "Pokušaj ponovo za preostalo",
     doneAction: "Završi",
 
@@ -189,16 +189,16 @@ export const DATA_RESET_LOCALIZATION: Record<AppALanguage, DataResetCopy> = {
     dangerZoneDescription: "Oturumu kapatmadan seçilen verileri kalıcı olarak silin.",
     primaryAction: "Uygulama verilerini sıfırla",
 
-    modalTitle: "App A verilerini sıfırla",
+    modalTitle: "Tüm uygulama verilerini sil?",
     modalIntro:
-      "Kalıcı olarak silmek istediğiniz veri kategorilerini seçin. Hesabınız açık kalmaya devam edecektir.",
+      "Planlar, Gelen Kutusu, vizyonlar, rutinler ve geçmiş silinecektir. Bu işlem geri alınamaz. Hesabınız aktif kalacaktır.",
 
     selectAll: "Tümünü seç",
     deselectAll: "Seçimi kaldır",
     cancel: "İptal",
     back: "Geri",
     continueToConfirm: "İncele ve onayla",
-    finalDestructiveAction: "Seçilen verileri kalıcı olarak sıfırla",
+    finalDestructiveAction: "Tüm verileri sil",
     retryAction: "Kalan kapsamları tekrar dene",
     doneAction: "Bitti",
 

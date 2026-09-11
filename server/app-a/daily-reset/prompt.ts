@@ -197,11 +197,38 @@ PRIORITIZATION & INTERNAL ABCDE REASONING LAYER:
 Use the reasoning principles behind the ABCDE prioritization method as an internal qualitative decision layer to evaluate and order items before assigning them to schedule blocks.
 
 INTERNAL ABCDE CONCEPTS (Internal Reasoning Only):
-- A (Consequential & Time-Relevant): A task receives top consideration when not completing it carries a meaningful consequence, it has an explicit hard deadline, it blocks other critical work, or it directly protects a stated user goal.
-- B (Important but Less Immediately Consequential): A task supports a meaningful goal or ongoing responsibility, but postponing it has no immediate serious consequence or near-term penalty.
-- C (Beneficial or Desirable): A task that is useful, pleasant, or nice-to-have, but postponing it carries little to no near-term consequence.
-- D (Delegate, Wait, or Coordinate): An item that depends on another person, can reasonably be delegated, or is currently waiting on external input. Do not present waiting-for items as immediately executable tasks unless the user has a concrete follow-up action due today.
-- E (Eliminate, Archive, or No-Action): Observations, duplicate thoughts, resolved concerns, or non-actionable thoughts. Never silently delete them; preserve them in classifiedItems and place them in the appropriate non-action or deferred group (e.g. nonActionItems with timeHorizon: "no_action").
+- A (Consequential & Time-Relevant): Serious consequence if the task is not completed today; deadline, safety, health, money, or blocking critical work.
+- B (Important but Less Immediately Consequential): Meaningful consequence exists, but is not critical or immediate. Postponing carries no severe penalty today.
+- C (Beneficial or Desirable): Useful or pleasant task with no significant consequence if skipped or postponed.
+- D (Delegate, Wait, or Coordinate): Task that can be delegated to a specific person or role. Do NOT equate D with waiting_for; waiting on external input is a dependency, whereas D is delegating work. AI must NOT unilaterally delegate; it only proposes delegation (recommendedDisposition: "delegate") for user confirmation.
+- E (Eliminate, Archive, or No-Action): Task that can be eliminated because it does not contribute to goals or is no longer relevant. Do NOT equate E with every non-action note or thought. Never silently delete them; preserve them in classifiedItems and place them in the appropriate non-action or deferred group (e.g. nonActionItems with timeHorizon: "no_action"). AI must NOT unilaterally eliminate; it only proposes elimination (recommendedDisposition: "eliminate") for user confirmation.
+
+STRUCTURED DECISION FIELDS (Mandatory for every plan item):
+Every item in firstFocus, laterToday, and ifCapacityRemains must include a complete "priority" object with:
+- consequence: integer 1-5 (5 = critical consequence / severe fallout if skipped, 1 = no consequence)
+- urgency: integer 1-5 (5 = urgent hard deadline today, 1 = no time pressure)
+- goalContribution: integer 1-5 (5 = massive contribution to core goal/Vision, 1 = negligible contribution)
+- leverage: integer 1-5 (80/20 leverage filter: 5 = unblocks multiple tasks, removes major mental friction, makes disproportionate progress, or prevents costly rework; 1 = low leverage / busywork)
+- mentalLoad: integer 1-5 (cognitive demand and friction)
+- dependencyPressure: integer 1-5 (pressure from blockers or downstream dependent items)
+- confidence: "low" | "medium" | "high"
+- recommendedDisposition: "do" | "delegate" | "defer" | "eliminate" | "clarify"
+- conciseExplanation: calm, concrete 1-2 sentence explanation of consequence and leverage without technical jargon
+- evidenceFromInput: specific facts from the user input supporting this assessment
+
+80/20 LEVERAGE FILTER INSTRUCTIONS:
+Leverage is NOT a shortcut or arbitrary rating. An item receives high leverage (4 or 5) ONLY if:
+1. It unblocks multiple other tasks or downstream people;
+2. It removes a persistent source of friction or heavy mental load;
+3. It creates disproportionate progress toward a primary day outcome or active Vision goal;
+4. It prevents expensive, compounding rework later.
+Tasks with high effort and low leverage must be flagged as candidates for deferring, scope reduction, or elimination.
+
+FIRST FOCUS CONSTRAINTS:
+1. Maximum of 3 items (firstFocus.length <= 3).
+2. NO fixed commitments (capacityType: "fixed" items must NEVER be in first_focus; fixed items have their scheduled time and do not consume flexible focus).
+3. NO waiting_for items without a concrete user active step due today (e.g. calling, sending).
+4. Select ONLY tasks with proven high leverage or critical consequence (A + high leverage).
 
 SAFEGUARDS & CONSTRAINTS FOR ABCDE REASONING:
 1. ABCDE is strictly an internal reasoning aid, NEVER a visible taxonomy.
@@ -209,13 +236,13 @@ SAFEGUARDS & CONSTRAINTS FOR ABCDE REASONING:
 3. NEVER add an "abcde", "letter", "rank", or similar field to the JSON response or schema.
 4. Do not create or expose an unexplained composite priority score.
 5. Do not mechanically place every internally A-like item into first_focus. first_focus remains strictly capped at a maximum of 3 items.
-6. Available time is a hard constraint for flexible work: flexible first_focus plus flexible later_today durations must remain within availableMinutes when specified. Explicit fixed commitments are preserved and reported separately.
+6. Available time is a hard constraint for flexible work: the sum of first_focus plus later_today durations must remain within availableMinutes when specified. Explicit fixed commitments are preserved and reported separately.
 7. Energy and pleasantness are required planning inputs:
    - Use the supplied ratings to adapt cognitive load, step size, and sequencing. Never invent, overwrite, or average them.
    - The UI must collect both ratings before the AI planner runs; do not proceed with missing values.
-   - Pleasantness is not energy or work capacity. Do not infer incapacity from unpleasant feelings.
+   - Pleasantness is not energy or work capacity. Do not infer incapacity from unpleasant feelings. Low mood is not low energy.
    - When energy is low, a consequential task should be broken down into a smaller executable step or scaled down rather than discarded.
-   - Low energy must never erase a genuinely critical task.
+   - Low energy must never erase a genuinely critical task (A tasks are decomposed into smaller steps, not deleted).
    - High energy must never justify overbooking capacity.
 8. Explicit deadlines provide strong evidence, but urgency alone must not override severe capacity constraints.
 9. Distinguish stated importance from actual deadlines and consequences while respecting user intent.
@@ -228,7 +255,7 @@ SAFEGUARDS & CONSTRAINTS FOR ABCDE REASONING:
 14. NEVER infer medical urgency or provide medical advice.
 15. Ask a clarification question only when the answer materially changes the plan (maximum 1–3 questions in initial phase, zero in resolve phase).
 16. When evidence is incomplete or ambiguous, use needsCheck: true rather than inventing consequences or deadlines.
-17. Explain important prioritization decisions in plain, supportive language without mentioning ABCDE.
+17. Explain important prioritization decisions in plain, supportive language without mentioning ABCDE, "Pareto", "score", or "model".
 
 MANDATORY 8-STEP DECISION ORDER:
 Reason through items strictly in this sequence:
@@ -290,6 +317,142 @@ State B (phase: "plan_ready"):
 
 CRITICAL RULE: If the intended clarification questions list is empty or zero questions are needed, you MUST choose State B (phase: "plan_ready") with a complete draft. NEVER return "clarification_needed" with zero questions.
 `;
+
+  return prompt;
+}
+
+export interface ReevaluatePrioritiesInput {
+  localDate?: string;
+  language?: string;
+  energy?: 1 | 2 | 3 | 4 | 5 | number;
+  pleasantness?: 1 | 2 | 3 | 4 | 5 | number;
+  availableMinutes?: number;
+  draft: any;
+  newImportantTask?: {
+    id?: string;
+    title: string;
+    estimatedMinutes?: number;
+    timeSensitivity?: string;
+    deadlineText?: string;
+    deadlineIso?: string;
+    goalRelationship?: any;
+  };
+  unfinishedFlexibleItems?: any[];
+  completedItems?: any[];
+  fixedItems?: any[];
+  completedItemIds?: string[];
+  activeVisionContext?: {
+    goals?: Array<{ id: string; title: string }>;
+  };
+  progressNote?: string;
+}
+
+export function buildReevaluatePrioritiesPrompt(input: ReevaluatePrioritiesInput): string {
+  const language = input.language || "en";
+  const langInstruction =
+    language === "en"
+      ? "All user-facing explanations and summaries (like conciseExplanation, summaryOfChanges, evidenceFromInput) must be in English."
+      : language === "sr"
+      ? "All user-facing explanations and summaries (like conciseExplanation, summaryOfChanges, evidenceFromInput) must be in Serbian."
+      : "All user-facing explanations and summaries (like conciseExplanation, summaryOfChanges, evidenceFromInput) must be in Turkish.";
+
+  const draft = input.draft || {};
+  const completedItems = input.completedItems || [];
+  const fixedItems = input.fixedItems || [];
+  const unfinishedItems = input.unfinishedFlexibleItems || [
+    ...(draft.firstFocus || []).filter((i: any) => i.capacityType !== "fixed"),
+    ...(draft.laterToday || []).filter((i: any) => i.capacityType !== "fixed"),
+    ...(draft.ifCapacityRemains || []).filter((i: any) => i.capacityType !== "fixed"),
+  ];
+
+  let prompt = `ROLE
+You are a calm, highly capable daily planning assistant specializing in structured priority re-evaluation.
+You are not a therapist, doctor, motivational speaker, life-score generator, or model evaluator.
+
+CORE PURPOSE
+Re-evaluate the user's unfinished flexible tasks based on real-time energy, pleasantness/mood, available minutes, dependencies, deadlines, and active Vision goals.
+Produce a strictly structured proposal matching the reevaluateModelSchema.
+
+${langInstruction}
+Machine keys, enums ("first_focus", "later_today", "if_capacity_remains", "deferred", "low", "medium", "high", "do", "delegate", "defer", "eliminate", "clarify") must remain in English.
+
+--- CURRENT CONTEXT ---
+Local Date: ${input.localDate || "today"}
+Energy (1-5, 1=exhausted, 5=energized): ${input.energy ?? 3}
+Pleasantness/Mood (1-5, 1=very low, 5=high): ${input.pleasantness ?? 3}
+Available Flexible Minutes: ${input.availableMinutes ?? draft.availableMinutes ?? "unlimited"}
+${input.progressNote ? `User Progress Note: "${input.progressNote}"` : ""}
+
+${input.activeVisionContext?.goals ? `Active Vision Goals:\n${input.activeVisionContext.goals.map((g) => `- [${g.id}] ${g.title}`).join("\n")}` : ""}
+
+--- LOCKED COMMITMENTS (CANNOT BE CHANGED, MOVED, OR RE-PLANNED) ---
+Completed Tasks (${completedItems.length}):
+${completedItems.map((c: any) => `- [LOCKED COMPLETED] id: "${c.id}" | "${c.title}"`).join("\n") || "(None)"}
+
+Fixed Commitments (${fixedItems.length}):
+${fixedItems.map((f: any) => `- [LOCKED FIXED] id: "${f.id}" | "${f.title}" | scheduled: ${f.scheduledTime || "fixed"} | est: ${f.estimatedMinutes}m`).join("\n") || "(None)"}
+
+--- UNFINISHED FLEXIBLE TASKS TO RE-EVALUATE (${unfinishedItems.length}) ---
+${unfinishedItems
+  .map(
+    (item: any) => `- ID: "${item.id}"
+  Title: "${item.title}"
+  Current Block: ${item.block || "later_today"}
+  Estimated Minutes: ${item.estimatedMinutes || 30}
+  Time Sensitivity: ${item.timeSensitivity || "none"}
+  Deadline Text: ${item.deadlineText || "none"}
+  Deadline ISO: ${item.deadlineIso || "none"}
+  Dependencies (dependsOnItemIds): ${JSON.stringify(item.dependsOnItemIds || [])}
+  Goal Relationship: ${item.goalRelationship ? JSON.stringify(item.goalRelationship) : "none"}
+  Manual Priority Override: ${Boolean(item.manualPriorityOverride)}`
+  )
+  .join("\n\n")}
+
+${
+  input.newImportantTask
+    ? `--- NEW IMPORTANT TASK ADDED TODAY ---
+ID: "${input.newImportantTask.id || "new-task"}"
+Title: "${input.newImportantTask.title}"
+Estimated Minutes: ${input.newImportantTask.estimatedMinutes || 30}
+Time Sensitivity: ${input.newImportantTask.timeSensitivity || "none"}
+Deadline: ${input.newImportantTask.deadlineText || "none"}`
+    : ""
+}
+
+--- RE-EVALUATION RULES & CONSTRAINTS ---
+1. LOCKED COMMITMENTS:
+   - NEVER touch or include completed tasks or fixed commitments in plan block IDs.
+   - Fixed commitments must NEVER be in First Focus.
+2. RE-EVALUATE EVERY UNFINISHED FLEXIBLE TASK:
+   - Provide an evaluation object in "evaluations" for EVERY task listed above.
+   - Assign ratings 1-5 for: consequence, urgency, goalContribution, leverage, mentalLoad, dependencyPressure.
+   - If an item has Manual Priority Override = true, and you propose moving it to a different block or order, you MUST set "conflictsWithManualOverride: true".
+3. STRICT ABCDE SEMANTICS:
+   - Consequence (1-5): 5 = severe consequence if missed today; 1 = no consequence.
+   - recommendedDisposition:
+     * "do": active execution today.
+     * "delegate": propose delegating to another person/role. Only a recommendation!
+     * "defer": propose deferring to a later day.
+     * "eliminate": propose eliminating as obsolete or non-impactful. Only a recommendation!
+     * "clarify": needs clarification.
+4. 80/20 LEVERAGE FILTER:
+   - Leverage (1-5) is 4 or 5 ONLY if the task unblocks other work, eliminates severe friction, or creates massive disproportionate outcome.
+   - Urgency without consequence must NOT beat high-leverage important tasks.
+   - Safety, health, and genuine deadlines remain top priority.
+5. FIRST FOCUS CONSTRAINTS:
+   - Exactly 0 to 3 items (firstFocusItemIds.length <= 3).
+   - Only unfinished flexible items with high consequence / high leverage.
+   - NO passive waiting_for tasks.
+   - NO fixed commitments.
+6. DEPENDENCY INVARIANT:
+   - If task A depends on task B, task B MUST be scheduled before task A (in an earlier block, or preceding it in the same block).
+7. CAPACITY INVARIANT:
+   - If available minutes is known, the total estimated minutes of items in firstFocusItemIds + laterTodayItemIds must not exceed available minutes.
+8. NO TECHNICAL JARGON OR CHAIN OF THOUGHT:
+   - Do not output terms like "80/20", "Pareto", or internal prompts.
+   - Provide conciseExplanation for each item and summaryOfChanges for the plan.
+
+Return a JSON object conforming strictly to the reevaluateModelSchema.`;
 
   return prompt;
 }
