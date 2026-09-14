@@ -1,0 +1,912 @@
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import {
+  Play,
+  Pause,
+  RotateCcw,
+  Square,
+  Volume2,
+  VolumeX,
+  Wind,
+  Moon,
+  Sparkles,
+  Info,
+  CheckCircle2,
+  ArrowLeft,
+} from "lucide-react";
+import type { AppALanguage } from "../../types";
+import {
+  type ResetExperienceId,
+  type ResetSessionStatus,
+  calculateBoxTiming,
+  calculateLongerExhaleTiming,
+  calculateDoubleInhaleTiming,
+  calculateGuidedRestTiming,
+} from "./resetTimingEngine";
+import { RESET_LOCALIZATION } from "./resetLocalization";
+import { lightChimeSynth, type BreathingSoundPhase } from "./lightChimeSynth";
+import { restSoundSynth } from "./restSoundSynth";
+import {
+  BoxVisualizer,
+  CircleExpander,
+  DoubleInhaleVisualizer,
+  GuidedRestVisualizer,
+} from "./ResetVisualizers";
+
+interface ResetSessionsProps {
+  language: AppALanguage;
+  embedded?: boolean;
+}
+
+export default function ResetSessions({ language, embedded = false }: ResetSessionsProps) {
+  const [selectedExperience, setSelectedExperience] = useState<ResetExperienceId | null>(null);
+  const [sessionStatus, setSessionStatus] = useState<ResetSessionStatus>("idle");
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [soundStatus, setSoundStatus] = useState<"idle" | "playing" | "blocked" | "unsupported">("idle");
+  const [showExplanation, setShowExplanation] = useState(false);
+
+  // Experience configuration
+  const [boxTargetCycles, setBoxTargetCycles] = useState<number>(12); // 4 (1:04), 8 (2:08), 12 (3:12) cycles default
+  const [durationPresetMs, setDurationPresetMs] = useState<number>(180000); // 1 or 3 min default for Exhale
+  const [doubleInhaleTargetCycles, setDoubleInhaleTargetCycles] = useState<number>(3); // 3 cycles for Double Inhale
+
+  // Monotonic Timing State
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const startTimestampRef = useRef<number | null>(null);
+  const accumulatedMsRef = useRef<number>(0);
+  const animationFrameIdRef = useRef<number | null>(null);
+  const lastPhaseIdRef = useRef<string | null>(null);
+  const hasCompletedRef = useRef(false);
+
+  // Reduced motion detection
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia) {
+      const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+      setPrefersReducedMotion(mediaQuery.matches);
+
+      const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+      mediaQuery.addEventListener("change", handler);
+      return () => mediaQuery.removeEventListener("change", handler);
+    }
+  }, []);
+
+  const loc = useMemo(() => RESET_LOCALIZATION[language] || RESET_LOCALIZATION.en, [language]);
+  const tCommon = loc.common;
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (animationFrameIdRef.current !== null) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+      }
+      lightChimeSynth.cleanup();
+      restSoundSynth.cleanup();
+    };
+  }, []);
+
+  // Total session target duration in milliseconds
+  const totalDurationMs = useMemo(() => {
+    if (selectedExperience === "balanced_box") {
+      return boxTargetCycles * 16000; // 4 cycles = 64s, 8 cycles = 128s, 12 cycles = 192s (3:12)
+    }
+    if (selectedExperience === "longer_exhale") {
+      return durationPresetMs; // 60s (1m) or 180s (3m)
+    }
+    if (selectedExperience === "double_inhale") {
+      return doubleInhaleTargetCycles * 10000; // 10s per cycle
+    }
+    if (selectedExperience === "guided_rest") {
+      return 600000; // 10 minutes (600s)
+    }
+    return 192000;
+  }, [selectedExperience, boxTargetCycles, durationPresetMs, doubleInhaleTargetCycles]);
+
+  // Handle session completion
+  const handleComplete = useCallback(() => {
+    if (hasCompletedRef.current) return;
+    hasCompletedRef.current = true;
+    setSessionStatus("completed");
+    if (animationFrameIdRef.current !== null) {
+      cancelAnimationFrame(animationFrameIdRef.current);
+      animationFrameIdRef.current = null;
+    }
+    restSoundSynth.stop();
+    lightChimeSynth.stop(0.01);
+    if (soundEnabled) {
+      void lightChimeSynth.playPhaseChime("complete");
+    }
+  }, [soundEnabled]);
+
+  // Main animation frame loop (monotonic timestamp based)
+  useEffect(() => {
+    if (sessionStatus !== "running") {
+      if (animationFrameIdRef.current !== null) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+        animationFrameIdRef.current = null;
+      }
+      return;
+    }
+
+    const step = (timestamp: number) => {
+      if (startTimestampRef.current === null) {
+        startTimestampRef.current = timestamp;
+      }
+
+      const currentRunElapsed = timestamp - startTimestampRef.current;
+      const totalCurrentElapsed = accumulatedMsRef.current + currentRunElapsed;
+
+      if (totalCurrentElapsed >= totalDurationMs) {
+        setElapsedMs(totalDurationMs);
+        handleComplete();
+        return;
+      }
+
+      setElapsedMs(totalCurrentElapsed);
+      animationFrameIdRef.current = requestAnimationFrame(step);
+    };
+
+    animationFrameIdRef.current = requestAnimationFrame(step);
+
+    return () => {
+      if (animationFrameIdRef.current !== null) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+        animationFrameIdRef.current = null;
+      }
+    };
+  }, [sessionStatus, totalDurationMs, handleComplete]);
+
+  // Calculate current timing metrics
+  const timingState = useMemo(() => {
+    if (selectedExperience === "balanced_box") {
+      return calculateBoxTiming(elapsedMs, totalDurationMs);
+    }
+    if (selectedExperience === "longer_exhale") {
+      return calculateLongerExhaleTiming(elapsedMs, totalDurationMs);
+    }
+    if (selectedExperience === "double_inhale") {
+      return calculateDoubleInhaleTiming(elapsedMs, doubleInhaleTargetCycles);
+    }
+    if (selectedExperience === "guided_rest") {
+      return calculateGuidedRestTiming(elapsedMs, totalDurationMs);
+    }
+    return calculateBoxTiming(0, 180000);
+  }, [selectedExperience, elapsedMs, totalDurationMs, doubleInhaleTargetCycles]);
+
+  // Determine active breathing phase audio data
+  const getCurrentPhaseAudioParams = useCallback(() => {
+    if (!selectedExperience || selectedExperience === "guided_rest") return null;
+
+    if (selectedExperience === "balanced_box") {
+      const box = timingState as ReturnType<typeof calculateBoxTiming>;
+      return {
+        key: `${box.cycle}_${box.phase}`,
+        phase: box.phase as BreathingSoundPhase,
+        phaseDurationMs: box.phaseDurationMs,
+        phaseRemainingMs: box.phaseRemainingMs,
+        phaseElapsedMs: box.phaseElapsedMs,
+      };
+    }
+    if (selectedExperience === "longer_exhale") {
+      const exh = timingState as ReturnType<typeof calculateLongerExhaleTiming>;
+      return {
+        key: `${exh.cycle}_${exh.phase}`,
+        phase: exh.phase as BreathingSoundPhase,
+        phaseDurationMs: exh.phaseDurationMs,
+        phaseRemainingMs: exh.phaseRemainingMs,
+        phaseElapsedMs: exh.phaseElapsedMs,
+      };
+    }
+    if (selectedExperience === "double_inhale") {
+      const dbl = timingState as ReturnType<typeof calculateDoubleInhaleTiming>;
+      return {
+        key: `${dbl.cycle}_${dbl.phase}`,
+        phase: dbl.phase as BreathingSoundPhase,
+        phaseDurationMs: dbl.phaseDurationMs,
+        phaseRemainingMs: dbl.phaseRemainingMs,
+        phaseElapsedMs: dbl.phaseElapsedMs,
+      };
+    }
+    return null;
+  }, [selectedExperience, timingState]);
+
+  // Continuous audio guidance tracking actual phase transitions and timing
+  useEffect(() => {
+    if (sessionStatus !== "running" || !soundEnabled || selectedExperience === "guided_rest") return;
+
+    const current = getCurrentPhaseAudioParams();
+    if (!current) return;
+
+    if (lastPhaseIdRef.current !== current.key) {
+      lastPhaseIdRef.current = current.key;
+      void lightChimeSynth
+        .playBreathingPhase({
+          phase: current.phase,
+          durationMs: current.phaseRemainingMs,
+          totalPhaseDurationMs: current.phaseDurationMs,
+          elapsedMs: current.phaseElapsedMs,
+        })
+        .then((played) => {
+          if (!played && lightChimeSynth.isSupported()) {
+            setSoundStatus("blocked");
+          } else if (played) {
+            setSoundStatus("playing");
+          }
+        });
+    }
+  }, [sessionStatus, soundEnabled, selectedExperience, getCurrentPhaseAudioParams]);
+
+  // User control handlers
+  const handleSelectExperience = (id: ResetExperienceId) => {
+    restSoundSynth.stop();
+    lightChimeSynth.stop(0.02);
+    setSelectedExperience(id);
+    setSessionStatus("idle");
+    setElapsedMs(0);
+    accumulatedMsRef.current = 0;
+    startTimestampRef.current = null;
+    lastPhaseIdRef.current = null;
+    hasCompletedRef.current = false;
+    setShowExplanation(false);
+    setSoundStatus("idle");
+
+    // Breathing exercises have sound enabled by default; guided rest requires explicit opting in.
+    if (id !== "guided_rest") {
+      setSoundEnabled(true);
+      void lightChimeSynth.init().then((ready) => {
+        if (!ready && lightChimeSynth.isSupported()) {
+          setSoundStatus("blocked");
+        }
+      });
+    } else {
+      setSoundEnabled(false);
+    }
+
+    if (id === "balanced_box") setBoxTargetCycles(12);
+    if (id === "longer_exhale") setDurationPresetMs(180000);
+    if (id === "double_inhale") setDoubleInhaleTargetCycles(3);
+  };
+
+  const startGuidedRestSound = async () => {
+    const result = await restSoundSynth.start();
+    setSoundStatus(result);
+    return result;
+  };
+
+  const handleStart = async () => {
+    hasCompletedRef.current = false;
+    lastPhaseIdRef.current = null;
+    accumulatedMsRef.current = elapsedMs;
+    startTimestampRef.current = null;
+
+    if (soundEnabled) {
+      if (selectedExperience === "guided_rest") {
+        await startGuidedRestSound();
+      } else {
+        const ready = await lightChimeSynth.init();
+        if (!ready) {
+          setSoundStatus(lightChimeSynth.isSupported() ? "blocked" : "unsupported");
+        } else {
+          setSoundStatus("playing");
+        }
+      }
+    }
+
+    setSessionStatus("running");
+  };
+
+  const handlePause = () => {
+    restSoundSynth.stop();
+    lightChimeSynth.stop(0.04);
+    setSessionStatus("paused");
+    accumulatedMsRef.current = elapsedMs;
+    startTimestampRef.current = null;
+  };
+
+  const handleResume = async () => {
+    accumulatedMsRef.current = elapsedMs;
+    startTimestampRef.current = null;
+
+    if (soundEnabled) {
+      if (selectedExperience === "guided_rest") {
+        await startGuidedRestSound();
+      } else {
+        const ready = await lightChimeSynth.init();
+        if (!ready) {
+          setSoundStatus(lightChimeSynth.isSupported() ? "blocked" : "unsupported");
+        } else {
+          setSoundStatus("playing");
+          // Resume active phase audio immediately for the remaining duration
+          const current = getCurrentPhaseAudioParams();
+          if (current) {
+            void lightChimeSynth.playBreathingPhase({
+              phase: current.phase,
+              durationMs: current.phaseRemainingMs,
+              totalPhaseDurationMs: current.phaseDurationMs,
+              elapsedMs: current.phaseElapsedMs,
+            });
+          }
+        }
+      }
+    }
+
+    setSessionStatus("running");
+  };
+
+  const handleRestart = () => {
+    restSoundSynth.stop();
+    lightChimeSynth.stop(0.02);
+    setSessionStatus("idle");
+    setElapsedMs(0);
+    accumulatedMsRef.current = 0;
+    startTimestampRef.current = null;
+    lastPhaseIdRef.current = null;
+    hasCompletedRef.current = false;
+  };
+
+  const handleStop = () => {
+    restSoundSynth.stop();
+    lightChimeSynth.stop(0.02);
+    setSessionStatus("idle");
+    setSelectedExperience(null);
+    setElapsedMs(0);
+    accumulatedMsRef.current = 0;
+    startTimestampRef.current = null;
+    lastPhaseIdRef.current = null;
+    hasCompletedRef.current = false;
+    setSoundStatus("idle");
+  };
+
+  const toggleSound = async () => {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    if (next) {
+      if (selectedExperience === "guided_rest") {
+        await startGuidedRestSound();
+      } else {
+        const ready = await lightChimeSynth.init();
+        if (!ready) {
+          setSoundStatus(lightChimeSynth.isSupported() ? "blocked" : "unsupported");
+        } else {
+          setSoundStatus("playing");
+          if (sessionStatus === "running") {
+            const current = getCurrentPhaseAudioParams();
+            if (current) {
+              void lightChimeSynth.playBreathingPhase({
+                phase: current.phase,
+                durationMs: current.phaseRemainingMs,
+                totalPhaseDurationMs: current.phaseDurationMs,
+                elapsedMs: current.phaseElapsedMs,
+              });
+            }
+          }
+        }
+      }
+    } else {
+      restSoundSynth.stop();
+      lightChimeSynth.stop(0.03);
+      setSoundStatus("idle");
+    }
+  };
+
+  // Get human phase description for the active screen
+  const currentPhaseDescription = useMemo(() => {
+    if (!selectedExperience) return "";
+    const expLoc = loc[
+      selectedExperience === "balanced_box"
+        ? "balancedBox"
+        : selectedExperience === "longer_exhale"
+        ? "longerExhale"
+        : selectedExperience === "double_inhale"
+        ? "doubleInhale"
+        : "guidedRest"
+    ];
+
+    if (selectedExperience === "balanced_box") {
+      const box = timingState as ReturnType<typeof calculateBoxTiming>;
+      if (box.phase === "inhale") return expLoc.phaseInhale;
+      if (box.phase === "hold_full") return expLoc.phaseHoldFull;
+      if (box.phase === "exhale") return expLoc.phaseExhale;
+      return expLoc.phaseHoldEmpty;
+    }
+    if (selectedExperience === "longer_exhale") {
+      const exh = timingState as ReturnType<typeof calculateLongerExhaleTiming>;
+      return exh.phase === "inhale" ? expLoc.phaseInhale : expLoc.phaseExhale;
+    }
+    if (selectedExperience === "double_inhale") {
+      const dbl = timingState as ReturnType<typeof calculateDoubleInhaleTiming>;
+      if (dbl.phase === "first_inhale") return expLoc.phaseFirstInhale;
+      if (dbl.phase === "topup_inhale") return expLoc.phaseTopupInhale;
+      return expLoc.phaseExhale;
+    }
+    if (selectedExperience === "guided_rest") {
+      const rst = timingState as ReturnType<typeof calculateGuidedRestTiming>;
+      if (rst.stage === "settle") return expLoc.stageSettle;
+      if (rst.stage === "body_attention") return expLoc.stageBodyAttention;
+      if (rst.stage === "quiet_rest") return expLoc.stageQuietRest;
+      return expLoc.stageGradualReturn;
+    }
+    return "";
+  }, [selectedExperience, timingState, loc]);
+
+  return (
+    <section
+      id="app-a-reset-sessions"
+      className={`mx-auto w-full max-w-[760px] px-4 pb-5 sm:px-6 ${embedded ? "mt-1" : "mt-7"}`}
+      aria-labelledby="reset-sessions-heading"
+    >
+      {/* Header & Subtitle */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2
+            id="reset-sessions-heading"
+            className="text-[19px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]"
+          >
+            {tCommon.sectionTitle}
+          </h2>
+          <p className="mt-0.5 text-[14px] leading-relaxed text-[#555558] dark:text-[#a1a1a6]">
+            {tCommon.sectionSubtitle}
+          </p>
+        </div>
+
+        {/* Global Sound & Motion Badges */}
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+          {prefersReducedMotion && (
+            <span className="inline-flex items-center rounded-full bg-black/5 px-2.5 py-1 text-[11px] font-medium text-[#555558] dark:bg-white/10 dark:text-[#a1a1a6]">
+              {tCommon.reducedMotionBadge}
+            </span>
+          )}
+          <button
+            type="button"
+            id="app-a-reset-sound-toggle"
+            onClick={() => void toggleSound()}
+            aria-label={soundEnabled ? tCommon.muteSound : tCommon.unmuteSound}
+            className="app-a-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-black/10 px-2.5 text-[12px] font-medium text-[#1d1d1f] hover:bg-black/5 dark:border-white/15 dark:text-[#f5f5f7] dark:hover:bg-white/5"
+          >
+            {soundEnabled ? (
+              <>
+                <Volume2 className="h-4 w-4 text-[#0071e3] dark:text-[#2997ff]" />
+                <span>{selectedExperience === "guided_rest" ? tCommon.restSoundEnabled : tCommon.muteSound}</span>
+              </>
+            ) : (
+              <>
+                <VolumeX className="h-4 w-4 text-[#76767b] dark:text-[#7c7c82]" />
+                <span>{selectedExperience === "guided_rest" ? tCommon.restSoundDisabled : tCommon.unmuteSound}</span>
+              </>
+            )}
+          </button>
+        </div>
+        {selectedExperience === "guided_rest" && soundEnabled && soundStatus !== "idle" ? (
+          <p role="status" className={`mb-3 text-[12px] ${soundStatus === "playing" ? "text-[#34C759] dark:text-[#30D158]" : "text-[#FF9500] dark:text-[#FF9F0A]"}`}>
+            {soundStatus === "playing"
+              ? tCommon.restSoundPlaying
+              : tCommon.restSoundFailed}
+          </p>
+        ) : soundEnabled && soundStatus === "blocked" ? (
+          <p role="status" className="mb-3 text-[12px] text-[#FF9500] dark:text-[#FF9F0A]">
+            {tCommon.audioBlockedNotice}
+          </p>
+        ) : null}
+      </div>
+
+      {/* Surface Container */}
+      <div className="app-a-surface p-4 sm:p-6">
+        {/* VIEW 1: EXPERIENCE SELECTION GRID */}
+        {!selectedExperience ? (
+          <div>
+            <h3 className="mb-3 text-[17px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">{tCommon.choosePrompt}</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {/* Option A: Balanced Box */}
+              <button
+                type="button"
+                id="reset-card-box"
+                onClick={() => handleSelectExperience("balanced_box")}
+                className="app-a-focus-ring flex flex-col justify-between rounded-2xl border border-black/10 p-4 text-left transition-all hover:border-[#0071e3]/40 hover:bg-[#0071e3]/[0.02] dark:border-white/15 dark:hover:border-[#2997ff]/40 dark:hover:bg-[#2997ff]/[0.02]"
+              >
+                <div>
+                  <div className="flex items-center gap-2 text-[#0071e3] dark:text-[#2997ff]">
+                    <Square className="h-4 w-4" />
+                    <span className="text-[15px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                      {loc.balancedBox.name}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-[13px] leading-snug text-[#555558] dark:text-[#a1a1a6]">
+                    {loc.balancedBox.shortDesc}
+                  </p>
+                </div>
+                <span className="mt-3 inline-block text-[11px] font-medium text-[#76767b] dark:text-[#7c7c82]">
+                  {tCommon.boxTiming}
+                </span>
+              </button>
+
+              {/* Option B: Gentle Longer Exhale */}
+              <button
+                type="button"
+                id="reset-card-exhale"
+                onClick={() => handleSelectExperience("longer_exhale")}
+                className="app-a-focus-ring flex flex-col justify-between rounded-2xl border border-black/10 p-4 text-left transition-all hover:border-[#0071e3]/40 hover:bg-[#0071e3]/[0.02] dark:border-white/15 dark:hover:border-[#2997ff]/40 dark:hover:bg-[#2997ff]/[0.02]"
+              >
+                <div>
+                  <div className="flex items-center gap-2 text-[#0071e3] dark:text-[#2997ff]">
+                    <Wind className="h-4 w-4" />
+                    <span className="text-[15px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                      {loc.longerExhale.name}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-[13px] leading-snug text-[#555558] dark:text-[#a1a1a6]">
+                    {loc.longerExhale.shortDesc}
+                  </p>
+                </div>
+                <span className="mt-3 inline-block text-[11px] font-medium text-[#76767b] dark:text-[#7c7c82]">
+                  {tCommon.exhaleTiming}
+                </span>
+              </button>
+
+              {/* Option C: Short Double-Inhale Reset */}
+              <button
+                type="button"
+                id="reset-card-double-inhale"
+                onClick={() => handleSelectExperience("double_inhale")}
+                className="app-a-focus-ring flex flex-col justify-between rounded-2xl border border-black/10 p-4 text-left transition-all hover:border-[#1a7f37]/40 hover:bg-[#1a7f37]/[0.02] dark:border-white/15 dark:hover:border-[#34c759]/40 dark:hover:bg-[#34c759]/[0.02]"
+              >
+                <div>
+                  <div className="flex items-center gap-2 text-[#1a7f37] dark:text-[#34c759]">
+                    <Sparkles className="h-4 w-4" />
+                    <span className="text-[15px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                      {loc.doubleInhale.name}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-[13px] leading-snug text-[#555558] dark:text-[#a1a1a6]">
+                    {loc.doubleInhale.shortDesc}
+                  </p>
+                </div>
+                <span className="mt-3 inline-block text-[11px] font-medium text-[#76767b] dark:text-[#7c7c82]">
+                  {tCommon.guidedCycles}
+                </span>
+              </button>
+
+              {/* Option D: Guided Deep Rest */}
+              <button
+                type="button"
+                id="reset-card-guided-rest"
+                onClick={() => handleSelectExperience("guided_rest")}
+                className="app-a-focus-ring flex flex-col justify-between rounded-2xl border border-black/10 p-4 text-left transition-all hover:border-[#0071e3]/40 hover:bg-[#0071e3]/[0.02] dark:border-white/15 dark:hover:border-[#2997ff]/40 dark:hover:bg-[#2997ff]/[0.02]"
+              >
+                <div>
+                  <div className="flex items-center gap-2 text-[#0071e3] dark:text-[#2997ff]">
+                    <Moon className="h-4 w-4" />
+                    <span className="text-[15px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                      {loc.guidedRest.name}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-[13px] leading-snug text-[#555558] dark:text-[#a1a1a6]">
+                    {loc.guidedRest.shortDesc}
+                  </p>
+                </div>
+                <span className="mt-3 inline-block text-[11px] font-medium text-[#76767b] dark:text-[#7c7c82]">
+                  {tCommon.guidedRestDuration}
+                </span>
+              </button>
+            </div>
+
+            {/* Comfort & Safety Note */}
+            <div className="mt-5 rounded-xl bg-black/[0.03] p-3.5 text-[12px] leading-relaxed text-[#555558] dark:bg-white/[0.04] dark:text-[#a1a1a6]">
+              <div className="flex items-start gap-2">
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#76767b] dark:text-[#7c7c82]" />
+                <div>
+                  <span className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                    {tCommon.safetyBannerTitle}:
+                  </span>{" "}
+                  {tCommon.safetyBannerText}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : sessionStatus === "completed" ? (
+          /* VIEW 2: COMPLETION SCREEN */
+          <div className="py-6 text-center" role="status" aria-live="polite">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#1a7f37]/10 text-[#1a7f37] dark:bg-[#34c759]/20 dark:text-[#34c759]">
+              <CheckCircle2 className="h-8 w-8" />
+            </div>
+            <h3 className="mt-4 text-[20px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+              {tCommon.completedTitle}
+            </h3>
+            <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-[#555558] dark:text-[#a1a1a6]">
+              {tCommon.completedSubtitle}
+            </p>
+            <div className="mt-6 flex flex-col justify-center gap-2 min-[380px]:flex-row">
+              <button
+                type="button"
+                id="reset-completed-restart-btn"
+                onClick={handleRestart}
+                className="app-a-secondary-button app-a-focus-ring gap-2 px-4 py-2"
+              >
+                <RotateCcw className="h-4 w-4" />
+                {tCommon.restart}
+              </button>
+              <button
+                type="button"
+                id="reset-completed-return-btn"
+                onClick={handleStop}
+                className="app-a-primary-button app-a-focus-ring gap-2 px-5 py-2"
+              >
+                {tCommon.completedReturnButton}
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* VIEW 3: ACTIVE / PAUSED / IDLE SESSION INTERFACE */
+          <div role="timer" aria-live="polite" className="text-center">
+            {/* Top Navigation & Title */}
+            <div className="mb-4 grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2">
+              <button
+                type="button"
+                id="reset-back-btn"
+                onClick={handleStop}
+                className="app-a-focus-ring inline-flex h-11 w-11 items-center justify-center text-[#555558] hover:text-[#1d1d1f] dark:text-[#a1a1a6] dark:hover:text-[#f5f5f7]"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="sr-only">{tCommon.completedReturnButton}</span>
+              </button>
+
+              <span className="min-w-0 truncate px-1 text-[12px] font-semibold uppercase tracking-wider text-[#76767b] dark:text-[#7c7c82]">
+                {selectedExperience === "balanced_box" && loc.balancedBox.name}
+                {selectedExperience === "longer_exhale" && loc.longerExhale.name}
+                {selectedExperience === "double_inhale" && loc.doubleInhale.name}
+                {selectedExperience === "guided_rest" && loc.guidedRest.name}
+              </span>
+              <button type="button" onClick={() => setShowExplanation((value) => !value)} aria-expanded={showExplanation} aria-label={tCommon.infoLabel} className="app-a-focus-ring flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 text-[#0071e3] dark:border-white/15 dark:text-[#2997ff]"><Info className="h-5 w-5" aria-hidden="true" /></button>
+            </div>
+
+            {showExplanation ? <div className="mb-5 rounded-xl border p-4 text-left" style={{ borderColor: "var(--app-a-border)", backgroundColor: "var(--app-a-surface-secondary)" }}><h3 className="text-[15px] font-semibold">{tCommon.whyTitle}</h3><p className="mt-1 text-[14px] leading-relaxed">{loc[selectedExperience === "balanced_box" ? "balancedBox" : selectedExperience === "longer_exhale" ? "longerExhale" : selectedExperience === "double_inhale" ? "doubleInhale" : "guidedRest"].bestFor}</p><p className="mt-2 text-[13px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>{loc[selectedExperience === "balanced_box" ? "balancedBox" : selectedExperience === "longer_exhale" ? "longerExhale" : selectedExperience === "double_inhale" ? "doubleInhale" : "guidedRest"].whyItMayHelp}</p></div> : null}
+
+            {/* Preset Selector (Visible before starting) */}
+            {sessionStatus === "idle" && selectedExperience === "balanced_box" && (
+              <div className="mb-5 flex flex-wrap justify-center gap-2">
+                <button
+                  type="button"
+                  id="preset-box-4-btn"
+                  onClick={() => setBoxTargetCycles(4)}
+                  className={`app-a-focus-ring rounded-lg px-3 py-1.5 text-[13px] font-medium border ${
+                    boxTargetCycles === 4
+                      ? "border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3] dark:border-[#2997ff] dark:bg-[#2997ff]/15 dark:text-[#2997ff]"
+                      : "border-black/10 text-[#555558] dark:border-white/15 dark:text-[#a1a1a6]"
+                  }`}
+                >
+                  {tCommon.presetBox4}
+                </button>
+                <button
+                  type="button"
+                  id="preset-box-8-btn"
+                  onClick={() => setBoxTargetCycles(8)}
+                  className={`app-a-focus-ring rounded-lg px-3 py-1.5 text-[13px] font-medium border ${
+                    boxTargetCycles === 8
+                      ? "border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3] dark:border-[#2997ff] dark:bg-[#2997ff]/15 dark:text-[#2997ff]"
+                      : "border-black/10 text-[#555558] dark:border-white/15 dark:text-[#a1a1a6]"
+                  }`}
+                >
+                  {tCommon.presetBox8}
+                </button>
+                <button
+                  type="button"
+                  id="preset-box-12-btn"
+                  onClick={() => setBoxTargetCycles(12)}
+                  className={`app-a-focus-ring rounded-lg px-3 py-1.5 text-[13px] font-medium border ${
+                    boxTargetCycles === 12
+                      ? "border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3] dark:border-[#2997ff] dark:bg-[#2997ff]/15 dark:text-[#2997ff]"
+                      : "border-black/10 text-[#555558] dark:border-white/15 dark:text-[#a1a1a6]"
+                  }`}
+                >
+                  {tCommon.presetBox12}
+                </button>
+              </div>
+            )}
+
+            {sessionStatus === "idle" && selectedExperience === "longer_exhale" && (
+              <div className="mb-5 flex justify-center gap-2">
+                <button
+                  type="button"
+                  id="preset-1min-btn"
+                  onClick={() => setDurationPresetMs(60000)}
+                  className={`app-a-focus-ring rounded-lg px-3 py-1.5 text-[13px] font-medium border ${
+                    durationPresetMs === 60000
+                      ? "border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3] dark:border-[#2997ff] dark:bg-[#2997ff]/15 dark:text-[#2997ff]"
+                      : "border-black/10 text-[#555558] dark:border-white/15 dark:text-[#a1a1a6]"
+                  }`}
+                >
+                  {tCommon.preset1Min}
+                </button>
+                <button
+                  type="button"
+                  id="preset-3min-btn"
+                  onClick={() => setDurationPresetMs(180000)}
+                  className={`app-a-focus-ring rounded-lg px-3 py-1.5 text-[13px] font-medium border ${
+                    durationPresetMs === 180000
+                      ? "border-[#0071e3] bg-[#0071e3]/10 text-[#0071e3] dark:border-[#2997ff] dark:bg-[#2997ff]/15 dark:text-[#2997ff]"
+                      : "border-black/10 text-[#555558] dark:border-white/15 dark:text-[#a1a1a6]"
+                  }`}
+                >
+                  {tCommon.preset3Min}
+                </button>
+              </div>
+            )}
+
+            {sessionStatus === "idle" && selectedExperience === "double_inhale" && (
+              <div className="mb-5 flex justify-center gap-2">
+                {[1, 2, 3].map((cnt) => (
+                  <button
+                    key={cnt}
+                    type="button"
+                    id={`preset-cycles-${cnt}-btn`}
+                    onClick={() => setDoubleInhaleTargetCycles(cnt)}
+                    className={`app-a-focus-ring rounded-lg px-3 py-1.5 text-[13px] font-medium border ${
+                      doubleInhaleTargetCycles === cnt
+                        ? "border-[#1a7f37] bg-[#1a7f37]/10 text-[#1a7f37] dark:border-[#34c759] dark:bg-[#34c759]/15 dark:text-[#34c759]"
+                        : "border-black/10 text-[#555558] dark:border-white/15 dark:text-[#a1a1a6]"
+                    }`}
+                  >
+                    {tCommon.presetCycles(cnt)}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* VISUALIZER PRESENTATION */}
+            <div className="my-3">
+              {selectedExperience === "balanced_box" && (
+                <BoxVisualizer
+                  phase={(timingState as ReturnType<typeof calculateBoxTiming>).phase}
+                  phaseElapsedMs={(timingState as ReturnType<typeof calculateBoxTiming>).phaseElapsedMs}
+                  phaseDurationMs={(timingState as ReturnType<typeof calculateBoxTiming>).phaseDurationMs}
+                  prefersReducedMotion={prefersReducedMotion}
+                  phaseLabel={currentPhaseDescription}
+                  countdownSec={Math.ceil(
+                    (timingState as ReturnType<typeof calculateBoxTiming>).phaseRemainingMs / 1000
+                  )}
+                />
+              )}
+
+              {selectedExperience === "longer_exhale" && (
+                <CircleExpander
+                  phase={(timingState as ReturnType<typeof calculateLongerExhaleTiming>).phase}
+                  phaseElapsedMs={(timingState as ReturnType<typeof calculateLongerExhaleTiming>).phaseElapsedMs}
+                  phaseDurationMs={(timingState as ReturnType<typeof calculateLongerExhaleTiming>).phaseDurationMs}
+                  prefersReducedMotion={prefersReducedMotion}
+                  phaseLabel={currentPhaseDescription}
+                  countdownSec={Math.ceil(
+                    (timingState as ReturnType<typeof calculateLongerExhaleTiming>).phaseRemainingMs / 1000
+                  )}
+                />
+              )}
+
+              {selectedExperience === "double_inhale" && (
+                <DoubleInhaleVisualizer
+                  phase={(timingState as ReturnType<typeof calculateDoubleInhaleTiming>).phase}
+                  phaseElapsedMs={(timingState as ReturnType<typeof calculateDoubleInhaleTiming>).phaseElapsedMs}
+                  phaseDurationMs={(timingState as ReturnType<typeof calculateDoubleInhaleTiming>).phaseDurationMs}
+                  prefersReducedMotion={prefersReducedMotion}
+                  phaseLabel={currentPhaseDescription}
+                  countdownSec={Math.ceil(
+                    (timingState as ReturnType<typeof calculateDoubleInhaleTiming>).phaseRemainingMs / 1000
+                  )}
+                />
+              )}
+
+              {selectedExperience === "guided_rest" && (
+                <>
+                  <GuidedRestVisualizer
+                    stage={(timingState as ReturnType<typeof calculateGuidedRestTiming>).stage}
+                    stageIndex={(timingState as ReturnType<typeof calculateGuidedRestTiming>).stageIndex}
+                    stageRemainingMs={(timingState as ReturnType<typeof calculateGuidedRestTiming>).stageRemainingMs}
+                    totalRemainingMs={totalDurationMs - elapsedMs}
+                    stageDescription={currentPhaseDescription}
+                    stageLabels={language === "sr" ? ["Smirivanje", "Pažnja na telo", "Tihi odmor", "Povratak"] : language === "tr" ? ["Yerleşme", "Beden farkındalığı", "Sessiz dinlenme", "Dönüş"] : ["Settle", "Body attention", "Quiet rest", "Return"]}
+                    prefersReducedMotion={prefersReducedMotion}
+                  />
+                  <p className="mx-auto mt-3 max-w-md text-[12px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
+                    {language === "sr" ? "Opcioni 4 Hz stereo zvuk radi samo kada ga uključite. Za stereo efekat koristite slušalice; prekinite ako vam ne prija." : language === "tr" ? "İsteğe bağlı 4 Hz stereo ses yalnızca siz açtığınızda çalışır. Stereo etki için kulaklık kullanın; rahatsız ederse kapatın." : "Optional 4 Hz stereo sound plays only when you turn it on. Use headphones for the stereo effect; stop if it feels uncomfortable."}
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* Active Cycle / Remaining Stats */}
+            {selectedExperience !== "guided_rest" && (
+              <div className="mt-3 flex items-center justify-center gap-6 text-[13px] text-[#555558] dark:text-[#a1a1a6]">
+                <span>
+                  {tCommon.cycleLabel}:{" "}
+                  <strong className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                    {timingState.isComplete
+                      ? selectedExperience === "balanced_box"
+                        ? boxTargetCycles
+                        : selectedExperience === "double_inhale"
+                        ? doubleInhaleTargetCycles
+                        : (timingState as { cycle?: number }).cycle || 1
+                      : (timingState as { cycle?: number }).cycle || 1}
+                  </strong>
+                  {selectedExperience === "balanced_box" && (
+                    <span className="text-[#76767b] dark:text-[#7c7c82]"> / {boxTargetCycles}</span>
+                  )}
+                  {selectedExperience === "double_inhale" && (
+                    <span className="text-[#76767b] dark:text-[#7c7c82]"> / {doubleInhaleTargetCycles}</span>
+                  )}
+                </span>
+                <span>
+                  {tCommon.remainingLabel}:{" "}
+                  <strong className="font-semibold tabular-nums text-[#1d1d1f] dark:text-[#f5f5f7]">
+                    {(() => {
+                      const totalSec = Math.max(0, Math.ceil((totalDurationMs - elapsedMs) / 1000));
+                      const mins = Math.floor(totalSec / 60);
+                      const secs = totalSec % 60;
+                      return `${mins}:${secs.toString().padStart(2, "0")}`;
+                    })()}
+                  </strong>
+                </span>
+              </div>
+            )}
+
+            {/* Interaction Buttons */}
+            <div className={`mt-5 grid min-w-0 grid-cols-2 gap-2.5 ${embedded ? "sticky bottom-0 z-10 -mx-2 border-t border-black/10 bg-[var(--app-a-surface)] px-2 pb-2 pt-3 shadow-[0_-10px_24px_rgba(0,0,0,.06)] dark:border-white/10" : ""}`}>
+              {sessionStatus === "idle" && (
+                <button
+                  type="button"
+                  id="reset-start-btn"
+                  onClick={() => void handleStart()}
+                  className="app-a-primary-button app-a-focus-ring col-span-2 w-full min-w-0 justify-center gap-2 px-4 py-2.5 text-[15px] font-semibold min-[380px]:col-span-1"
+                >
+                  <Play className="h-4 w-4" />
+                  {tCommon.start}
+                </button>
+              )}
+
+              {sessionStatus === "running" && (
+                <button
+                  type="button"
+                  id="reset-pause-btn"
+                  onClick={handlePause}
+                  className="app-a-primary-button app-a-focus-ring w-full justify-center gap-2 px-3 py-2.5 text-[15px] font-semibold"
+                >
+                  <Pause className="h-4 w-4" />
+                  {tCommon.pause}
+                </button>
+              )}
+
+              {sessionStatus === "paused" && (
+                <button
+                  type="button"
+                  id="reset-resume-btn"
+                  onClick={() => void handleResume()}
+                  className="app-a-primary-button app-a-focus-ring w-full justify-center gap-2 px-3 py-2.5 text-[15px] font-semibold"
+                >
+                  <Play className="h-4 w-4" />
+                  {tCommon.resume}
+                </button>
+              )}
+
+              {sessionStatus !== "idle" && (
+                <button
+                  type="button"
+                  id="reset-restart-btn"
+                  onClick={handleRestart}
+                  className="app-a-secondary-button app-a-focus-ring w-full justify-center gap-1.5 px-3 py-2.5 text-[14px]"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  {tCommon.restart}
+                </button>
+              )}
+
+              <button
+                type="button"
+                id="reset-stop-btn"
+                onClick={handleStop}
+                className="app-a-secondary-button app-a-focus-ring col-span-2 w-full justify-center gap-1.5 px-4 py-2.5 text-[14px]"
+              >
+                {tCommon.stop}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}

@@ -1,0 +1,213 @@
+export type SupportedLanguage = "en" | "sr" | "tr";
+export type FiveLevelRating = 1 | 2 | 3 | 4 | 5;
+
+export interface DailyResetInput {
+  brainDump: string;
+  language: SupportedLanguage;
+  energy?: FiveLevelRating;
+  pleasantness?: FiveLevelRating;
+  availableMinutes?: number;
+  stateNote?: string;
+}
+
+export interface ClarificationAnswer {
+  questionId: string;
+  answer: string;
+}
+
+export interface DailyResetClarificationSubmission extends DailyResetInput {
+  clarificationAnswers: ClarificationAnswer[];
+}
+
+export type BrainDumpItemKind = "task" | "idea" | "worry" | "fact" | "waiting_for";
+
+export type TimeHorizon = "today" | "this_week" | "later" | "long_term_idea" | "no_action";
+
+export type PlanBlock = "first_focus" | "later_today" | "if_capacity_remains";
+
+export type RequiredEnergy = 1 | 2 | 3 | 4 | 5;
+
+export type TimeSensitivity = "none" | "soft" | "deadline" | "urgent";
+
+export type PriorityConfidence = "low" | "medium" | "high";
+
+export type RecommendedDisposition = "do" | "delegate" | "defer" | "eliminate" | "clarify";
+
+export type ItemStatusState =
+  | "actionable"
+  | "waiting_for"
+  | "note_needs_clarification"
+  | "fixed"
+  | "deferred"
+  | "eliminated";
+
+export interface PriorityFactors {
+  consequence?: 1 | 2 | 3 | 4 | 5;
+  urgency?: 1 | 2 | 3 | 4 | 5;
+  goalContribution?: 1 | 2 | 3 | 4 | 5;
+  leverage?: 1 | 2 | 3 | 4 | 5;
+  mentalLoad?: 1 | 2 | 3 | 4 | 5;
+  dependencyPressure?: 1 | 2 | 3 | 4 | 5;
+  confidence?: PriorityConfidence;
+  recommendedDisposition?: RecommendedDisposition;
+  conciseExplanation?: string;
+  evidenceFromInput?: string;
+  explanation: string;
+}
+
+export interface GoalRelationship {
+  goalId?: string;
+  goalTitle?: string;
+  projectId?: string;
+  projectTitle?: string;
+  relationshipExplanation?: string;
+}
+
+export interface ClassifiedBrainDumpItem {
+  id: string;
+  originalText: string;
+  kind: BrainDumpItemKind;
+  timeHorizon: TimeHorizon;
+  suggestedAction?: string;
+  estimatedMinutes?: number;
+  requiredEnergy?: RequiredEnergy;
+  timeSensitivity: TimeSensitivity;
+  deadlineText?: string;
+  deadlineIso?: string;
+  isAmbiguous: boolean;
+  needsCheck: boolean;
+  relatedQuestionId?: string;
+  priority: PriorityFactors;
+  goalRelationship?: GoalRelationship;
+}
+
+export interface ClarificationQuestion {
+  id: string;
+  question: string;
+  context: string;
+  relatedItemIds: string[];
+  materialImpact:
+    | "priority"
+    | "deadline"
+    | "duration"
+    | "classification"
+    | "goal_relationship"
+    | "other";
+}
+
+export interface ClarificationNeededResponse {
+  success: true;
+  phase: "clarification_needed";
+  questions: ClarificationQuestion[];
+}
+
+export interface DailyPlanItem {
+  id: string;
+  sourceItemIds: string[];
+  title: string;
+  description?: string;
+  block: PlanBlock;
+  estimatedMinutes: number;
+  /** Fixed commitments are shown in the day's total load but do not consume the
+   * flexible task budget selected during check-in. Legacy items default to flexible. */
+  capacityType?: "flexible" | "fixed";
+  requiredEnergy: RequiredEnergy;
+  timeSensitivity: TimeSensitivity;
+  deadlineText?: string;
+  deadlineIso?: string;
+  priority: PriorityFactors;
+  goalRelationship?: GoalRelationship;
+  reasoning?: string;
+  needsCheck: boolean;
+  manualPriorityOverride?: boolean;
+  itemStatusState?: ItemStatusState;
+  dependsOnItemIds?: string[];
+  originalPlanDate?: string;
+  originalPlanItemId?: string;
+  sourceRoutineId?: string;
+}
+
+export interface SafeIntervention {
+  type: "environment" | "movement" | "breathing" | "rest" | "hydration" | "light" | "focus";
+  title: string;
+  description: string;
+  estimatedMinutes: number;
+  reason: string;
+  targetTaskId?: string;
+}
+
+export interface DailyResetVisionSuggestion {
+  sourceItemIds: string[];
+  suggestedTitle: string;
+  desiredOutcome: string;
+  reason: string;
+  confidence: "medium" | "high";
+  needsClarification: boolean;
+  clarificationQuestion?: string;
+  possibleExistingVisionId?: string;
+}
+
+export interface DailyPlanDraft {
+  localDate?: string;
+  classifiedItems: ClassifiedBrainDumpItem[];
+  firstFocus: DailyPlanItem[];
+  laterToday: DailyPlanItem[];
+  ifCapacityRemains: DailyPlanItem[];
+  deferredItems: ClassifiedBrainDumpItem[];
+  longTermIdeas: ClassifiedBrainDumpItem[];
+  nonActionItems: ClassifiedBrainDumpItem[];
+  planRationale: string;
+  intervention?: SafeIntervention;
+  visionSuggestion?: DailyResetVisionSuggestion;
+  availableMinutes?: number;
+  plannedRequiredMinutes: number; // Sum of firstFocus + laterToday
+  plannedFlexibleMinutes?: number; // Required work competing for selected flexible capacity
+  plannedFixedMinutes?: number; // Explicitly unavoidable commitments kept visible separately
+  plannedOptionalMinutes: number; // Sum of ifCapacityRemains
+  manualPriorityOverride?: boolean; // Indicates if the user manually reordered tasks
+  plannedRoutineIds?: string[]; // Explicitly planned flexible routines for this date
+}
+
+export interface PlanReadyResponse {
+  success: true;
+  phase: "plan_ready";
+  draft: DailyPlanDraft;
+  visionSuggestion?: DailyResetVisionSuggestion;
+}
+
+export type DailyResetErrorCode =
+  | "invalid_input"
+  | "clarification_required"
+  | "invalid_ai_response"
+  | "capacity_exceeded"
+  | "rate_limited"
+  | "service_unavailable"
+  | "timeout"
+  | "unknown";
+
+export interface DailyResetErrorResponse {
+  success: false;
+  phase: "error";
+  code: DailyResetErrorCode;
+  error: string;
+  retryable: boolean;
+  fieldErrors?: Partial<
+    Record<
+      | "brainDump"
+      | "language"
+      | "energy"
+      | "pleasantness"
+      | "availableMinutes"
+      | "stateNote"
+      | "clarificationAnswers",
+      string
+    >
+  >;
+}
+
+export type DailyResetApiResponse =
+  | ClarificationNeededResponse
+  | PlanReadyResponse
+  | DailyResetErrorResponse;
+
+export type IdFactory = () => string;

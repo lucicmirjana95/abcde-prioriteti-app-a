@@ -1,0 +1,433 @@
+.app-a-root {
+  /* Apple HIG Light Theme Tokens */
+  --app-a-bg: #f7f4ee;
+  --app-a-header-bg: rgba(250, 248, 243, 0.88);
+  --app-a-tabbar-bg: rgba(250, 248, 243, 0.9);
+  --app-a-sidebar: rgba(251, 249, 245, 0.9);
+  --app-a-surface: rgba(255, 253, 249, 0.94);
+  --app-a-surface-secondary: #efede8;
+  --app-a-surface-elevated: #fffdf9;
+  --app-a-text: #172941;
+  --app-a-text-secondary: #647084;
+  --app-a-text-tertiary: #8a91a0;
+  --app-a-border: rgba(74, 91, 111, 0.16);
+  --app-a-border-strong: rgba(74, 91, 111, 0.25);
+  --app-a-accent: #527fa4;
+  --app-a-accent-hover: #406d93;
+  --app-a-accent-soft: rgba(115, 158, 190, 0.16);
+  --app-a-on-accent: #ffffff;
+  --app-a-danger: #ff3b30;
+  --app-a-danger-soft: rgba(255, 59, 48, 0.12);
+  --app-a-danger-text: #d70015;
+  --app-a-warning: #ff9500;
+  --app-a-warning-soft: rgba(255, 149, 0, 0.12);
+  --app-a-warning-text: #c97500;
+  --app-a-success: #34c759;
+  --app-a-success-soft: rgba(52, 199, 89, 0.12);
+  --app-a-success-text: #248a3d;
+  --app-a-disabled-bg: rgba(120, 120, 128, 0.08);
+  --app-a-disabled-text: rgba(60, 60, 67, 0.38);
+  --app-a-focus-ring: rgba(82, 127, 164, 0.36);
+  --app-a-shadow: 0 1px 3px rgba(38, 50, 66, 0.05);
+  --app-a-shadow-lg: 0 12px 30px rgba(38, 50, 66, 0.10);
+  --app-a-radius: 18px;
+  --app-a-tab-inactive: #87909d;
+  --app-a-wash-blue: rgba(180, 210, 230, 0.24);
+  --app-a-wash-sage: rgba(169, 193, 171, 0.22);
+  --app-a-wash-sage-border: rgba(103, 148, 118, 0.35);
+  --app-a-wash-sage-text: #285536;
+  --app-a-wash-sage-badge: rgba(169, 193, 171, 0.40);
+
+  --app-a-wash-lavender: rgba(192, 187, 215, 0.22);
+  --app-a-wash-lavender-border: rgba(154, 142, 194, 0.35);
+  --app-a-wash-lavender-text: #503E78;
+  --app-a-wash-lavender-badge: rgba(192, 187, 215, 0.40);
+
+  color-scheme: light dark;
+  color: var(--app-a-text);
+  background-color: var(--app-a-bg);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100dvh;
+}
+
+.app-a-root.dark {
+  /* Warm Dark Muted Navy Theme Tokens (Never black) */
+  --app-a-bg: #101B2D;
+  --app-a-header-bg: rgba(16, 27, 45, 0.88);
+  --app-a-tabbar-bg: rgba(16, 27, 45, 0.88);
+  --app-a-sidebar: rgba(16, 27, 45, 0.94);
+  --app-a-surface: #192C45;
+  --app-a-surface-secondary: #203552;
+  --app-a-surface-elevated: #223857;
+  --app-a-text: #FBF7EF;
+  --app-a-text-secondary: #94A3B8;
+  --app-a-text-tertiary: #6B7F96;
+  --app-a-border: rgba(251, 247, 239, 0.11);
+  --app-a-border-strong: rgba(251, 247, 239, 0.20);
+  --app-a-accent: #82B7E3;
+  --app-a-accent-hover: #9CC7EB;
+  --app-a-accent-soft: rgba(130, 183, 227, 0.16);
+  --app-a-on-accent: #101B2D;
+  --app-a-danger: #F87171;
+  --app-a-danger-soft: rgba(248, 113, 113, 0.16);
+  --app-a-danger-text: #FCA5A5;
+  --app-a-warning: #FBBF24;
+  --app-a-warning-soft: rgba(251, 191, 36, 0.16);
+  --app-a-warning-text: #FDE68A;
+  --app-a-success: #4ADE80;
+  --app-a-success-soft: rgba(74, 222, 128, 0.16);
+  --app-a-success-text: #86EFAC;
+  --app-a-disabled-bg: rgba(251, 247, 239, 0.06);
+  --app-a-disabled-text: rgba(251, 247, 239, 0.32);
+  --app-a-focus-ring: rgba(130, 183, 227, 0.48);
+  --app-a-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
+  --app-a-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --app-a-radius: 24px;
+  --app-a-tab-inactive: #72849A;
+
+  /* Pastel Washes for Dark Mode */
+  --app-a-wash-apricot: rgba(240, 162, 126, 0.14);
+  --app-a-wash-apricot-border: rgba(240, 162, 126, 0.30);
+  --app-a-wash-apricot-text: #F8BFA5;
+  --app-a-wash-apricot-badge: rgba(240, 162, 126, 0.22);
+
+  --app-a-wash-dusty-blue: rgba(130, 183, 227, 0.14);
+  --app-a-wash-dusty-blue-border: rgba(130, 183, 227, 0.30);
+  --app-a-wash-dusty-blue-text: #B4D5F2;
+  --app-a-wash-dusty-blue-badge: rgba(130, 183, 227, 0.22);
+  --app-a-wash-blue: rgba(96, 151, 194, 0.20);
+
+  --app-a-wash-sage: rgba(126, 179, 143, 0.14);
+  --app-a-wash-sage-border: rgba(126, 179, 143, 0.30);
+  --app-a-wash-sage-text: #B8E0C4;
+  --app-a-wash-sage-badge: rgba(126, 179, 143, 0.22);
+
+  --app-a-wash-lavender: rgba(175, 161, 222, 0.14);
+  --app-a-wash-lavender-border: rgba(175, 161, 222, 0.30);
+  --app-a-wash-lavender-text: #D5CCF2;
+  --app-a-wash-lavender-badge: rgba(175, 161, 222, 0.22);
+}
+
+.app-a-flow-header {
+  position: relative;
+  isolation: isolate;
+  min-height: 150px;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 20px;
+  background:
+    radial-gradient(circle at 76% 24%, var(--app-a-wash-apricot), transparent 24%),
+    radial-gradient(circle at 88% 70%, var(--app-a-wash-sage), transparent 26%),
+    linear-gradient(135deg, var(--app-a-wash-lavender), transparent 45%),
+    var(--app-a-surface);
+  border: 1px solid var(--app-a-border);
+  box-shadow: var(--app-a-shadow);
+}
+
+.app-a-flow-header::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 0 auto;
+  width: min(48%, 280px);
+  background: url('/app-a/growth-path-watercolor.png') center 51% / 155% auto no-repeat;
+  opacity: .54;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 26%);
+  mask-image: linear-gradient(to right, transparent, #000 26%);
+}
+
+.app-a-flow-header > * { max-width: 66%; }
+
+.app-a-plan-rationale {
+  background: linear-gradient(120deg, var(--app-a-wash-lavender), transparent 72%), var(--app-a-surface) !important;
+}
+
+.app-a-plan-block-first {
+  background: linear-gradient(120deg, var(--app-a-wash-apricot), transparent 78%), var(--app-a-surface) !important;
+}
+
+.app-a-plan-block-later {
+  background: linear-gradient(120deg, var(--app-a-wash-blue), transparent 82%), var(--app-a-surface) !important;
+}
+
+.app-a-plan-block-optional {
+  background: linear-gradient(120deg, var(--app-a-wash-sage), transparent 82%), var(--app-a-surface) !important;
+}
+
+@media (max-width: 430px) {
+  .app-a-flow-header { min-height: 176px; padding: 18px; }
+  .app-a-flow-header > * { max-width: 76%; }
+  .app-a-flow-header::after { width: 52%; opacity: .42; }
+}
+
+/* Apple HIG Translucent Materials */
+.app-a-tabbar {
+  background-color: var(--app-a-tabbar-bg) !important;
+  border-top: 0.5px solid var(--app-a-border) !important;
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  backdrop-filter: blur(25px) saturate(180%);
+}
+
+.app-a-header-bar {
+  background-color: var(--app-a-header-bg) !important;
+  border-bottom: 0.5px solid var(--app-a-border) !important;
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  backdrop-filter: blur(25px) saturate(180%);
+}
+
+/* Surface containers */
+.app-a-surface {
+  background-color: var(--app-a-surface);
+  border: 1px solid var(--app-a-border);
+  border-radius: var(--app-a-radius);
+  box-shadow: var(--app-a-shadow);
+  color: var(--app-a-text);
+}
+
+.app-a-surface-secondary {
+  background-color: var(--app-a-surface-secondary);
+  border: 1px solid var(--app-a-border);
+  border-radius: 14px;
+  color: var(--app-a-text);
+}
+
+.app-a-surface-elevated {
+  background-color: var(--app-a-surface-elevated);
+  border: 1px solid var(--app-a-border-strong);
+  border-radius: 16px;
+  box-shadow: var(--app-a-shadow-lg);
+  color: var(--app-a-text);
+}
+
+@keyframes app-a-rest-orb-float {
+  0%, 100% { transform: scale(.82) rotate(-2deg); border-radius: 44% 56% 52% 48% / 47% 43% 57% 53%; }
+  50% { transform: scale(1) rotate(3deg); border-radius: 53% 47% 44% 56% / 43% 56% 44% 57%; }
+}
+
+.app-a-rest-orb {
+  animation: app-a-rest-orb-float 8s ease-in-out infinite;
+  will-change: transform, border-radius;
+}
+
+@keyframes app-a-rest-ring-breathe {
+  0%, 100% { opacity: .35; transform: scale(.9); }
+  50% { opacity: .9; transform: scale(1); }
+}
+
+.app-a-rest-ring {
+  animation: app-a-rest-ring-breathe 8s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-a-rest-orb, .app-a-rest-ring { animation: none; }
+}
+
+/* Apple HIG Mobile Input Zoom Prevention */
+input,
+textarea,
+select,
+.app-a-field {
+  font-size: 16px !important;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", "Helvetica Neue", sans-serif;
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
+}
+
+/* Apple HIG Inset Form Fields */
+.app-a-field {
+  border: 1px solid var(--app-a-border);
+  background-color: var(--app-a-surface);
+  border-radius: 12px;
+  color: var(--app-a-text);
+  caret-color: var(--app-a-accent);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.app-a-field::placeholder {
+  color: var(--app-a-text-tertiary);
+  opacity: 0.85;
+}
+
+.app-a-field:focus {
+  border-color: var(--app-a-accent);
+  box-shadow: 0 0 0 3.5px var(--app-a-focus-ring);
+  outline: none;
+}
+
+/* Apple HIG Buttons */
+.app-a-primary-button {
+  min-height: 48px;
+  border-radius: 14px;
+  background-color: var(--app-a-accent);
+  color: var(--app-a-on-accent);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), opacity 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.app-a-primary-button:active:not(:disabled) {
+  transform: scale(0.98);
+  opacity: 0.85;
+}
+
+.app-a-primary-button:hover:not(:disabled) {
+  background-color: var(--app-a-accent-hover);
+}
+
+.app-a-primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.app-a-secondary-button {
+  min-height: 48px;
+  border-radius: 14px;
+  background-color: var(--app-a-surface-secondary);
+  color: var(--app-a-text);
+  border: 1px solid var(--app-a-border);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), background-color 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.app-a-secondary-button:active:not(:disabled) {
+  transform: scale(0.98);
+  opacity: 0.85;
+}
+
+.app-a-secondary-button:hover:not(:disabled) {
+  background-color: var(--app-a-border);
+}
+
+.app-a-secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.app-a-focus-ring:focus-visible {
+  outline: 3px solid var(--app-a-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Typography styles */
+.app-a-eyebrow {
+  margin-bottom: 0.5rem;
+  color: var(--app-a-accent);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.app-a-page-title {
+  margin-bottom: 0.75rem;
+  color: var(--app-a-text);
+  font-size: clamp(1.875rem, 4.5vw, 2.375rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+
+.app-a-page-intro {
+  max-width: 620px;
+  color: var(--app-a-text-secondary);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+/* Notice & Message Panels */
+.app-a-panel-danger {
+  background-color: var(--app-a-danger-soft);
+  border: 1px solid var(--app-a-danger);
+  color: var(--app-a-danger-text);
+  border-radius: 14px;
+  padding: 0.875rem 1rem;
+}
+
+.app-a-panel-warning {
+  background-color: var(--app-a-warning-soft);
+  border: 1px solid var(--app-a-warning);
+  color: var(--app-a-warning-text);
+  border-radius: 14px;
+  padding: 0.875rem 1rem;
+}
+
+.app-a-panel-success {
+  background-color: var(--app-a-success-soft);
+  border: 1px solid var(--app-a-success);
+  color: var(--app-a-success-text);
+  border-radius: 14px;
+  padding: 0.875rem 1rem;
+}
+
+/* Reusable Pastel Plan Blocks */
+.app-a-block-first-focus {
+  background-color: var(--app-a-wash-apricot);
+  border: 1.5px solid var(--app-a-wash-apricot-border);
+  border-radius: var(--app-a-radius);
+  box-shadow: var(--app-a-shadow);
+}
+
+.app-a-badge-first-focus {
+  background-color: var(--app-a-wash-apricot-badge);
+  color: var(--app-a-wash-apricot-text);
+}
+
+.app-a-block-later-today {
+  background-color: var(--app-a-wash-dusty-blue);
+  border: 1px solid var(--app-a-wash-dusty-blue-border);
+  border-radius: var(--app-a-radius);
+}
+
+.app-a-badge-later-today {
+  background-color: var(--app-a-wash-dusty-blue-badge);
+  color: var(--app-a-wash-dusty-blue-text);
+}
+
+.app-a-block-if-capacity {
+  background-color: var(--app-a-wash-sage);
+  border: 1px dashed var(--app-a-wash-sage-border);
+  border-radius: var(--app-a-radius);
+}
+
+.app-a-badge-if-capacity {
+  background-color: var(--app-a-wash-sage-badge);
+  color: var(--app-a-wash-sage-text);
+}
+
+.app-a-block-rationale {
+  background-color: var(--app-a-wash-lavender);
+  border: 1px solid var(--app-a-wash-lavender-border);
+  border-radius: var(--app-a-radius);
+  color: var(--app-a-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-a-root *,
+  .app-a-root *::before,
+  .app-a-root *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
