@@ -95,3 +95,4 @@ createRoot(document.getElementById("root")!).render(
     </ErrorBoundary>
   </StrictMode>,
 );
+console.log("FORCE UPDATE AI STUDIO");
