@@ -1,0 +1,28 @@
+runConfig:
+  minInstances: 0
+  maxInstances: 2
+  concurrency: 40
+  cpu: 1
+  memoryMiB: 512
+
+scripts:
+  buildCommand: pnpm run build
+  runCommand: node dist/server.cjs
+
+env:
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY
+    availability:
+      - RUNTIME
+  - variable: NODE_ENV
+    value: production
+    availability:
+      - RUNTIME
+  - variable: APP_A_DAILY_RESET_ENABLED
+    value: "true"
+    availability:
+      - RUNTIME
+  - variable: APP_A_AI_DAILY_LIMIT
+    value: "500"
+    availability:
+      - RUNTIME

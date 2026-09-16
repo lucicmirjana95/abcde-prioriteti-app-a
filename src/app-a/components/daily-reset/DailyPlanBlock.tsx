@@ -29,63 +29,38 @@ export default function DailyPlanBlock({
     return null;
   }
 
-  const getTitleAndStyle = () => {
+  const getBlockConfig = () => {
     switch (block) {
       case "first_focus":
         return {
           title: t.firstFocusTitle,
           subtitle: undefined,
-          containerStyle: {
-            borderColor: "var(--app-a-accent)",
-            backgroundColor: "var(--app-a-accent-soft)",
-          },
-          badgeStyle: {
-            backgroundColor: "var(--app-a-accent-soft)",
-            color: "var(--app-a-accent)",
-          },
+          blockClass: "app-a-block-first-focus",
+          badgeClass: "app-a-badge-first-focus",
         };
       case "later_today":
         return {
           title: t.laterTodayTitle,
           subtitle: undefined,
-          containerStyle: {
-            borderColor: "var(--app-a-border)",
-            backgroundColor: "var(--app-a-surface)",
-          },
-          badgeStyle: {
-            backgroundColor: "var(--app-a-disabled-bg)",
-            color: "var(--app-a-text-secondary)",
-          },
+          blockClass: "app-a-block-later-today",
+          badgeClass: "app-a-badge-later-today",
         };
       case "if_capacity_remains":
         return {
           title: t.ifCapacityRemainsTitle,
           subtitle: t.ifCapacityRemainsDesc,
-          containerStyle: {
-            borderColor: "var(--app-a-border-strong)",
-            backgroundColor: "transparent",
-            borderStyle: "dashed" as const,
-          },
-          badgeStyle: {
-            backgroundColor: "var(--app-a-disabled-bg)",
-            color: "var(--app-a-text-secondary)",
-          },
+          blockClass: "app-a-block-if-capacity",
+          badgeClass: "app-a-badge-if-capacity",
         };
     }
   };
 
-  const { title, subtitle, containerStyle, badgeStyle } = getTitleAndStyle();
-  const visualClass = block === "first_focus"
-    ? "app-a-plan-block-first"
-    : block === "later_today"
-      ? "app-a-plan-block-later"
-      : "app-a-plan-block-optional";
+  const { title, subtitle, blockClass, badgeClass } = getBlockConfig();
 
   return (
     <section
       data-testid={`plan-block-${block}`}
-      className={`mb-5 rounded-[20px] border p-4 sm:p-5 ${visualClass}`}
-      style={containerStyle}
+      className={`mb-5 rounded-[20px] p-4 sm:p-5 ${blockClass}`}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
@@ -93,8 +68,7 @@ export default function DailyPlanBlock({
             {title}
           </h3>
           <span
-            className="rounded-full px-2.5 py-0.5 text-[12px] font-semibold"
-            style={badgeStyle}
+            className={`rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${badgeClass}`}
           >
             {items.length}
           </span>

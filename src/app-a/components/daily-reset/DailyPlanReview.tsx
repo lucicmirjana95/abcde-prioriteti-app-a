@@ -1,5 +1,5 @@
 import { ReevaluationDialog } from "./ReevaluationDialog";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { DailyPlanDraft, PlanBlock, DailyResetVisionSuggestion } from "../../domain/daily-reset/contracts";
 import { AppALanguage, APP_A_TRANSLATIONS } from "../../types";
 import { loadAppAPreferences, getEffectiveTimeZone } from "../../settings/preferences";
@@ -20,6 +20,7 @@ import DeferredItemsSection from "./DeferredItemsSection";
 import SafeInterventionCard from "./SafeInterventionCard";
 import DailyLoadWarning from "./DailyLoadWarning";
 import VisionSuggestionCard from "./VisionSuggestionCard";
+import FlowHeader from "./FlowHeader";
 import {
   computeVisionSuggestionFingerprint,
   isVisionSuggestionDismissed,
@@ -74,6 +75,29 @@ export default function DailyPlanReview({
   const { routines, completions, localDate, plannedRoutineIds } = useDailyRoutines(userId);
 
   const draft = reviewState.currentDraft;
+
+  // Single-flight synchronous ref lock and request tokens for confirm action
+  const isConfirmingRef = useRef(false);
+  const confirmRequestIdRef = useRef(0);
+  const draftRevisionRef = useRef(0);
+  const [isLocalSaving, setIsLocalSaving] = useState(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      confirmRequestIdRef.current += 1;
+      isConfirmingRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    draftRevisionRef.current += 1;
+    confirmRequestIdRef.current += 1;
+    isConfirmingRef.current = false;
+    setIsLocalSaving(false);
+  }, [draft]);
 
   useEffect(() => {
     if (initialDraft !== reviewState.currentDraft) setReviewState({ currentDraft: initialDraft, undoDraft: null, error: null });
@@ -367,6 +391,30 @@ export default function DailyPlanReview({
     setShowReevalDialog(false);
   };
 
+  const handleConfirmClick = async () => {
+    // Synchronous ref lock: ignore second click in same event loop tick
+    if (isConfirmingRef.current) return;
+    if (saveStatus === "saving" || isLocalSaving) return;
+    if (draft.availableMinutes !== undefined && plannedFlexible > draft.availableMinutes) return;
+
+    isConfirmingRef.current = true;
+    setIsLocalSaving(true);
+    const token = ++confirmRequestIdRef.current;
+    const revision = draftRevisionRef.current;
+    const currentDraft = draft;
+
+    try {
+      await onConfirm(currentDraft);
+    } catch (err) {
+      console.error("onConfirm error in DailyPlanReview:", err);
+    } finally {
+      if (isMountedRef.current && confirmRequestIdRef.current === token && draftRevisionRef.current === revision) {
+        isConfirmingRef.current = false;
+        setIsLocalSaving(false);
+      }
+    }
+  };
+
   return (
     <div className="mx-auto w-full max-w-[760px] px-5 sm:px-6">
       {showReevalDialog && (
@@ -378,15 +426,12 @@ export default function DailyPlanReview({
           onConfirm={handleConfirmReeval}
         />
       )}
-      <header className="app-a-flow-header mb-7">
-        <p className="app-a-eyebrow">{t.today}</p>
-        <h1 className="app-a-page-title">
-          {t.reviewTitle}
-        </h1>
-        <p className="app-a-page-intro">
-          {t.reviewIntro}
-        </p>
-      </header>
+      <FlowHeader
+        eyebrow={language === "sr" ? "PREDLOG PLANA" : language === "tr" ? "PLAN ÖNERİSİ" : "PROPOSED PLAN"}
+        title={t.reviewTitle}
+        intro={t.reviewIntro}
+        className="mb-7"
+      />
 
       {draft.manualPriorityOverride && (
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-[#0A84FF]/20 bg-[#0A84FF]/5 p-4 dark:border-[#0A84FF]/30 dark:bg-[#0A84FF]/10">
@@ -454,19 +499,15 @@ export default function DailyPlanReview({
       {/* 1. Plan Rationale */}
       {draft.planRationale && (
         <div
-          className="app-a-plan-rationale mb-4 rounded-2xl p-4 text-left border"
-          style={{
-            backgroundColor: "var(--app-a-disabled-bg)",
-            borderColor: "var(--app-a-border)",
-          }}
+          className="app-a-block-rationale mb-5 rounded-[20px] p-4 sm:p-5 text-left"
         >
           <h3
-            className="mb-1 text-[13px] font-bold uppercase tracking-wide"
-            style={{ color: "var(--app-a-text-secondary)" }}
+            className="mb-1 text-[13px] font-bold uppercase tracking-wider"
+            style={{ color: "var(--app-a-wash-lavender-text)" }}
           >
             {t.planRationaleTitle}
           </h3>
-          <p className="text-[15px] leading-relaxed" style={{ color: "var(--app-a-text)" }}>
+          <p className="text-[15px] leading-relaxed">
             {draft.planRationale}
           </p>
         </div>
@@ -610,11 +651,11 @@ export default function DailyPlanReview({
       >
         <button
           type="button"
-          onClick={() => void onConfirm(draft)}
-          disabled={saveStatus === "saving" || (draft.availableMinutes !== undefined && plannedFlexible > draft.availableMinutes)}
+          onClick={handleConfirmClick}
+          disabled={saveStatus === "saving" || isLocalSaving || (draft.availableMinutes !== undefined && plannedFlexible > draft.availableMinutes)}
           className="app-a-primary-button app-a-focus-ring w-full px-8 transition-colors sm:order-2 sm:w-auto"
         >
-          {saveStatus === "saving" ? t.savingPlan : t.reviewCompleteBtn}
+          {saveStatus === "saving" || isLocalSaving ? t.savingPlan : t.reviewCompleteBtn}
         </button>
 
         <button

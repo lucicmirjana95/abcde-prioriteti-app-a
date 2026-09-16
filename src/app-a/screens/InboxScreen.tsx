@@ -1,213 +1,561 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Archive, CalendarPlus, Check, Clock3, Ellipsis, FileText, Inbox, Loader2, Plus, Search, Trash2, Undo2 } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useAppAAuth } from "../auth/useAppAAuth";
 import PlanHistoryState from "../components/PlanHistoryState";
-import type { AppAInboxItem, InboxItemStatus } from "../domain/inbox/contracts";
-import { createManualInboxItemId, normalizeInboxTitle } from "../domain/inbox/contracts";
-import { convertInboxNoteToTask, deleteInboxItem, importDailyPlanItemsToInbox, loadInboxItems, saveInboxItem, savePlanAndScheduleInboxItemAtomic, updateInboxItemStatus } from "../persistence/inboxRepository";
+import GrowthPathArt from "../components/GrowthPathArt";
+import type { AppAInboxItem } from "../domain/inbox/contracts";
+import { normalizeInboxTitle } from "../domain/inbox/contracts";
 import { getLocalDateKeyInTimeZone } from "../persistence/dailyPlanDocument";
-import { loadConfirmedDailyPlan, loadRecentDailyPlans } from "../persistence/dailyPlanRepository";
 import { getEffectiveTimeZone } from "../settings/preferences";
 import type { AppALanguage, AppAPreferences } from "../types";
-import { addInboxItemToPlan, getInboxPlanningMinutes } from "./inboxCandidatePlan";
-import { useDataRefresh } from '../persistence/useDataRefresh';
-import { clarifyInboxNote, type NoteClarification } from "../api/noteClarificationApi";
+import { useDataRefresh } from "../persistence/useDataRefresh";
+import { useVisionReviewAdapter } from "../adapters/useVisionReviewAdapter";
+import type { SavedVisionStrategy } from "../../shared/domain/vision";
+import type { InboxAdapter } from "../adapters/inboxAdapter";
+import { useInboxAdapter } from "../adapters/useInboxAdapter";
+import { useInboxMutations } from "../components/inbox/useInboxMutations";
+import InboxQuickCapture from "../components/inbox/InboxQuickCapture";
+import InboxSections, { type InboxFilter } from "../components/inbox/InboxSections";
+import InboxItemCard from "../components/inbox/InboxItemCard";
 
-type Filter = "all" | "notes" | "this_week" | "later" | "waiting" | "scheduled" | "completed" | "archived";
 const COPY = {
-  en: { eyebrow: "Not for today yet", title: "Inbox", intro: "Keep later tasks clear and decide what happens next.", add: "Add", placeholder: "What do you want to remember?", search: "Search Inbox", all: "Tasks", notes: "To clarify", filters: "Filter", active: "All active", more: "More actions", note: "Note — no action assumed", makeTask: "Turn into task", converted: "Saved as a task in Inbox. Add it to Today only when you choose.", week: "This week", later: "Later", waiting: "Waiting", scheduled: "Scheduled", completed: "Completed", archived: "Archived", empty: "Nothing matches this view.", minutes: "min", duration: "How many minutes?", saveAndAdd: "Save and add", addToday: "Add to Today", schedule: "Schedule", wait: "Waiting", restore: "Move to Inbox", complete: "Complete", archive: "Archive", delete: "Delete", confirmDelete: "Delete permanently?", cancel: "Cancel", noPlan: "Create today's plan before adding this item.", durationNeeded: "Add an estimated duration first.", capacity: "This item does not fit in today's available time.", duplicate: "This item is already in today's plan.", error: "The action could not be completed. Try again.", signInError: "Sign-in was not completed. Your data has not changed.", retrySignIn: "Try sign-in again" },
-  sr: { eyebrow: "Još nije za danas", title: "Inboks", intro: "Sačuvajte obaveze za kasnije i razjasnite beleške bez izmišljanja zadataka.", add: "Dodaj", placeholder: "Šta želite da zapamtite?", search: "Pretraži Inboks", all: "Zadaci", notes: "Za razjašnjenje", filters: "Filter", active: "Svi aktivni", more: "Više radnji", note: "Beleška — radnja nije pretpostavljena", makeTask: "Pretvori u zadatak", converted: "Sačuvano kao zadatak u Inboksu. U Danas se dodaje samo kada vi odlučite.", week: "Ove nedelje", later: "Kasnije", waiting: "Čekam", scheduled: "Zakazano", completed: "Završeno", archived: "Arhivirano", empty: "Nema stavki u ovom prikazu.", minutes: "min", duration: "Koliko minuta?", saveAndAdd: "Sačuvaj i dodaj", addToday: "Dodaj u Danas", schedule: "Zakaži", wait: "Čekam", restore: "Vrati u Inboks", complete: "Završi", archive: "Arhiviraj", delete: "Obriši", confirmDelete: "Trajno obrisati?", cancel: "Otkaži", noPlan: "Prvo napravite današnji plan.", durationNeeded: "Prvo dodajte procenjeno trajanje.", capacity: "Ova stavka ne staje u raspoloživo vreme za danas.", duplicate: "Ova stavka je već u današnjem planu.", error: "Radnja nije uspela. Pokušajte ponovo.", signInError: "Prijava nije završena. Vaši podaci nisu promenjeni.", retrySignIn: "Pokušaj prijavu ponovo" },
-  tr: { eyebrow: "Henüz bugün için değil", title: "Gelen kutusu", intro: "Sonraki görevleri saklayın ve görev uydurmadan notları netleştirin.", add: "Ekle", placeholder: "Neyi hatırlamak istiyorsunuz?", search: "Gelen kutusunda ara", all: "Görevler", notes: "Netleştirilecek", filters: "Filtre", active: "Tüm etkinler", more: "Diğer işlemler", note: "Not — eylem varsayılmadı", makeTask: "Göreve dönüştür", converted: "Gelen kutusuna görev olarak kaydedildi. Yalnızca siz seçtiğinizde Bugün'e eklenir.", week: "Bu hafta", later: "Daha sonra", waiting: "Bekliyor", scheduled: "Planlandı", completed: "Tamamlandı", archived: "Arşivlenmiş", empty: "Bu görünümde öğe yok.", minutes: "dk", duration: "Kaç dakika?", saveAndAdd: "Kaydet ve ekle", addToday: "Bugüne ekle", schedule: "Planla", wait: "Bekliyor", restore: "Gelen kutusuna taşı", complete: "Tamamla", archive: "Arşivle", delete: "Sil", confirmDelete: "Kalıcı olarak silinsin mi?", cancel: "İptal", noPlan: "Bu öğeyi eklemeden önce bugünün planını oluşturun.", durationNeeded: "Önce tahmini süre ekleyin.", capacity: "Bu öğe bugünkü kullanılabilir süreye sığmıyor.", duplicate: "Bu öğe zaten bugünün planında.", error: "İşlem tamamlanamadı. Tekrar deneyin.", signInError: "Giriş tamamlanmadı. Verileriniz değişmedi.", retrySignIn: "Girişi tekrar dene" },
+  en: {
+    eyebrow: "Not for today yet",
+    title: "Inbox",
+    intro: "Keep thoughts and later tasks clear, and decide what happens next.",
+    add: "Save to Inbox",
+    placeholder: "What do you want to remember or decide on later?",
+    search: "Search Inbox",
+    charCount: "characters",
+    quickPrompt: "Items stay in Inbox until you explicitly schedule or move them.",
+    emptyTitle: "Inbox is clear",
+    emptyDesc: "A calm place for thoughts, ideas, and tasks that are not yet part of today's plan.",
+    all: "Tasks",
+    notes: "To clarify",
+    week: "This week",
+    waiting: "Waiting",
+    scheduled: "Scheduled",
+    later: "Later",
+    completed: "Completed",
+    archived: "Archived",
+    sectionNeedsDecision: "Needs clarification",
+    sectionWaiting: "Waiting for response",
+    sectionScheduled: "Scheduled",
+    sectionThisWeek: "This week",
+    sectionLater: "Other saved items",
+    addToday: "Add to Today",
+    clarify: "Clarify",
+    schedule: "Schedule date",
+    scheduleAction: "Schedule",
+    moveToWeek: "This week",
+    moveToLater: "Later",
+    markWaiting: "Waiting for response",
+    saveWaiting: "Save waiting status",
+    connectVision: "Connect to vision",
+    developVision: "Develop as vision",
+    edit: "Edit",
+    saveEdit: "Save changes",
+    complete: "Mark complete",
+    archive: "No longer needed",
+    restore: "Move back to Inbox",
+    delete: "Delete permanently",
+    confirmDelete: "Delete permanently?",
+    confirmDeleteDesc: "This item will be permanently deleted and cannot be restored.",
+    cancel: "Cancel",
+    more: "More actions",
+    waitingOnLabel: "Waiting for:",
+    waitingPrompt: "Who or what are you waiting for?",
+    waitingPlaceholder: "e.g. Colleague review, client reply...",
+    editPlaceholder: "Item title...",
+    sourceManual: "Quick note",
+    sourceDailyReset: "From daily plan",
+    sourceRollover: "Rollover",
+    minutes: "min",
+    note: "Note — no action assumed",
+    converted: "Saved as a task in Inbox. Add it to Today only when you choose.",
+    itemAddedToToday: "Added to today's plan.",
+    noPlan: "Create today's plan before adding this item.",
+    durationNeeded: "Add an estimated duration first.",
+    capacity: "This item does not fit in today's available time.",
+    duplicate: "This item is already in today's plan.",
+    error: "The action could not be completed. Try again.",
+    invalidDate: "Please select a date from today onwards.",
+    signInError: "Sign-in was not completed. Your data has not changed.",
+    retrySignIn: "Try sign-in again",
+    visionConnected: "Connected to vision.",
+    visionSelectPrompt: "Select a vision to connect:",
+    visionNone: "No active visions found.",
+    retry: "Try again",
+  },
+  sr: {
+    eyebrow: "Još nije za danas",
+    title: "Inboks",
+    intro: "Sačuvajte ideje i obaveze za kasnije i razjasnite beleške bez izmišljanja zadataka.",
+    add: "Sačuvaj u Inboks",
+    placeholder: "Šta želite da zapamtite ili odlučite kasnije?",
+    search: "Pretraži Inboks",
+    charCount: "znakova",
+    quickPrompt: "Stavke ostaju u Inboksu dok ih vi sami ne zakažete ili prebacite.",
+    emptyTitle: "Inboks je miran",
+    emptyDesc: "Mirno privremeno mesto za ideje, obaveze i stavke koje još nisu spremne za današnji plan.",
+    all: "Zadaci",
+    notes: "Za razjašnjenje",
+    week: "Ove nedelje",
+    waiting: "Čekam",
+    scheduled: "Zakazano",
+    later: "Kasnije",
+    completed: "Završeno",
+    archived: "Arhivirano",
+    sectionNeedsDecision: "Zahteva razjašnjenje",
+    sectionWaiting: "Čekam odgovor",
+    sectionScheduled: "Zakazane stavke",
+    sectionThisWeek: "Ove nedelje",
+    sectionLater: "Ostale sačuvane ideje",
+    addToday: "Dodaj u Danas",
+    clarify: "Razjasni",
+    schedule: "Zakaži datum",
+    scheduleAction: "Zakaži",
+    moveToWeek: "Ove nedelje",
+    moveToLater: "Kasnije",
+    markWaiting: "Čekam odgovor",
+    saveWaiting: "Sačuvaj status čekanja",
+    connectVision: "Poveži sa vizijom",
+    developVision: "Razradi kao viziju",
+    edit: "Izmeni",
+    saveEdit: "Sačuvaj izmene",
+    complete: "Označi kao završeno",
+    archive: "Više nije potrebno",
+    restore: "Vrati u Inboks",
+    delete: "Trajno obriši",
+    confirmDelete: "Trajno obrisati?",
+    confirmDeleteDesc: "Ova stavka će biti trajno uklonjena i ne može se povratiti.",
+    cancel: "Otkaži",
+    more: "Više radnji",
+    waitingOnLabel: "Čeka se:",
+    waitingPrompt: "Koga ili šta čekate?",
+    waitingPlaceholder: "npr. Odgovor klijenta, mišljenje kolege...",
+    editPlaceholder: "Naslov stavke...",
+    sourceManual: "Brza zabeleška",
+    sourceDailyReset: "Iz dnevnog plana",
+    sourceRollover: "Prebačeno",
+    minutes: "min",
+    note: "Beleška — radnja nije pretpostavljena",
+    converted: "Sačuvano kao zadatak u Inboksu. U Danas se dodaje samo kada vi odlučite.",
+    itemAddedToToday: "Dodato u današnji plan.",
+    noPlan: "Prvo napravite današnji plan.",
+    durationNeeded: "Prvo dodajte procenjeno trajanje.",
+    capacity: "Ova stavka ne staje u raspoloživo vreme za danas.",
+    duplicate: "Ova stavka je već u današnjem planu.",
+    error: "Radnja nije uspela. Pokušajte ponovo.",
+    invalidDate: "Izaberite datum od danas pa nadalje.",
+    signInError: "Prijava nije završena. Vaši podaci nisu promenjeni.",
+    retrySignIn: "Pokušaj prijavu ponovo",
+    visionConnected: "Povezano sa vizijom.",
+    visionSelectPrompt: "Izaberite viziju za povezivanje:",
+    visionNone: "Nema aktivnih vizija.",
+    retry: "Pokušaj ponovo",
+  },
+  tr: {
+    eyebrow: "Henüz bugün için değil",
+    title: "Gelen kutusu",
+    intro: "Düşünceleri saklayın ve görev uydurmadan notları netleştirin.",
+    add: "Gelen kutusuna kaydet",
+    placeholder: "Daha sonra neyi hatırlamak veya karar vermek istiyorsunuz?",
+    search: "Gelen kutusunda ara",
+    charCount: "karakter",
+    quickPrompt: "Öğeler siz planlayana veya taşıyana kadar Gelen Kutusunda kalır.",
+    emptyTitle: "Gelen kutusu sakin",
+    emptyDesc: "Henüz bugünün planına hazır olmayan düşünceler, fikirler ve görevler için sakin bir yer.",
+    all: "Görevler",
+    notes: "Netleştirilecek",
+    week: "Bu hafta",
+    waiting: "Bekliyor",
+    scheduled: "Planlandı",
+    later: "Daha sonra",
+    completed: "Tamamlandı",
+    archived: "Arşivlenmiş",
+    sectionNeedsDecision: "Netleştirme gerektirenler",
+    sectionWaiting: "Yanıt bekleyenler",
+    sectionScheduled: "Planlananlar",
+    sectionThisWeek: "Bu hafta",
+    sectionLater: "Diğer kayıtlı öğeler",
+    addToday: "Bugüne ekle",
+    clarify: "Netleştir",
+    schedule: "Tarih planla",
+    scheduleAction: "Planla",
+    moveToWeek: "Bu hafta",
+    moveToLater: "Daha sonra",
+    markWaiting: "Yanıt bekliyorum",
+    saveWaiting: "Bekleme durumunu kaydet",
+    connectVision: "Vizyona bağla",
+    developVision: "Vizyon olarak geliştir",
+    edit: "Düzenle",
+    saveEdit: "Değişiklikleri kaydet",
+    complete: "Tamamla",
+    archive: "Artık gerekli değil",
+    restore: "Gelen kutusuna geri taşı",
+    delete: "Kalıcı olarak sil",
+    confirmDelete: "Kalıcı olarak silinsin mi?",
+    confirmDeleteDesc: "Bu öğe kalıcı olarak silinecek ve geri alınamayacaktır.",
+    cancel: "İptal",
+    more: "Diğer işlemler",
+    waitingOnLabel: "Beklenen:",
+    waitingPrompt: "Kimi veya neyi bekliyorsunuz?",
+    waitingPlaceholder: "ör. Müşteri yanıtı, meslektaş onayı...",
+    editPlaceholder: "Öğe başlığı...",
+    sourceManual: "Hızlı not",
+    sourceDailyReset: "Günlük plandan",
+    sourceRollover: "Devredilen",
+    minutes: "dk",
+    note: "Not — eylem varsayılmadı",
+    converted: "Gelen kutusuna görev olarak kaydedildi. Yalnızca siz seçtiğinizde Bugün'e eklenir.",
+    itemAddedToToday: "Bugünün planına eklendi.",
+    noPlan: "Bu öğeyi eklemeden önce bugünün planını oluşturun.",
+    durationNeeded: "Önce tahmini süre ekleyin.",
+    capacity: "Bu öğe bugünkü kullanılabilir süreye sığmıyor.",
+    duplicate: "Bu öğe zaten bugünün planında.",
+    error: "İşlem tamamlanamadı. Tekrar deneyin.",
+    invalidDate: "Lütfen bugünden itibaren geçerli bir tarih seçin.",
+    signInError: "Giriş tamamlanmadı. Verileriniz değişmedi.",
+    retrySignIn: "Girişi tekrar dene",
+    visionConnected: "Vizyona bağlandı.",
+    visionSelectPrompt: "Bağlanacak vizyonu seçin:",
+    visionNone: "Etkin vizyon bulunamadı.",
+    retry: "Tekrar dene",
+  },
 } as const;
 
 const CLARIFY_COPY = {
-  en: { clarify: "Clarify", prompt: "What concrete action do you want to take?", save: "Save as task", help: "Help me clarify", keep: "Keep as note", noSuggestion: "No responsible action is clear yet. Write your own action or keep this as a note.", retry: "Try suggestions again" },
-  sr: { clarify: "Razjasni", prompt: "Koju konkretnu radnju želite da preduzmete?", save: "Sačuvaj kao zadatak", help: "Pomozi mi da razjasnim", keep: "Zadrži kao belešku", noSuggestion: "Još nema jasne i odgovorne radnje. Unesite svoju radnju ili zadržite ovo kao belešku.", retry: "Pokušaj druge predloge" },
-  tr: { clarify: "Netleştir", prompt: "Hangi somut eylemi yapmak istiyorsunuz?", save: "Görev olarak kaydet", help: "Netleştirmeme yardım et", keep: "Not olarak tut", noSuggestion: "Henüz açık ve sorumlu bir eylem yok. Kendi eyleminizi yazın veya bunu not olarak tutun.", retry: "Önerileri tekrar dene" },
+  en: {
+    clarify: "Clarify",
+    prompt: "What concrete action do you want to take?",
+    save: "Save as task",
+    help: "Help me clarify",
+    keep: "Keep as note",
+    noSuggestion: "No responsible action is clear yet. Write your own action or keep this as a note.",
+    retry: "Try suggestions again",
+  },
+  sr: {
+    clarify: "Razjasni",
+    prompt: "Koju konkretnu radnju želite da preduzmete?",
+    save: "Sačuvaj kao zadatak",
+    help: "Pomozi mi da razjasnim",
+    keep: "Zadrži kao belešku",
+    noSuggestion: "Još nema jasne i odgovorne radnje. Unesite svoju radnju ili zadržite ovo kao belešku.",
+    retry: "Pokušaj druge predloge",
+  },
+  tr: {
+    clarify: "Netleştir",
+    prompt: "Hangi somut eylemi yapmak istiyorsunuz?",
+    save: "Görev olarak kaydet",
+    help: "Netleştirmeme yardım et",
+    keep: "Not olarak tut",
+    noSuggestion: "Henüz açık ve sorumlu bir eylem yok. Kendi eyleminizi yazın veya bunu not olarak tutun.",
+    retry: "Önerileri tekrar dene",
+  },
 } as const;
 
-export default function InboxScreen({ language, preferences }: { language: AppALanguage; preferences: AppAPreferences }) {
+export interface InboxScreenProps {
+  language: AppALanguage;
+  preferences: AppAPreferences;
+  onOpenVision?: (visionId?: string) => void;
+  adapter?: InboxAdapter;
+}
+
+export default function InboxScreen({
+  language,
+  preferences,
+  onOpenVision,
+  adapter: customAdapter,
+}: InboxScreenProps) {
   const refreshVersion = useDataRefresh();
   const { user, authReady, signInWithGoogle } = useAppAAuth();
   const t = COPY[language];
-  const [items, setItems] = useState<AppAInboxItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const clarifyCopy = CLARIFY_COPY[language];
+
+  const adapter = useInboxAdapter(customAdapter);
+  const effectiveTimeZone = getEffectiveTimeZone(preferences);
+  const todayLocalDate = getLocalDateKeyInTimeZone(effectiveTimeZone);
+
+  const { controller: visionController } = useVisionReviewAdapter(user?.uid, onOpenVision);
+
+  const {
+    items,
+    setItems,
+    loading,
+    setLoading,
+    error,
+    setError,
+    notice,
+    setNotice,
+    processingId,
+    draft,
+    setDraftTitle,
+    draftError,
+    submitDraft,
+    retryDraft,
+    updateItemStatus,
+    editItemTitle,
+    deleteItem,
+    scheduleToday,
+    convertNote,
+    developVision,
+    connectVision,
+  } = useInboxMutations({
+    userId: user?.uid || "guest",
+    language,
+    adapter,
+    todayLocalDate,
+    visionController,
+    onOpenVision,
+    translations: t,
+  });
+
   const [signInFailed, setSignInFailed] = useState(false);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
-  const [newTitle, setNewTitle] = useState("");
-  const [processing, setProcessing] = useState<string | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [openActions, setOpenActions] = useState<string | null>(null);
-  const [scheduleFor, setScheduleFor] = useState<Record<string, string>>({});
-  const [clarifyingId, setClarifyingId] = useState<string | null>(null);
-  const [clarifiedAction, setClarifiedAction] = useState("");
-  const [clarificationHelp, setClarificationHelp] = useState<NoteClarification | null>(null);
-  const [clarificationLoading, setClarificationLoading] = useState(false);
-  const migratedUsers = useRef(new Set<string>());
-  const effectiveTimeZone = getEffectiveTimeZone(preferences);
+  const [filter, setFilter] = useState<InboxFilter>("all");
+  const [openActionsId, setOpenActionsId] = useState<string | null>(null);
+  const [availableVisions, setAvailableVisions] = useState<SavedVisionStrategy[]>([]);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Load items on mount / auth ready
   useEffect(() => {
     if (!authReady) return;
-    if (!user) { setItems([]); setLoading(false); return; }
-    let active = true; setLoading(true); setError(null);
+    if (!user) {
+      setItems([]);
+      setLoading(false);
+      setLoadError(null);
+      return;
+    }
+
+    let active = true;
+    setLoading(true);
+    setLoadError(null);
+
     void (async () => {
-      // Bounded, idempotent migration: make deferred items from plans created before
-      // the Inbox feature available without scanning unbounded history.
-      if (!migratedUsers.current.has(user.uid)) {
-        migratedUsers.current.add(user.uid);
-        try {
-          const recentPlans = await loadRecentDailyPlans(user.uid, 30);
-          for (const plan of recentPlans) await importDailyPlanItemsToInbox(user.uid, plan);
-        } catch (migrationError) {
-          migratedUsers.current.delete(user.uid);
-          throw migrationError;
-        }
+      try {
+        const loaded = await adapter.loadItems(user.uid);
+        return loaded;
+      } catch {
+        throw new Error("inbox_load_failed");
       }
-      return loadInboxItems(user.uid);
-    })().then((next) => { if (active) setItems(next); }).catch(() => { if (active) setError(t.error); }).finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [authReady, t.error, user, refreshVersion]);
+    })()
+      .then((next) => {
+        if (active) setItems(next);
+      })
+      .catch(() => {
+        if (active) {
+          // Retain previous items — do NOT wipe on transient load failure
+          setLoadError(t.error);
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
 
-  const visible = useMemo(() => items.filter((item) => {
-    const isTerminal = item.status === "archived" || item.status === "completed";
-    const matches = filter === "all" ? !isTerminal && item.kind !== "note" : filter === "notes" ? item.kind === "note" && !isTerminal : item.kind !== "note" && ((filter === "this_week" && item.horizon === "this_week" && item.status === "inbox") || (filter === "later" && item.horizon === "later" && item.status === "inbox") || item.status === filter);
-    const needle = normalizeInboxTitle(search);
-    return matches && (!needle || normalizeInboxTitle(`${item.title} ${item.details || ""}`).includes(needle));
-  }), [filter, items, search]);
+    return () => {
+      active = false;
+    };
+  }, [adapter, authReady, user, refreshVersion, loadAttempt, setItems, setLoading, t.error]);
 
-  if (!authReady || loading) return <PlanHistoryState language={language} state="loading" />;
+  // Load active visions when requested
+  useEffect(() => {
+    if (!user?.uid) return;
+    let active = true;
+    void (async () => {
+      try {
+        const activeList = await adapter.loadVisionLibrary(user.uid);
+        if (active) {
+          setAvailableVisions(activeList);
+        }
+      } catch {
+        if (active) setAvailableVisions([]);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [adapter, user?.uid]);
+
+  const visible = useMemo(() => {
+    return items.filter((item) => {
+      const isTerminal = item.status === "archived" || item.status === "completed";
+      const needle = normalizeInboxTitle(search);
+      const matchesSearch =
+        !needle ||
+        normalizeInboxTitle(`${item.title} ${item.details || ""} ${item.waitingOn || ""}`).includes(
+          needle
+        );
+      if (!matchesSearch) return false;
+
+      switch (filter) {
+        case "all":
+          return !isTerminal && item.kind !== "note";
+        case "notes":
+          return item.kind === "note" && !isTerminal;
+        case "this_week":
+          return item.horizon === "this_week" && item.status === "inbox" && !isTerminal;
+        case "waiting":
+          return (item.status === "waiting" || item.kind === "waiting_for") && !isTerminal;
+        case "scheduled":
+          return item.status === "scheduled" && !isTerminal;
+        case "later":
+          return item.horizon === "later" && item.status === "inbox" && !isTerminal;
+        case "completed":
+          return item.status === "completed";
+        case "archived":
+          return item.status === "archived";
+        default:
+          return true;
+      }
+    });
+  }, [filter, items, search]);
+
+  const groupedSections = useMemo(() => {
+    if (filter !== "all") return null;
+
+    const notes = items.filter(
+      (item) => item.kind === "note" && item.status !== "archived" && item.status !== "completed"
+    );
+    const waiting = visible.filter((item) => item.status === "waiting" || item.kind === "waiting_for");
+    const scheduled = visible.filter((item) => item.status === "scheduled");
+    const thisWeek = visible.filter((item) => item.horizon === "this_week" && item.status === "inbox");
+    const later = visible.filter((item) => item.horizon === "later" && item.status === "inbox");
+
+    return {
+      notes,
+      waiting,
+      scheduled,
+      thisWeek,
+      later,
+    };
+  }, [filter, items, visible]);
+
   const startSignIn = async () => {
     setSignInFailed(false);
-    try { await signInWithGoogle(); }
-    catch { setSignInFailed(true); }
+    try {
+      await signInWithGoogle();
+    } catch {
+      setSignInFailed(true);
+    }
   };
-  if (!user) return signInFailed
-    ? <PlanHistoryState language={language} state="error" errorText={t.signInError} retryLabel={t.retrySignIn} onSignIn={() => void startSignIn()} />
-    : <PlanHistoryState language={language} state="sign_in" onSignIn={() => void startSignIn()} />;
 
-  const run = async (id: string, action: () => Promise<void>) => {
-    if (processing) return;
-    setProcessing(id); setError(null); setNotice(null);
-    try { await action(); window.dispatchEvent(new Event('app-a-inbox-changed')); window.dispatchEvent(new Event('app-a-plan-changed')); } catch { setError(t.error); } finally { setProcessing(null); }
-  };
-  const addManual = async () => {
-    const title = newTitle.trim(); if (!title || processing) return;
-    const now = new Date().toISOString();
-    const item: AppAInboxItem = { id: createManualInboxItemId(), title, kind: "task", horizon: "later", status: "inbox", source: "manual", language, createdAt: now, updatedAt: now };
-    await run("new", async () => { await saveInboxItem(user.uid, item); setItems((all) => [item, ...all]); setNewTitle(""); });
-  };
-  const update = (item: AppAInboxItem, status: InboxItemStatus, extras: { scheduledLocalDate?: string; waitingOn?: string } = {}) => run(item.id, async () => {
-    const next = await updateInboxItemStatus(user.uid, item, status, extras); setItems((all) => all.map((entry) => entry.id === item.id ? next : entry));
-  });
-  const scheduleToday = async (item: AppAInboxItem): Promise<AppAInboxItem | null> => {
-    const localDate = getLocalDateKeyInTimeZone(effectiveTimeZone); const document = await loadConfirmedDailyPlan(user.uid, localDate);
-    if (!document) { setError(t.noPlan); return null; }
-    const estimatedItem = { ...item, estimatedMinutes: getInboxPlanningMinutes(item) };
-    const result = addInboxItemToPlan(document.plan, estimatedItem);
-    if ("error" in result) { setError(result.error === "duplicate" ? t.duplicate : result.error === "duration_required" ? t.durationNeeded : result.error.includes("capacity") ? t.capacity : t.error); return null; }
-    const scheduled = await savePlanAndScheduleInboxItemAtomic(user.uid, { ...document, plan: result.draft }, estimatedItem);
-    return scheduled.item;
-  };
-  const addToday = (item: AppAInboxItem) => {
-    void run(item.id, async () => {
-      const scheduled = await scheduleToday(item);
-      if (scheduled) setItems((all) => all.map((entry) => entry.id === item.id ? scheduled : entry));
-    });
-  };
-  const taskFilters: Array<[Exclude<Filter, "notes">, string]> = [["all", t.active], ["this_week", t.week], ["later", t.later], ["waiting", t.waiting], ["scheduled", t.scheduled], ["completed", t.completed], ["archived", t.archived]];
+  if (!user) {
+    return signInFailed ? (
+      <PlanHistoryState
+        language={language}
+        state="error"
+        errorText={t.signInError}
+        retryLabel={t.retrySignIn}
+        onSignIn={() => void startSignIn()}
+      />
+    ) : (
+      <PlanHistoryState language={language} state="sign_in" onSignIn={() => void startSignIn()} />
+    );
+  }
 
-  return <div className="mx-auto w-full max-w-[760px] px-4 sm:px-6">
-    <header className="mb-5">
-      <p className="app-a-eyebrow">{t.eyebrow}</p>
-      <h1 className="app-a-page-title">{t.title}</h1>
-      <p className="app-a-page-intro max-w-[580px]">{t.intro}</p>
-    </header>
+  const renderCard = (item: AppAInboxItem) => (
+    <InboxItemCard
+      key={item.id}
+      item={item}
+      language={language}
+      todayLocalDate={todayLocalDate}
+      isProcessing={processingId === item.id}
+      isMenuOpen={openActionsId === item.id}
+      onToggleMenu={() => setOpenActionsId((prev) => (prev === item.id ? null : item.id))}
+      onAddToday={scheduleToday}
+      onUpdateStatus={updateItemStatus}
+      onEditTitle={editItemTitle}
+      onDelete={deleteItem}
+      onConvertNote={convertNote}
+      onDevelopVision={developVision}
+      onConnectVision={connectVision}
+      onClarifyHelp={(noteText) => adapter.clarifyNote(noteText, language)}
+      availableVisions={availableVisions}
+      onError={setError}
+      translations={{
+        ...t,
+        clarifyCopy,
+      }}
+    />
+  );
 
-    <section className="app-a-surface mb-4 p-3" aria-label={t.add}>
-      <div className="flex min-w-0 gap-2">
-        <input className="app-a-field app-a-focus-ring min-w-0 flex-1 px-3 py-2.5 text-[16px]" maxLength={500} value={newTitle} onChange={(event) => setNewTitle(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void addManual(); }} placeholder={t.placeholder} />
-        <button type="button" onClick={() => void addManual()} disabled={!newTitle.trim() || processing === "new"} className="app-a-primary-button app-a-focus-ring shrink-0 px-3.5"><Plus className="h-4 w-4" /><span className="hidden min-[360px]:inline">{t.add}</span></button>
-      </div>
-    </section>
+  return (
+    <div className="mx-auto w-full max-w-[760px] px-4 pb-28 sm:px-6 sm:pb-32">
+      {/* 1. Header */}
+      <header className="relative mb-5 overflow-hidden rounded-[20px] p-5 sm:p-6 app-a-surface">
+        <GrowthPathArt variant="header" className="absolute inset-0 opacity-40 dark:opacity-30" />
+        <div className="relative z-10">
+          <p className="app-a-eyebrow">{t.eyebrow}</p>
+          <h1 className="app-a-page-title text-[24px] sm:text-[28px]">{t.title}</h1>
+          <p className="app-a-page-intro mt-1 max-w-[560px] text-[14px] sm:text-[15px]">{t.intro}</p>
+        </div>
+      </header>
 
-    <div className="mb-4 grid gap-3">
-      <div className="flex rounded-[12px] p-1 bg-black/[0.06] dark:bg-white/[0.08]" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={filter !== "notes"}
-          onClick={() => setFilter("all")}
-          className={`app-a-focus-ring flex-1 min-h-[36px] rounded-[9px] text-[14px] font-semibold transition-all ${
-            filter !== "notes"
-              ? "bg-white text-black shadow-sm dark:bg-[#3A3A3C] dark:text-white"
-              : "text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white"
-          }`}
+      {/* 2. Quick Capture (Stable identity, retained text on failure, Retry button) */}
+      <InboxQuickCapture
+        language={language}
+        draftTitle={draft.title}
+        onDraftTitleChange={setDraftTitle}
+        onSubmit={submitDraft}
+        onRetry={retryDraft}
+        isSubmitting={processingId === "new"}
+        draftError={draftError}
+        translations={t}
+      />
+
+      {/* Global Alerts / Notices */}
+      {/* Load Error — with Retry */}
+      {loadError ? (
+        <div
+          className="mb-4 flex items-center justify-between gap-3 rounded-xl p-3.5 text-[13px] font-medium"
+          style={{ background: "var(--app-a-danger-soft)", color: "var(--app-a-danger)" }}
         >
-          {t.all}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={filter === "notes"}
-          onClick={() => setFilter("notes")}
-          className={`app-a-focus-ring flex-1 min-h-[36px] rounded-[9px] text-[14px] font-semibold transition-all ${
-            filter === "notes"
-              ? "bg-white text-black shadow-sm dark:bg-[#3A3A3C] dark:text-white"
-              : "text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white"
-          }`}
+          <span role="alert">{loadError}</span>
+          <button
+            type="button"
+            className="min-h-[44px] shrink-0 rounded-full px-3 font-semibold underline underline-offset-2"
+            onClick={() => { setLoadError(null); setLoadAttempt((attempt) => attempt + 1); }}
+          >
+            {t.retry}
+          </button>
+        </div>
+      ) : null}
+
+      {/* Mutation Error — no Retry button, just the alert text */}
+      {error ? (
+        <div
+          role="alert"
+          className="mb-4 rounded-xl p-3.5 text-[13px] font-medium"
+          style={{ background: "var(--app-a-danger-soft)", color: "var(--app-a-danger)" }}
         >
-          {t.notes}
-        </button>
-      </div>
-      <div className="grid min-w-0 gap-2 min-[520px]:grid-cols-[1fr_auto]">
-        <label className="app-a-field flex min-w-0 items-center gap-2 px-3"><Search className="h-4 w-4 shrink-0 opacity-60" aria-hidden="true" /><input className="min-h-11 min-w-0 flex-1 bg-transparent outline-none text-[16px]" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t.search} /></label>
-        {filter !== "notes" ? <label className="app-a-field flex min-h-11 min-w-0 items-center gap-2 px-3 text-[13px] font-medium"><span className="shrink-0 text-[#86868B]">{t.filters}</span><select className="min-w-0 flex-1 bg-transparent font-semibold outline-none text-[16px]" value={filter} onChange={(event) => setFilter(event.target.value as Filter)}>{taskFilters.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label> : null}
-      </div>
+          {error}
+        </div>
+      ) : null}
+
+      {notice ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="mb-4 rounded-xl p-3.5 text-[13px] font-medium"
+          style={{ background: "var(--app-a-accent-soft)", color: "var(--app-a-accent)" }}
+        >
+          {notice}
+        </div>
+      ) : null}
+
+      {/* 3. Sections & Filters */}
+      <InboxSections
+        filter={filter}
+        onFilterChange={setFilter}
+        search={search}
+        onSearchChange={setSearch}
+        visibleItems={visible}
+        groupedSections={groupedSections}
+        renderItemCard={renderCard}
+        hasLoadError={!!loadError}
+        translations={t}
+      />
     </div>
-
-    {error ? <div role="alert" className="mb-3 rounded-xl p-3 text-[13px]" style={{ background: "var(--app-a-danger-soft)", color: "var(--app-a-danger)" }}>{error}</div> : null}
-    {notice ? <div role="status" aria-live="polite" className="mb-3 rounded-xl p-3 text-[13px]" style={{ background: "var(--app-a-accent-soft)", color: "var(--app-a-accent)" }}>{notice}</div> : null}
-
-    {visible.length === 0 ? <div className="app-a-surface flex min-h-[180px] flex-col items-center justify-center gap-3 p-7 text-center"><Inbox className="h-6 w-6" style={{ color: "var(--app-a-accent)" }} /><p style={{ color: "var(--app-a-text-secondary)" }}>{t.empty}</p></div> : <div className="space-y-2.5">{visible.map((item) => {
-      const isNote = item.kind === "note";
-      const canAddToday = !isNote && (item.status === "inbox" || item.status === "waiting");
-      return <article key={item.id} className="app-a-surface min-w-0 p-4">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="min-w-0 flex-1">
-            <h2 className="break-words text-[16px] font-semibold leading-snug">{item.title}</h2>
-            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px]" style={{ color: "var(--app-a-text-secondary)" }}>
-              {isNote ? <span className="inline-flex items-center gap-1"><FileText className="h-3.5 w-3.5" />{t.note}</span> : <><span>{item.status === "waiting" ? t.waiting : item.status === "scheduled" ? `${t.scheduled}: ${item.scheduledLocalDate}` : item.status === "completed" ? t.completed : item.status === "archived" ? t.archived : item.horizon === "this_week" ? t.week : t.later}</span>{item.estimatedMinutes ? <span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" />{item.estimatedMinutes} {t.minutes}</span> : null}</>}
-            </div>
-          </div>
-          {processing === item.id ? <Loader2 className="mt-1 h-5 w-5 shrink-0 animate-spin" /> : <button type="button" aria-label={t.more} aria-expanded={openActions === item.id} onClick={() => setOpenActions((open) => open === item.id ? null : item.id)} className="app-a-secondary-button app-a-focus-ring h-11 w-11 shrink-0 p-0"><Ellipsis className="h-5 w-5" /></button>}
-        </div>
-
-        <div className="mt-3 flex min-w-0 flex-wrap gap-2">
-          {isNote ? <button type="button" onClick={() => { setClarifyingId(item.id); setClarifiedAction(""); setClarificationHelp(null); }} className="app-a-primary-button app-a-focus-ring min-h-11 px-3 text-[13px]">{CLARIFY_COPY[language].clarify}</button> : canAddToday ? <button type="button" onClick={() => addToday(item)} disabled={Boolean(processing)} className="app-a-primary-button app-a-focus-ring min-h-11 px-3 text-[13px]"><CalendarPlus className="h-4 w-4" />{t.addToday}</button> : null}
-        </div>
-
-        {clarifyingId === item.id ? <div className="mt-3 rounded-xl border p-3" style={{ borderColor: "var(--app-a-border)" }}>
-          <label className="block text-[13px] font-semibold">{CLARIFY_COPY[language].prompt}<input autoFocus value={clarifiedAction} maxLength={500} onChange={event => setClarifiedAction(event.target.value)} className="app-a-field app-a-focus-ring mt-2 w-full px-3 py-2.5 text-[16px]" /></label>
-          {clarificationHelp ? <div className="mt-3 rounded-lg p-3 text-[13px]" style={{ background: "var(--app-a-surface-secondary)" }}>
-            {clarificationHelp.questions.length ? <ul className="mb-3 list-disc space-y-1 pl-5">{clarificationHelp.questions.map(question => <li key={question}>{question}</li>)}</ul> : null}
-            {clarificationHelp.suggestions.length ? <div className="flex flex-wrap gap-2">{clarificationHelp.suggestions.map(suggestion => <button key={suggestion} type="button" onClick={() => setClarifiedAction(suggestion)} className="app-a-secondary-button min-h-10 px-3 text-left text-[12px]">{suggestion}</button>)}</div> : !clarificationHelp.questions.length ? <p style={{ color: "var(--app-a-text-secondary)" }}>{CLARIFY_COPY[language].noSuggestion}</p> : null}
-          </div> : null}
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button type="button" disabled={clarifiedAction.trim().length < 3 || Boolean(processing)} onClick={() => void run(item.id, async () => { const next = await convertInboxNoteToTask(user.uid, item.id, clarifiedAction); setItems(all => all.map(entry => entry.id === item.id ? next : entry)); setClarifyingId(null); setClarifiedAction(""); setClarificationHelp(null); setSearch(""); setFilter("all"); setNotice(t.converted); })} className="app-a-primary-button px-3 text-[13px]">{CLARIFY_COPY[language].save}</button>
-            {!clarificationHelp || (!clarificationHelp.questions.length && !clarificationHelp.suggestions.length) ? <button type="button" disabled={clarificationLoading} onClick={() => { setError(null); setClarificationLoading(true); void clarifyInboxNote(item.title, language).then(setClarificationHelp).catch(() => setError(t.error)).finally(() => setClarificationLoading(false)); }} className="app-a-secondary-button px-3 text-[13px]">{clarificationLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{clarificationHelp ? CLARIFY_COPY[language].retry : CLARIFY_COPY[language].help}</button> : null}
-            <button type="button" onClick={() => { setClarifyingId(null); setClarificationHelp(null); }} className="app-a-secondary-button px-3 text-[13px]">{clarifiedAction ? t.cancel : CLARIFY_COPY[language].keep}</button>
-          </div>
-        </div> : null}
-
-        {openActions === item.id ? <div className="mt-3 grid min-w-0 gap-2 border-t pt-3 min-[430px]:grid-cols-2" style={{ borderColor: "var(--app-a-border)" }}>
-          {!isNote && item.status === "inbox" ? <><div className="app-a-field flex min-h-11 min-w-0 items-center gap-2 px-2"><input type="date" min={getLocalDateKeyInTimeZone(effectiveTimeZone)} value={scheduleFor[item.id] || ""} onChange={(event) => setScheduleFor((all) => ({ ...all, [item.id]: event.target.value }))} className="min-w-0 flex-1 bg-transparent text-[16px]" aria-label={t.schedule} /><button type="button" className="shrink-0 text-[13px] font-semibold text-[#0071E3] dark:text-[#0A84FF]" disabled={!scheduleFor[item.id]} onClick={() => void update(item, "scheduled", { scheduledLocalDate: scheduleFor[item.id] })}>{t.schedule}</button></div><button type="button" onClick={() => void update(item, "waiting")} className="app-a-secondary-button app-a-focus-ring min-h-11 justify-start px-3 text-[13px]">{t.wait}</button></> : !isNote ? <button type="button" onClick={() => void update(item, "inbox")} className="app-a-secondary-button app-a-focus-ring min-h-11 justify-start px-3 text-[13px]"><Undo2 className="h-4 w-4" />{t.restore}</button> : null}
-          {!isNote && item.status !== "completed" && item.status !== "archived" ? <><button type="button" onClick={() => void update(item, "completed")} className="app-a-secondary-button app-a-focus-ring min-h-11 justify-start px-3 text-[13px]"><Check className="h-4 w-4" />{t.complete}</button><button type="button" onClick={() => void update(item, "archived")} className="app-a-secondary-button app-a-focus-ring min-h-11 justify-start px-3 text-[13px]"><Archive className="h-4 w-4" />{t.archive}</button></> : null}
-          {deleteConfirm === item.id ? <><button type="button" onClick={() => void run(item.id, async () => { await deleteInboxItem(user.uid, item.id); setItems((all) => all.filter((entry) => entry.id !== item.id)); setDeleteConfirm(null); })} className="app-a-focus-ring min-h-11 rounded-xl px-3 text-left text-[13px] font-semibold" style={{ color: "var(--app-a-danger)", background: "var(--app-a-danger-soft)" }}><Trash2 className="mr-1 inline h-4 w-4" />{t.confirmDelete}</button><button type="button" onClick={() => setDeleteConfirm(null)} className="app-a-secondary-button app-a-focus-ring min-h-11 justify-start px-3 text-[13px]">{t.cancel}</button></> : <button type="button" onClick={() => setDeleteConfirm(item.id)} className="app-a-focus-ring min-h-11 rounded-xl px-3 text-left text-[13px] font-semibold" style={{ color: "var(--app-a-danger)" }}><Trash2 className="mr-1 inline h-4 w-4" />{t.delete}</button>}
-        </div> : null}
-      </article>;
-    })}</div>}
-  </div>;
+  );
 }

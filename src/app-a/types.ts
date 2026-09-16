@@ -6,12 +6,17 @@ export type AppATimeZoneSetting =
   | { mode: 'automatic' }
   | { mode: 'override'; timeZone: string };
 
+export type AppAReducedMotion = 'system' | 'reduced' | 'standard';
+
 export interface AppAPreferences {
   language: AppALanguage;
   theme: AppATheme;
   timeZoneSetting: AppATimeZoneSetting;
   defaultFocusMinutes: 15 | 25 | 45 | 60;
   aiSuggestionsEnabled: boolean;
+  reducedMotion: AppAReducedMotion;
+  soundEnabled: boolean;
+  notificationsEnabled: boolean;
 }
 
 export type EnergyLevel = 1 | 2 | 3 | 4 | 5;
@@ -46,8 +51,9 @@ export const APP_A_TRANSLATIONS = {
     progressDesc: "Progress toward goals, consistency, and weekly review.",
     destinationPreviewStatus: "Planned for the next product step",
     // Today Daily Reset
-    dailyResetTitle: "What’s on your mind today?",
-    dailyResetIntro: "Add tasks, ideas, and worries. We’ll suggest a realistic order for today.",
+    dailyResetEyebrow: "DAILY PLAN",
+    dailyResetTitle: "New daily plan",
+    dailyResetIntro: "Get it all out of your head. We’ll suggest a realistic order for today.",
     stateSectionTitle: "How are you feeling?",
     stateSectionSubtitle: "Helps us avoid overloading your day if your energy is low.",
     onboardingTitle: "Let’s make a realistic plan for today",
@@ -70,13 +76,15 @@ export const APP_A_TRANSLATIONS = {
     clearSelection: "Clear",
     // Energy
     energyLabel: "Energy",
+    energySubtitle: "How much energy do you have right now?",
     energy1: "Exhausted",
     energy2: "Low",
     energy3: "Okay",
     energy4: "Good",
     energy5: "Energized",
     // Pleasantness
-    pleasantnessLabel: "Mood",
+    pleasantnessLabel: "Pleasantness",
+    pleasantnessSubtitle: "How are you feeling today?",
     pleasantness1: "Struggling",
     pleasantness2: "Low",
     pleasantness3: "Neutral",
@@ -93,25 +101,27 @@ export const APP_A_TRANSLATIONS = {
     timeCustomMins: "Minutes",
     timeErrorInvalid: "Please enter a valid time greater than zero.",
     // State Note
-    stateNoteLabel: "State note (optional)",
-    stateNotePlaceholder: "e.g. slept poorly, headache...",
+    stateNoteLabel: "Anything else about your state?",
+    stateNoteSubtitle: "Optional",
+    stateNotePlaceholder: "For example: slept poorly, important meeting today...",
     stateNoteToggle: "+ Add a quick note about your state",
     // Brain Dump
-    brainDumpLabel: "What’s on your mind?",
-    brainDumpPlaceholder: "E.g. send report to Ana, buy coffee, worried about 2pm meeting...",
+    brainDumpLabel: "Get it all out of your head.",
+    brainDumpSubtitle: "Write down whatever is on your mind — tasks, worries, ideas, little things...",
+    brainDumpPlaceholder: "You can write anything here...",
     brainDumpEmptyError: "Please write what is on your mind to create a plan.",
     voicePlaceholder: "Use voice",
     voiceLabel: "Use voice",
     charCount: "characters",
     // Actions
-    submitPlan: "Create my plan",
-    submitFirstPlan: "Create my plan",
+    submitPlan: "Create plan proposal",
+    submitFirstPlan: "Create plan proposal",
     // Success
-    successTitle: "Input Prepared",
-    successMsg: "Your daily reset input has been prepared for AI processing. (Temporary development state)",
+    successTitle: "Input is ready",
+    successMsg: "Your daily input is ready for AI processing. (Temporary development state)",
     backToEdit: "Back to edit",
     // Plan Review
-    planRationaleTitle: "Plan Rationale",
+    planRationaleTitle: "Why this way",
     reviewTitle: "Review today’s plan",
     reviewIntro: "Make small adjustments, then save the version you want to follow today.",
     todayPlanTitle: "Your plan for today",
@@ -207,8 +217,9 @@ export const APP_A_TRANSLATIONS = {
     progressDesc: "Napredak ka ciljevima, doslednost i nedeljni pregled.",
     destinationPreviewStatus: "Planirano za sledeći razvojni korak",
     // Today Daily Reset
-    dailyResetTitle: "Šta ti je danas na umu?",
-    dailyResetIntro: "Napiši obaveze, ideje i brige. Predložićemo realan redosled za danas.",
+    dailyResetEyebrow: "DNEVNI PLAN",
+    dailyResetTitle: "Novi dnevni plan",
+    dailyResetIntro: "Izbaci sve iz glave. Predložićemo realan redosled za danas.",
     stateSectionTitle: "Tvoje trenutno stanje",
     stateSectionSubtitle: "Pomaže nam da ne pretrpamo plan ako si bez snage.",
     onboardingTitle: "Hajde da napravimo realan plan za danas",
@@ -231,13 +242,15 @@ export const APP_A_TRANSLATIONS = {
     clearSelection: "Obriši",
     // Energy
     energyLabel: "Energija",
+    energySubtitle: "Koliko energije sada imaš?",
     energy1: "Iscrpljeno",
     energy2: "Nisko",
     energy3: "U redu",
     energy4: "Dobro",
     energy5: "Pun snage",
     // Pleasantness
-    pleasantnessLabel: "Raspoloženje",
+    pleasantnessLabel: "Prijatnost",
+    pleasantnessSubtitle: "Kako se danas osećaš?",
     pleasantness1: "Teško",
     pleasantness2: "Loše",
     pleasantness3: "Neutralno",
@@ -254,25 +267,27 @@ export const APP_A_TRANSLATIONS = {
     timeCustomMins: "Minuta",
     timeErrorInvalid: "Unesite validno vreme veće od nule.",
     // State Note
-    stateNoteLabel: "Beleška o stanju (opciono)",
-    stateNotePlaceholder: "npr. loše sam spavao, boli me glava...",
+    stateNoteLabel: "Još nešto o tvom stanju?",
+    stateNoteSubtitle: "Opciono",
+    stateNotePlaceholder: "Na primer: loše sam spavao, imam važan sastanak...",
     stateNoteToggle: "+ Dodaj kratku belešku o stanju",
     // Brain Dump
-    brainDumpLabel: "Šta ti je na umu?",
-    brainDumpPlaceholder: "Npr. poslati izveštaj Ani, kupiti kafu, brine me sastanak u 14h...",
+    brainDumpLabel: "Izbaci sve iz glave.",
+    brainDumpSubtitle: "Napiši sve što ti je sada na umu — obaveze, brige, ideje, sitnice...",
+    brainDumpPlaceholder: "Ovde možeš da napišeš šta god...",
     brainDumpEmptyError: "Napišite šta vam je na umu da bismo kreirali plan.",
     voicePlaceholder: "Koristi glas",
     voiceLabel: "Koristi glas",
     charCount: "karaktera",
     // Actions
-    submitPlan: "Napravi moj plan",
-    submitFirstPlan: "Napravi moj plan",
+    submitPlan: "Napravi predlog plana",
+    submitFirstPlan: "Napravi predlog plana",
     // Success
     successTitle: "Unos je spreman",
     successMsg: "Vaš dnevni unos je pripremljen za AI obradu. (Privremeno razvojno stanje)",
     backToEdit: "Nazad na izmenu",
     // Plan Review
-    planRationaleTitle: "Obrazloženje plana",
+    planRationaleTitle: "Zašto ovako",
     reviewTitle: "Pregledajte današnji plan",
     reviewIntro: "Napravite male izmene, a zatim sačuvajte verziju koju želite da pratite danas.",
     todayPlanTitle: "Vaš plan za danas",
@@ -368,8 +383,9 @@ export const APP_A_TRANSLATIONS = {
     progressDesc: "Hedeflere doğru ilerleme, tutarlılık ve haftalık inceleme.",
     destinationPreviewStatus: "Bir sonraki ürün adımı için planlandı",
     // Today Daily Reset
-    dailyResetTitle: "Bugün aklında neler var?",
-    dailyResetIntro: "Görevlerini, fikirlerini ve endişelerini yaz. Bugün için gerçekçi bir sıra önerelim.",
+    dailyResetEyebrow: "GÜNLÜK PLAN",
+    dailyResetTitle: "Yeni günlük plan",
+    dailyResetIntro: "Aklındakileri dök. Bugün için gerçekçi bir sıra önerelim.",
     stateSectionTitle: "Nasıl hissediyorsun?",
     stateSectionSubtitle: "Enerjin düşükse gününü fazla doldurmamıza engel olur.",
     onboardingTitle: "Bugün için gerçekçi bir plan yapalım",
@@ -392,6 +408,7 @@ export const APP_A_TRANSLATIONS = {
     clearSelection: "Temizle",
     // Energy
     energyLabel: "Enerji",
+    energySubtitle: "Şu an ne kadar enerjin var?",
     energy1: "Tükenmiş",
     energy2: "Düşük",
     energy3: "İyi",
@@ -415,25 +432,27 @@ export const APP_A_TRANSLATIONS = {
     timeCustomMins: "Dakika",
     timeErrorInvalid: "Lütfen sıfırdan büyük geçerli bir süre girin.",
     // State Note
-    stateNoteLabel: "Durum notu (isteğe bağlı)",
+    stateNoteLabel: "Durumun hakkında başka bir şey var mı?",
+    stateNoteSubtitle: "İsteğe bağlı",
     stateNotePlaceholder: "örn. kötü uyudum, başım ağrıyor...",
     stateNoteToggle: "+ Durumun hakkında kısa bir not ekle",
     // Brain Dump
-    brainDumpLabel: "Aklında ne var?",
+    brainDumpLabel: "Aklındakileri dök.",
+    brainDumpSubtitle: "Şu anda aklında ne varsa yaz — görevler, endişeler, fikirler...",
     brainDumpPlaceholder: "Örn. Ana’ya raporu gönder, kahve al, saat 14’teki toplantı beni endişelendiriyor...",
     brainDumpEmptyError: "Bir plan oluşturmak için lütfen aklınızdakileri yazın.",
     voicePlaceholder: "Sesle yaz",
     voiceLabel: "Sesle yaz",
     charCount: "karakter",
     // Actions
-    submitPlan: "Planımı oluştur",
-    submitFirstPlan: "Planımı oluştur",
+    submitPlan: "Plan teklifi oluştur",
+    submitFirstPlan: "Plan teklifi oluştur",
     // Success
     successTitle: "Girdi Hazırlandı",
     successMsg: "Günlük sıfırlama girdiniz AI işleme için hazırlandı. (Geçici geliştirme durumu)",
     backToEdit: "Düzenlemeye dön",
     // Plan Review
-    planRationaleTitle: "Plan Gerekçesi",
+    planRationaleTitle: "Neden böyle",
     reviewTitle: "Bugünkü planı gözden geçirin",
     reviewIntro: "Küçük düzenlemeler yapın, ardından bugün uygulamak istediğiniz sürümü kaydedin.",
     todayPlanTitle: "Bugünkü planınız",

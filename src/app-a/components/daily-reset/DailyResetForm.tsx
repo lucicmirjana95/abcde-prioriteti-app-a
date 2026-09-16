@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { ArrowRight } from 'lucide-react';
 import { DailyResetData, EnergyLevel, PleasantnessLevel, type AppALanguage } from '../../types';
 import FiveLevelScale from './FiveLevelScale';
 import BrainDumpInput from './BrainDumpInput';
+import PlanCreationDisclosure from './PlanCreationDisclosure';
 
 interface Props {
   t: any;
@@ -26,7 +28,6 @@ export default function DailyResetForm({
   onboardingCompleted = false,
   submissionError,
 }: Props) {
-  const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [energy, setEnergy] = useState<EnergyLevel | undefined>(initialData.energy);
   const [pleasantness, setPleasantness] = useState<PleasantnessLevel | undefined>(initialData.pleasantness);
   const [stateNote, setStateNote] = useState(initialData.stateNote);
@@ -90,69 +91,40 @@ export default function DailyResetForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="app-a-surface rounded-[24px] border p-4 sm:p-5 md:p-6 flex flex-col gap-5 transition-shadow shadow-sm"
-      style={{ borderColor: "var(--app-a-border)" }}
+      className="flex flex-col gap-4 sm:gap-5"
     >
-      <section className="rounded-xl border px-4 py-3" style={{ borderColor: "var(--app-a-border)", background: "var(--app-a-surface-secondary)" }}>
-        <button
-          type="button"
-          aria-expanded={showHowItWorks}
-          onClick={() => setShowHowItWorks(value => !value)}
-          className="app-a-focus-ring flex min-h-11 w-full items-center justify-between gap-3 rounded-lg text-left"
+      {/* Disclosure: "How is your plan created?" — closed by default */}
+      <PlanCreationDisclosure language={language} />
+
+      {/* 1. Mind / Brain Dump Card */}
+      <div
+        className="app-a-surface rounded-[24px] border p-5 sm:p-6 shadow-sm transition-shadow"
+        style={{ borderColor: "var(--app-a-border)" }}
+      >
+        <BrainDumpInput
+          value={brainDump}
+          onChange={(val) => {
+            setBrainDump(val);
+            onDraftChange?.({ brainDump: val });
+            setBrainDumpError(undefined);
+          }}
+          t={t}
+          language={language}
+          error={brainDumpError}
+        />
+      </div>
+
+      {/* 2. State (Energy & Mood) Cards - side by side */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <section
+          className="app-a-surface rounded-[24px] border p-4 sm:p-5 shadow-sm transition-shadow flex flex-col justify-between"
+          style={{ borderColor: "var(--app-a-border)" }}
+          aria-labelledby="energy-scale-heading"
         >
-          <span>
-            <span className="block text-[14px] font-semibold">{t.onboardingHowItWorks}</span>
-            {!onboardingCompleted && !showHowItWorks ? <span className="mt-0.5 block text-[12px]" style={{ color: "var(--app-a-text-secondary)" }}>{t.onboardingIntro}</span> : null}
-          </span>
-          <span aria-hidden="true" className="text-[18px]">{showHowItWorks ? '−' : '+'}</span>
-        </button>
-        {showHowItWorks ? (
-          <div className="mt-2 border-t pt-3 text-[13px] leading-relaxed" style={{ borderColor: "var(--app-a-border)", color: "var(--app-a-text-secondary)" }}>
-            <p>{t.onboardingIntro}</p>
-            <div className="mt-2 divide-y" style={{ borderColor: "var(--app-a-border)" }}>
-              {[
-                [t.onboardingSortTitle, t.onboardingSortText],
-                [t.onboardingPrioritizeTitle, t.onboardingPrioritizeText],
-                [t.onboardingControlTitle, t.onboardingControlText],
-              ].map(([title, text]) => (
-                <div key={title} className="py-2 first:pt-1 last:pb-0">
-                  <h3 className="text-[12px] font-semibold" style={{ color: "var(--app-a-text)" }}>{title}</h3>
-                  <p className="mt-0.5 text-[12px] leading-snug">{text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-      </section>
-
-      {/* 1. Mind / Brain Dump */}
-      <BrainDumpInput
-        value={brainDump}
-        onChange={(val) => {
-          setBrainDump(val);
-          onDraftChange?.({ brainDump: val });
-          setBrainDumpError(undefined);
-        }}
-        t={t}
-        language={language}
-        error={brainDumpError}
-      />
-
-      {/* 2. State (Energy & Mood) */}
-      <section className="flex flex-col gap-3 pt-3 border-t" style={{ borderColor: "var(--app-a-border)" }} aria-labelledby="daily-state-heading">
-        <div className="flex flex-col gap-0.5">
-          <h2 id="daily-state-heading" className="text-[15px] sm:text-[16px] font-semibold" style={{ color: "var(--app-a-text)" }}>
-            {t.stateSectionTitle || (language === 'sr' ? 'Tvoje trenutno stanje' : language === 'tr' ? 'Nasıl hissediyorsun?' : 'How are you feeling?')}
-          </h2>
-          <p className="text-[13px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>
-            {t.stateSectionSubtitle || (language === 'sr' ? 'Pomaže nam da ne pretrpamo plan ako si bez snage.' : language === 'tr' ? 'Enerjin düşükse gününü fazla doldurmamıza engel olur.' : 'Helps us avoid overloading your day if your energy is low.')}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4 mt-1">
           <FiveLevelScale
             id="energy-scale"
             label={t.energyLabel}
+            subtitle={t.energySubtitle}
             value={energy}
             onChange={(value) => {
               setEnergy(value);
@@ -161,11 +133,20 @@ export default function DailyResetForm({
             }}
             options={energyOptions}
             clearLabel={t.clearSelection}
+            minLabel={language === "sr" ? "Veoma niska" : language === "tr" ? "Çok düşük" : "Very low"}
+            maxLabel={language === "sr" ? "Veoma visoka" : language === "tr" ? "Çok yüksek" : "Very high"}
           />
+        </section>
 
+        <section
+          className="app-a-surface rounded-[24px] border p-4 sm:p-5 shadow-sm transition-shadow flex flex-col justify-between"
+          style={{ borderColor: "var(--app-a-border)" }}
+          aria-labelledby="pleasantness-scale-heading"
+        >
           <FiveLevelScale
             id="pleasantness-scale"
             label={t.pleasantnessLabel}
+            subtitle={t.pleasantnessSubtitle}
             value={pleasantness}
             onChange={(value) => {
               setPleasantness(value);
@@ -174,81 +155,63 @@ export default function DailyResetForm({
             }}
             options={pleasantnessOptions}
             clearLabel={t.clearSelection}
+            minLabel={language === "sr" ? "Veoma teško" : language === "tr" ? "Çok zor" : "Very hard"}
+            maxLabel={language === "sr" ? "Veoma prijatno" : language === "tr" ? "Çok hoş" : "Very pleasant"}
           />
+        </section>
+      </div>
+
+      {stateError ? (
+        <p role="alert" className="text-[13px] font-medium px-2" style={{ color: "var(--app-a-danger)" }}>
+          {stateError}
+        </p>
+      ) : null}
+
+      {/* 3. Optional State Note Card */}
+      <section
+        className="app-a-surface rounded-[24px] border p-4 sm:p-5 shadow-sm transition-shadow flex flex-col gap-2.5"
+        style={{ borderColor: "var(--app-a-border)" }}
+        aria-labelledby="state-note-heading"
+      >
+        <div className="flex flex-col gap-0.5">
+          <label id="state-note-heading" htmlFor="state-note" className="text-[16px] font-semibold tracking-tight" style={{ color: "var(--app-a-text)" }}>
+            {t.stateNoteLabel || (language === 'sr' ? 'Još nešto o tvom stanju?' : language === 'tr' ? 'Durumun hakkında başka bir şey var mı?' : 'Anything else about your state?')}
+          </label>
+          <span className="text-[13px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>
+            {t.stateNoteSubtitle || (language === 'sr' ? 'Opciono' : language === 'tr' ? 'İsteğe bağlı' : 'Optional')}
+          </span>
         </div>
-
-        {stateError ? (
-          <p role="alert" className="text-[13px] font-medium" style={{ color: "var(--app-a-danger)" }}>
-            {stateError}
-          </p>
-        ) : null}
-
-        {/* Optional State Note */}
-        {showNote ? (
-          <div className="flex flex-col gap-1.5 mt-1">
-            <div className="flex items-center justify-between">
-              <label htmlFor="state-note" className="text-[13px] font-medium" style={{ color: "var(--app-a-text-secondary)" }}>
-                {t.stateNoteLabel}
-              </label>
-              {!initialData.stateNote && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowNote(false);
-                    setStateNote("");
-                    onDraftChange?.({ stateNote: "" });
-                  }}
-                  className="app-a-focus-ring text-[12px] font-medium rounded px-1.5 py-0.5 transition-colors"
-                  style={{ color: "var(--app-a-text-tertiary)" }}
-                >
-                  {language === 'sr' ? 'Otkaži' : language === 'tr' ? 'İptal' : 'Cancel'}
-                </button>
-              )}
-            </div>
-            <input
-              id="state-note"
-              type="text"
-              value={stateNote}
-              onChange={(e) => {
-                setStateNote(e.target.value);
-                onDraftChange?.({ stateNote: e.target.value });
-              }}
-              placeholder={t.stateNotePlaceholder}
-              className="app-a-field min-h-[44px] w-full px-3.5 text-[16px] transition-shadow"
-            />
-          </div>
-        ) : (
-          <div className="mt-0.5">
-            <button
-              type="button"
-              onClick={() => setShowNote(true)}
-              className="app-a-focus-ring inline-flex min-h-11 items-center text-[13px] font-medium transition-colors hover:underline"
-              style={{ color: "var(--app-a-accent)" }}
-            >
-              {t.stateNoteToggle || (language === 'sr' ? '+ Dodaj kratku belešku o stanju' : language === 'tr' ? '+ Durumun hakkında kısa bir not ekle' : '+ Add a quick note about your state')}
-            </button>
-          </div>
-        )}
+        <input
+          id="state-note"
+          type="text"
+          value={stateNote}
+          onChange={(e) => {
+            setStateNote(e.target.value);
+            onDraftChange?.({ stateNote: e.target.value });
+          }}
+          placeholder={t.stateNotePlaceholder || (language === 'sr' ? 'Na primer: loše sam spavao, imam važan sastanak...' : language === 'tr' ? 'Örneğin: kötü uyudum, önemli bir toplantım var...' : 'For example: slept poorly, have an important meeting...')}
+          className="app-a-field min-h-[46px] w-full px-4 text-[16px] rounded-[16px] transition-shadow"
+          style={{ background: "var(--app-a-surface-secondary)" }}
+        />
       </section>
 
-      {/* 3. CTA Action */}
-      <div className="pt-2 border-t flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" style={{ borderColor: "var(--app-a-border)" }}>
+      {/* 4. CTA Action */}
+      <div className="pt-2 flex flex-col gap-3">
         {submissionError ? (
-          <p role="alert" className="text-[13px] font-medium" style={{ color: "var(--app-a-danger)" }}>
+          <p role="alert" className="text-[13px] font-medium px-2" style={{ color: "var(--app-a-danger)" }}>
             {submissionError}
           </p>
-        ) : (
-          <div />
-        )}
+        ) : null}
         <button
           type="submit"
           disabled={!aiEnabled}
-          className="app-a-primary-button app-a-focus-ring w-full sm:w-auto px-8 min-h-[48px] text-[15px] sm:text-[16px] font-semibold transition-all shadow-sm"
+          className="app-a-btn-primary app-a-focus-ring flex items-center justify-center gap-2.5 w-full min-h-[52px] rounded-full text-[16px] font-semibold shadow-md transition-all"
         >
-          {t.submitPlan}
+          <span>{t.submitPlan}</span>
+          <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
         </button>
         {!aiEnabled && aiDisabledMessage ? (
-          <p className="text-[13px] text-[#6E6E73] dark:text-[#AEAEB2] sm:order-first">{aiDisabledMessage}</p>
+          <p className="text-[13px] text-center" style={{ color: "var(--app-a-text-secondary)" }}>{aiDisabledMessage}</p>
         ) : null}
       </div>
     </form>

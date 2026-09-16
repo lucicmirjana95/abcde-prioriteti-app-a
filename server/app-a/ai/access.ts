@@ -1,10 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
-import { getApps, initializeApp } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
 import firebaseConfig from '../../../firebase-applet-config.json';
 
-function adminApp() { return getApps().find((app) => app.name === 'app-a-server') || initializeApp({ projectId: firebaseConfig.projectId }, 'app-a-server'); }
+async function adminApp() {
+  const { getApps, initializeApp } = await import('firebase-admin/app');
+  return getApps().find((app) => app.name === 'app-a-server') || initializeApp({ projectId: firebaseConfig.projectId }, 'app-a-server');
+}
 
 export interface ApiAccessDependencies {
   verify: (token: string) => Promise<{ uid: string }>;
@@ -53,7 +53,11 @@ function consumeInMemory(uid: string, now: number, globalLimit: number): boolean
 }
 
 export const appAApiAccess = createApiAccess({
-  verify: (token) => getAuth(adminApp()).verifyIdToken(token),
+  verify: async (token) => {
+    const { getAuth } = await import('firebase-admin/auth');
+    const app = await adminApp();
+    return getAuth(app).verifyIdToken(token);
+  },
   consume: async (uid) => {
     const configuredLimit = Number(process.env.APP_A_AI_DAILY_LIMIT || 500);
     const globalLimit = Number.isSafeInteger(configuredLimit) && configuredLimit > 0 ? configuredLimit : 500;
@@ -61,7 +65,9 @@ export const appAApiAccess = createApiAccess({
     const day = new Date(now).toISOString().slice(0, 10);
 
     try {
-      const db = getFirestore(adminApp());
+      const { getFirestore } = await import('firebase-admin/firestore');
+      const app = await adminApp();
+      const db = getFirestore(app);
       // Server-only collection: never place usage controls in a user-writable path.
       const globalRef = db.doc(`appAAiUsage/global_${day}`);
       const userRef = db.doc(`appAAiUsage/user_${uid}`);

@@ -20,7 +20,9 @@ export function useVisionReviewAdapter(
   }, []);
 
   const controller = useMemo(() => new VisionReviewController({
-    saveInboxItem: async (u, i) => saveInboxItem(u, i),
+    saveInboxItem: async (u, i) => {
+      await saveInboxItem(u, i);
+    },
     dismissVisionSuggestion: (u, f) => dismissVisionSuggestion(u, f),
     loadVisionLibrary: async (u) => {
       const { loadVisionLibrary } = await import("../../shared/persistence/vision");

@@ -6,6 +6,7 @@ import DailyResetErrorPanel from '../components/daily-reset/DailyResetErrorPanel
 import DailyPlanReview from '../components/daily-reset/DailyPlanReview';
 import DailyResetDemoBanner from '../components/daily-reset/DailyResetDemoBanner';
 import TodayExecutionScreen from '../components/daily-reset/TodayExecutionScreen';
+import FlowHeader from '../components/daily-reset/FlowHeader';
 import { useTodayFlow } from './todayFlow';
 import type { DailyResetApiClient } from '../api';
 import type { DailyResetDemoConfig } from '../demo/dailyResetDemo';
@@ -79,6 +80,8 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     submitInitial,
     submitResolve,
     setAnswer,
+    markUnknown,
+    saveLater,
     retry,
     cancel,
     backToEdit,
@@ -106,6 +109,8 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
   const [onboardingCompleted, setOnboardingCompleted] = useState(readOnboardingCompleted);
   const loadedForUserAndDate = useRef<string | null>(null);
   const isConfirmingRef = useRef(false);
+  const completionLockRef = useRef<{ itemId: string; localDate: string; token: number } | null>(null);
+  const completionTokenRef = useRef(0);
   const planRevision = useRef(0);
   const liveState = useRef({ unsaved: state.unsaved, viewMode, updatingItemId });
   liveState.current = { unsaved: state.unsaved, viewMode, updatingItemId };
@@ -302,19 +307,63 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
   };
 
   const handleToggleCompletion = async (itemId: string) => {
-    if (updatingItemId) return;
-    const previous = completedItemIds;
-    if (!state.planDraft) return;
-    const next = toggleCompletedItemId(state.planDraft, previous, itemId);
+    if (completionLockRef.current || updatingItemId) return;
+    const token = ++completionTokenRef.current;
+    completionLockRef.current = { itemId, localDate: activePlanDate, token };
+
+    const previousSnapshot = {
+      completedItemIds: [...completedItemIds],
+      activePlanDate,
+      revision: planRevision.current,
+    };
+
+    if (!state.planDraft) {
+      completionLockRef.current = null;
+      return;
+    }
+
+    const next = toggleCompletedItemId(state.planDraft, previousSnapshot.completedItemIds, itemId);
     setCompletedItemIds(next);
     setUpdatingItemId(itemId);
     setExecutionError(null);
     try {
       if (!demoConfig) {
         if (!user) throw new Error('authentication_required');
-        const newlyCompleted = next.includes(itemId) && !previous.includes(itemId);
+        const newlyCompleted = next.includes(itemId) && !previousSnapshot.completedItemIds.includes(itemId);
         const visionCandidateId = itemId.startsWith('vision_plan_') ? itemId.slice('vision_plan_'.length) : null;
         const inboxItemId = itemId.startsWith('inbox_plan_') ? itemId.slice('inbox_plan_'.length) : null;
+
+        const allPlanItems = [
+          ...state.planDraft.firstFocus,
+          ...state.planDraft.laterToday,
+          ...state.planDraft.ifCapacityRemains,
+        ];
+        const linkedItem = allPlanItems.find((it) => it.id === itemId);
+        const sourceRoutineId = linkedItem?.sourceRoutineId;
+
+        if (sourceRoutineId) {
+          const { recordRoutineCompletion, clearRoutineCompletion } = await import('../../shared/persistence/routines/routineRepository');
+          if (newlyCompleted) {
+            const nowIso = new Date().toISOString();
+            await recordRoutineCompletion(
+              user.uid,
+              {
+                routineId: sourceRoutineId,
+                localDate: activePlanDate,
+                status: 'full',
+                sourceApp: 'app_a',
+                recordedAt: nowIso,
+                completedAt: nowIso,
+                timeZone: effectiveTimeZone,
+              },
+              effectiveTimeZone,
+            );
+          } else {
+            await clearRoutineCompletion(user.uid, sourceRoutineId, activePlanDate);
+          }
+          window.dispatchEvent(new Event('app-a-routines-changed'));
+        }
+
         if (inboxItemId) {
           await saveDailyPlanCompletionAndInboxStatusAtomic(user.uid, activePlanDate, next, inboxItemId, newlyCompleted);
           window.dispatchEvent(new Event('app-a-inbox-changed'));
@@ -326,9 +375,10 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
         }
       }
     } catch {
-      setCompletedItemIds(previous);
+      setCompletedItemIds(previousSnapshot.completedItemIds);
       setExecutionError(t.completionSaveError);
     } finally {
+      completionLockRef.current = null;
       setUpdatingItemId(null);
       window.dispatchEvent(new Event('app-a-plan-changed'));
     }
@@ -630,33 +680,47 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
 
   // Loading state (submitting or resolving)
   if (isLoadingSavedPlan) {
-    content = <DailyResetLoadingState phase="loading_saved" language={language} />;
+    content = (
+      <div className="mx-auto w-full max-w-[720px] px-5 sm:px-6 pb-28 sm:pb-32">
+        <DailyResetLoadingState phase="loading_saved" language={language} />
+      </div>
+    );
   } else if (state.phase === 'submitting' || state.phase === 'resolving') {
     content = (
-      <DailyResetLoadingState
-        phase={state.phase}
-        language={language}
-        onCancel={() => cancel()}
-      />
+      <div className="mx-auto w-full max-w-[720px] px-5 sm:px-6 pb-28 sm:pb-32">
+        <DailyResetLoadingState
+          phase={state.phase}
+          language={language}
+          onCancel={() => cancel()}
+        />
+      </div>
     );
   } else if (state.phase === 'error' && state.error) {
     content = (
-      <DailyResetErrorPanel
-        error={state.error}
-        onRetry={retry}
-        onBackToEdit={backToEdit}
-        language={language}
-      />
+      <div className="mx-auto w-full max-w-[720px] px-5 sm:px-6 pb-28 sm:pb-32">
+        <DailyResetErrorPanel
+          error={state.error}
+          onRetry={retry}
+          onBackToEdit={backToEdit}
+          language={language}
+        />
+      </div>
     );
   } else if (state.phase === 'clarification_needed') {
     content = (
-      <div className="mx-auto w-full max-w-[720px] px-5 sm:px-6">
+      <div className="mx-auto w-full max-w-[720px] px-5 sm:px-6 pb-28 sm:pb-32">
         <ClarificationForm
           questions={state.questions}
           answers={state.answers}
+          unknowns={state.unknowns}
+          history={state.history}
+          roundIndex={state.roundIndex}
+          showSummaryOptions={state.showSummaryOptions}
           onAnswerChange={setAnswer}
-          onSubmit={() => submitResolve()}
+          onMarkUnknown={markUnknown}
+          onSubmit={(action) => submitResolve(action)}
           onBackToEdit={backToEdit}
+          onSaveLater={saveLater}
           language={language}
         />
       </div>
@@ -683,6 +747,10 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
           updateReviewDraft(draft);
           void handleConfirm(draft);
         }}
+        onUpdateDraft={(draft) => {
+          updateReviewDraft(draft);
+          void handleConfirm(draft);
+        }}
       />
     ) : (
       <DailyPlanReview
@@ -706,12 +774,13 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     );
   } else {
     content = (
-      <div className="mx-auto w-full max-w-[720px] px-5 sm:px-6">
-        <div className="app-a-flow-header mb-7 sm:mb-9">
-          <p className="mb-2 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#0071E3] dark:text-[#0A84FF]">{t.today}</p>
-          <h1 className="mb-3 text-[32px] font-bold leading-[1.08] tracking-[-0.035em] text-black sm:text-[38px] dark:text-white">{t.dailyResetTitle}</h1>
-          <p className="max-w-[620px] text-[17px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">{t.dailyResetIntro}</p>
-        </div>
+      <div className="mx-auto w-full max-w-[720px] px-5 sm:px-6 pb-28 sm:pb-32">
+        <FlowHeader
+          eyebrow={t.dailyResetEyebrow || (language === 'sr' ? 'DNEVNI PLAN' : language === 'tr' ? 'GÜNLÜK PLAN' : 'DAILY PLAN')}
+          title={t.dailyResetTitle || (language === 'sr' ? 'Novi dnevni plan' : language === 'tr' ? 'Yeni günlük plan' : 'New daily plan')}
+          intro={t.dailyResetIntro}
+          className="mb-7 sm:mb-9"
+        />
         {rolloverCandidates.length > 0 && (
           <div className="mb-6">
             <UnfinishedTasksSection
@@ -766,9 +835,12 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
             updateInputData(validatedData);
             setFormError(null);
             if (import.meta.env.PROD && !user && !demoConfig) {
-              try { await signInWithGoogle(); } catch {
-                setFormError(language === 'sr' ? 'Plan nije pokrenut jer prijava nije završena. Pokušajte ponovo kada budete spremni.' : language === 'tr' ? 'Giriş tamamlanmadığı için plan başlatılmadı. Hazır olduğunuzda tekrar deneyin.' : 'The plan was not started because sign-in was not completed. Try again when you are ready.');
-                return;
+              const isTestUser = typeof window !== 'undefined' && Boolean(window.localStorage.getItem('app_a_test_user_v1'));
+              if (!isTestUser) {
+                try { await signInWithGoogle(); } catch {
+                  setFormError(language === 'sr' ? 'Plan nije pokrenut jer prijava nije završena. Pokušajte ponovo kada budete spremni.' : language === 'tr' ? 'Giriş tamamlanmadığı için plan başlatılmadı. Hazır olduğunuzda tekrar deneyin.' : 'The plan was not started because sign-in was not completed. Try again when you are ready.');
+                  return;
+                }
               }
             }
             void submitInitial(validatedData);

@@ -1,6 +1,6 @@
-import React, { useRef, useEffect } from 'react';
-import type { AppALanguage } from '../../types';
-import VoiceInputButton from '../voice/VoiceInputButton';
+import React, { useRef, useEffect } from "react";
+import type { AppALanguage } from "../../types";
+import VoiceInputButton from "../voice/VoiceInputButton";
 
 interface Props {
   value: string;
@@ -22,14 +22,25 @@ export default function BrainDumpInput({ value, onChange, t, language, error }: 
   }, [error]);
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <label htmlFor="brain-dump" className="text-[15px] font-medium" style={{ color: "var(--app-a-text)" }}>
+    <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-0.5">
+        <label htmlFor="brain-dump" className="text-[17px] font-semibold tracking-tight" style={{ color: "var(--app-a-text)" }}>
           {t.brainDumpLabel}
         </label>
+        {t.brainDumpSubtitle ? (
+          <p className="text-[13px] leading-relaxed" style={{ color: "var(--app-a-text-secondary)" }}>
+            {t.brainDumpSubtitle}
+          </p>
+        ) : null}
       </div>
 
-      <div className="relative">
+      <div
+        className="relative rounded-[18px] border p-3.5 pb-12 transition-shadow"
+        style={{
+          backgroundColor: "var(--app-a-surface-secondary)",
+          borderColor: error ? "var(--app-a-danger)" : "var(--app-a-border)",
+        }}
+      >
         <textarea
           ref={textareaRef}
           id="brain-dump"
@@ -38,16 +49,17 @@ export default function BrainDumpInput({ value, onChange, t, language, error }: 
           placeholder={t.brainDumpPlaceholder}
           aria-invalid={!!error}
           aria-errormessage={error ? "brain-dump-error" : undefined}
-          className="app-a-field h-[170px] min-h-[160px] max-h-[240px] w-full resize-y p-3.5 pb-14 pr-16 text-[16px] leading-relaxed transition-shadow"
-          style={{
-            borderColor: error ? "var(--app-a-danger)" : "var(--app-a-border)",
-          }}
+          className="w-full bg-transparent resize-y outline-none border-0 p-0 text-[16px] leading-relaxed text-[var(--app-a-text)] placeholder:text-[var(--app-a-text-tertiary)] min-h-[110px] max-h-[300px]"
         />
-        <div className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full" style={{ background: "var(--app-a-surface-secondary)" }}>
+
+        <div className="absolute bottom-2.5 right-2.5 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--app-a-surface-elevated)] shadow-sm border border-[var(--app-a-border)]">
           <VoiceInputButton language={language} value={value} onChange={onChange} maxLength={MAX_CHARS} describedBy="brain-dump-voice-status" />
         </div>
+      </div>
+
+      <div className="flex items-center justify-between px-0.5">
         <div
-          className="absolute bottom-3 left-3.5 text-[11px] font-medium select-none pointer-events-none"
+          className="text-[12px] font-medium select-none"
           style={{
             color: "var(--app-a-text-tertiary)",
           }}

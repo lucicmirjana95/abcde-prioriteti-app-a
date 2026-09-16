@@ -640,6 +640,7 @@ async function runManageRoutinesModalTests() {
     // 7. Save Draft B and verify normal completion
     await act(async () => {
       saveBtnB.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+      await new Promise((resolve) => setTimeout(resolve, 20));
     });
 
     assert.equal(changedFired, 1, "onChanged fires when Draft B is saved");

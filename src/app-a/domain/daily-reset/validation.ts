@@ -99,13 +99,17 @@ export function validateRequiredPlanningState(input: DailyResetInput): Validatio
 
 export function validateClarificationSubmission(
   submission: DailyResetClarificationSubmission,
-  knownQuestions: ClarificationQuestion[]
+  knownQuestions: ClarificationQuestion[],
+  explicitMode?: "continue" | "draft_now",
+  explicitHistory?: any[]
 ): ValidationResult {
   const inputValidation = validateDailyResetInput(submission);
   const errors = [...inputValidation.errors];
   const fieldErrors = { ...(inputValidation.fieldErrors || {}) };
 
   const answers = submission.clarificationAnswers;
+  const mode = explicitMode || submission.clarificationMode || "continue";
+  const history = explicitHistory || submission.clarificationHistory || [];
   
   if (!answers || !Array.isArray(answers)) {
     errors.push("Clarification answers must be an array.");
@@ -113,13 +117,21 @@ export function validateClarificationSubmission(
     return { valid: errors.length === 0, errors, fieldErrors };
   }
 
-  if (answers.length > 3) {
+  if (knownQuestions.length > 3) {
+    errors.push("Maximum 3 questions allowed per round.");
+    fieldErrors.questions = "Too many questions";
+  }
+
+  if (history.length === 0 && answers.length > 3) {
     errors.push("Maximum three answers are allowed.");
     fieldErrors.clarificationAnswers = "Too many answers";
   }
 
   const answeredIds = new Set<string>();
-  const knownIds = new Set(knownQuestions.map((q) => q.id));
+  const knownIds = new Set<string>([
+    ...knownQuestions.map((q) => q.id),
+    ...history.map((h: any) => h.questionId || h.question?.id).filter(Boolean),
+  ]);
 
   for (const answer of answers) {
     if (answeredIds.has(answer.questionId)) {
@@ -135,9 +147,26 @@ export function validateClarificationSubmission(
     }
   }
 
-  for (const knownId of knownIds) {
-    if (!answeredIds.has(knownId)) {
-      errors.push(`Missing answer for question ID: ${knownId}`);
+  // If NOT in draft_now mode, all current knownQuestions must have answers
+  if (mode !== "draft_now") {
+    for (const q of knownQuestions) {
+      if (!answeredIds.has(q.id)) {
+        errors.push(`Missing answer for question ID: ${q.id}`);
+      }
+    }
+  }
+
+  // Validate history entries if present
+  if (Array.isArray(history)) {
+    for (let i = 0; i < history.length; i++) {
+      const h = history[i];
+      const qId = h.questionId || h.question?.id;
+      if (!qId || typeof qId !== "string" || !qId.trim()) {
+        errors.push(`History entry at index ${i} missing questionId.`);
+      }
+      if (typeof h.roundIndex !== "number" || h.roundIndex < 1 || h.roundIndex > 5) {
+        errors.push(`History entry at index ${i} has invalid roundIndex (must be 1-5).`);
+      }
     }
   }
 

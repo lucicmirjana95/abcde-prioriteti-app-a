@@ -17,7 +17,10 @@ function isClarificationSubmission(
 
 export function buildDailyResetPrompt(
   input: DailyResetInput | DailyResetClarificationSubmission,
-  questions?: ClarificationQuestion[]
+  questions?: ClarificationQuestion[],
+  clarificationRound: number = 1,
+  clarificationMode?: "continue" | "draft_now",
+  clarificationHistory?: any[]
 ): string {
   const isSubmission = isClarificationSubmission(input);
 
@@ -61,8 +64,25 @@ ${input.brainDump}
     prompt += `\n[STATE NOTE START]\n${input.stateNote}\n[STATE NOTE END]`;
   }
 
+  const effectiveHistory = clarificationHistory || (isSubmission ? (input as any).clarificationHistory : undefined);
+  if (effectiveHistory && Array.isArray(effectiveHistory) && effectiveHistory.length > 0) {
+    prompt += `\n\n--- PREVIOUS CLARIFICATION ROUNDS & USER ANSWERS (HISTORY) ---`;
+    for (const entry of effectiveHistory) {
+      const qId = entry.questionId || entry.question?.id || "unknown";
+      const qText = entry.question?.question || entry.question || "";
+      const qCtx = entry.context || entry.question?.context || "";
+      const qMat = entry.materialImpact || entry.question?.materialImpact || "";
+      const ans = entry.isUnknown || entry.answer === "__UNKNOWN__" ? "User does not know / Unsure" : entry.answer;
+      prompt += `\n[Round ${entry.roundIndex || 1} - Question ID: ${qId}]`;
+      prompt += `\nQuestion: ${qText}`;
+      if (qCtx) prompt += `\nContext: ${qCtx}`;
+      if (qMat) prompt += `\nMaterial Impact: ${qMat}`;
+      prompt += `\nExact User Answer: ${ans}\n`;
+    }
+  }
+
   if (isSubmission) {
-    prompt += `\n\n--- CLARIFICATION QUESTIONS & EXACT USER ANSWERS (AUTHORITATIVE) ---`;
+    prompt += `\n\n--- CURRENT CLARIFICATION ROUND ANSWERS ---`;
     const questionsById = new Map<string, ClarificationQuestion>();
     if (questions && Array.isArray(questions)) {
       for (const q of questions) {
@@ -84,7 +104,8 @@ ${input.brainDump}
           prompt += `\nMaterial Impact: ${q.materialImpact}`;
         }
       }
-      prompt += `\nExact User Answer: ${answer.answer}\n`;
+      const ansDisplay = answer.answer === "__UNKNOWN__" ? "User does not know / Unsure" : answer.answer;
+      prompt += `\nExact User Answer: ${ansDisplay}\n`;
     }
   }
 
@@ -126,10 +147,9 @@ Use "no_action" for observations, facts, feelings, or worries that do not contai
 - A relationship-state sentence such as "I am not talking to my spouse" / "Ne pričam sa suprugom" describes a situation, not a task. Do not place the sentence itself in today, this_week, or later. Use no_action unless the user explicitly states a desired action. If the desired outcome would materially affect the plan, ask one neutral clarification question; never invent "talk to them", "fix the relationship", or another personal action.
 
 CLARIFICATION QUESTIONS:
-- Ask questions only when an answer can materially change: priority, deadline, duration, classification, or goal relationship.
+- Ask questions only when an answer can materially change: priority, deadline, duration, dependency/blocker, classification, goal relationship, or capacity.
 - Prefer zero questions when a safe, useful plan can be produced without them.
 - When questions are needed, ask between 1 and 3 questions (never 0, never more than 3).
-- Ask all necessary questions in one round.
 - Never ask conversational, cosmetic, coaching, curiosity-based, or low-value questions.
 - When ambiguity is not important enough to block planning, set needsCheck=true instead.
 - If you ask clarification questions (1-3 questions), return ONLY the clarification response (phase: "clarification_needed") without a provisional draft.
@@ -137,7 +157,12 @@ CLARIFICATION QUESTIONS:
 - A hard-deadline deliverable that depends on awaited external input requires a material clarification question when the input arrival time or a viable contingency is unknown. Ask what can be completed without it and when it is expected; do not pretend the blocked final action is immediately executable.
 `;
   } else {
-    prompt += `
+    const effectiveMode = clarificationMode ?? (input as any).clarificationMode ?? "draft_now";
+    const totalQuestionsCount = (effectiveHistory?.length || 0) + (questions?.length || 0);
+    const forcePlan = effectiveMode === "draft_now" || clarificationRound >= 5 || totalQuestionsCount >= 12;
+
+    if (forcePlan) {
+      prompt += `
 This is the CLARIFICATION PHASE (RESOLUTION).
 - You have the original input and the user's authoritative clarification answers.
 - You MUST return ONLY a final plan (phase: "plan_ready") with a complete draft.
@@ -145,7 +170,25 @@ This is the CLARIFICATION PHASE (RESOLUTION).
 - "questions" MUST be omitted or set to [].
 - Preserve every meaningful thought and the original source text.
 - Do not invent tasks, deadlines, goals, obligations, relationships, health facts, or personal history.
+- If any details or answers remain unknown, make a conservative planning decision and mark needsCheck: true.
+`;
+    } else {
+      prompt += `
+This is CLARIFICATION ROUND ${clarificationRound} (RESOLUTION OR FURTHER CLARIFICATION).
+- You have the original input, previous clarification history, and the user's answers.
+- Preserve every meaningful thought and the original source text.
+- Do not invent tasks, deadlines, goals, obligations, relationships, health facts, or personal history.
+- If you still have MATERIAL uncertainty that directly impacts priority, deadline, duration, dependency/blocker, classification, vision relationship, or daily capacity:
+  - You MAY return phase: "clarification_needed" with 1 to 3 questions.
+  - DO NOT ask duplicate questions or questions already answered in previous rounds.
+  - "draft" MUST be omitted if you return "clarification_needed".
+- If you have sufficient information to construct a realistic plan, or if remaining uncertainty is non-critical:
+  - Return phase: "plan_ready" with a complete draft.
+  - Mark any minor ambiguous items as needsCheck: true.
+`;
+    }
 
+    prompt += `
 AUTHORITATIVE CLARIFICATION RULES:
 1. Clarification answers are authoritative user-provided facts (Tier A).
 2. They strictly override prior AI estimates, defaults, and assumptions.

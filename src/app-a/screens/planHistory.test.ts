@@ -35,13 +35,25 @@ const document = {
 
 assert.deepEqual(getInboxItems([document]).map((entry) => entry.item.id), ["later", "wait"]);
 assert.deepEqual(getVisionItems([document]).map((entry) => entry.item.id), ["idea"]);
-assert.deepEqual(getProgressSummary([document]), {
-  completedTasks: 1,
-  activeDays: 1,
-  plannedDays: 1,
-  days: [{ localDate: "2026-08-30", completed: 1, total: 3, completedItems: [{ id: "p1", title: "Task 1", sourceRoutineId: undefined }] }],
-});
-assert.deepEqual(getProgressSummary([]), { completedTasks: 0, activeDays: 0, plannedDays: 0, days: [] });
+const initialSummary = getProgressSummary([document]);
+assert.equal(initialSummary.completedTasks, 1);
+assert.equal(initialSummary.activeDays, 1);
+assert.equal(initialSummary.plannedDays, 1);
+assert.equal(initialSummary.completedFocusCount, 1);
+assert.equal(initialSummary.totalFocusCount, 1);
+assert.equal(initialSummary.consistencyStreak, 1);
+assert.equal(initialSummary.days[0].completed, 1);
+assert.equal(initialSummary.days[0].completedFocusCount, 1);
+assert.equal(initialSummary.days[0].total, 3);
+assert.equal(initialSummary.days[0].completedItems[0].id, "p1");
+
+const emptySummary = getProgressSummary([]);
+assert.equal(emptySummary.completedTasks, 0);
+assert.equal(emptySummary.activeDays, 0);
+assert.equal(emptySummary.plannedDays, 0);
+assert.equal(emptySummary.completedFocusCount, 0);
+assert.equal(emptySummary.consistencyStreak, 0);
+assert.equal(emptySummary.days.length, 0);
 assert.match(formatHistoryDate("2026-08-30", "sr"), /30/);
 assert.equal(formatHistoryDate("not-a-date", "en"), "not-a-date");
 

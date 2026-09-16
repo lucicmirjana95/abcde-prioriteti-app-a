@@ -7,3 +7,4 @@ assert.equal(getInitialFocusMinutes(0, 45), 45, "invalid task duration must use 
 assert.equal(getInitialFocusMinutes(Number.NaN, 60), 60, "non-finite task duration must use the preference default");
 
 console.log("Focus timer duration tests passed.");
+process.exit(0);

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createImportedInboxItemId, isAppAInboxItem, normalizeInboxTitle } from "./contracts";
+import { createImportedInboxItemId, createInboxMutationId, isAppAInboxItem, normalizeInboxTitle } from "./contracts";
 
 const createdAt = "2026-09-02T12:00:00.000Z";
 const validItem = {
@@ -25,5 +25,11 @@ assert.equal(isAppAInboxItem({ ...validItem, kind: "note", estimatedMinutes: und
 assert.equal(isAppAInboxItem({ ...validItem, estimatedMinutes: 0 }), false);
 assert.equal(isAppAInboxItem({ ...validItem, scheduledLocalDate: "tomorrow" }), false);
 assert.equal(normalizeInboxTitle("  Call   THE dentist "), "call the dentist");
+
+const mutationId = createInboxMutationId();
+assert.match(mutationId, /^mut_in_[a-z0-9]+$/);
+assert.equal(isAppAInboxItem({ ...validItem, mutationId }), true);
+assert.equal(isAppAInboxItem({ ...validItem, mutationId: "" }), false);
+assert.equal(isAppAInboxItem({ ...validItem, mutationId: "a".repeat(129) }), false);
 
 console.log("Inbox contract tests passed.");

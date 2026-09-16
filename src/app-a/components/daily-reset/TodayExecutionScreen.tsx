@@ -1,9 +1,29 @@
 import { ReevaluationDialog } from "./ReevaluationDialog";
 import { StructuredReevaluationProposal } from "../../screens/planReview";
 import { useState } from "react";
-import { Check, Clock3, Pencil, Sparkles, Timer, Wind } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  Check,
+  ChevronDown,
+  Clock3,
+  Compass,
+  Leaf,
+  MoreHorizontal,
+  Pencil,
+  Sparkles,
+  Timer,
+  Wind,
+} from "lucide-react";
 import type { DailyPlanDraft, DailyPlanItem } from "../../domain/daily-reset/contracts";
 import { normalizeChronologicalOrder } from "../../domain/daily-reset/chronology";
+import { recalculatePlanTotals } from "../../domain/daily-reset/validation";
+import {
+  isWaitingForItem,
+  movePlanItemToBlock,
+  reorderPlanItems,
+} from "../../domain/daily-reset/planMutations";
 import { APP_A_TRANSLATIONS, type AppALanguage } from "../../types";
 import SafeInterventionCard from "./SafeInterventionCard";
 import { normalizeCompletedItemIds } from "../../screens/todayExecution";
@@ -30,7 +50,83 @@ interface Props {
   onQuickAddToday: (input: QuickAddInput) => Promise<QuickAddResult>;
   onQuickSaveLater: (title: string, minutes: number, capacityType: "flexible" | "fixed") => Promise<boolean>;
   onReevaluatePriorities?: (draft: DailyPlanDraft) => void;
+  onUpdateDraft?: (draft: DailyPlanDraft) => void;
 }
+
+const COPY = {
+  en: {
+    nextFocus: "NEXT FOCUS",
+    startFocus: "Start focus",
+    resetBefore: "Reset before",
+    moveUp: "Move up",
+    moveDown: "Move down",
+    moreOptions: "More options",
+    moveToFirstFocus: "Move to First focus",
+    moveToLaterToday: "Move to Later today",
+    moveToOptional: "Move to If capacity remains",
+    deferToTomorrow: "Defer for tomorrow",
+    routineContext: "Routine",
+    visionContext: "Vision",
+    fixedContext: "Fixed commitment",
+    deadlineContext: "Deadline",
+    orderManuallyModified: "Order manually modified.",
+    reevaluateWithAi: "Re-evaluate via AI",
+    allDoneTitle: "Everything for today is complete.",
+    allDoneSummary: "You have completed all {count} planned tasks ({minutes} min).",
+    reviewCompleted: "Review completed tasks",
+    hideCompleted: "Hide completed tasks",
+    addAnotherTask: "Add another task",
+    completedTasksHeading: "Completed tasks",
+  },
+  sr: {
+    nextFocus: "SLEDEĆI FOKUS",
+    startFocus: "Pokreni fokus",
+    resetBefore: "Predah pre",
+    moveUp: "Pomeri nagore",
+    moveDown: "Pomeri nadole",
+    moreOptions: "Više opcija",
+    moveToFirstFocus: "Prebaci u Prvi fokus",
+    moveToLaterToday: "Prebaci na Kasnije danas",
+    moveToOptional: "Prebaci u Ako ostane kapaciteta",
+    deferToTomorrow: "Odloži za sutra",
+    routineContext: "Rutina",
+    visionContext: "Vizija",
+    fixedContext: "Fiksna obaveza",
+    deadlineContext: "Rok",
+    orderManuallyModified: "Redosled je ručno izmenjen.",
+    reevaluateWithAi: "Preispitaj prioritete uz AI",
+    allDoneTitle: "Sve za danas je završeno.",
+    allDoneSummary: "Uspešno ste završili svih {count} planiranih zadataka ({minutes} min).",
+    reviewCompleted: "Pregledaj završene zadatke",
+    hideCompleted: "Sakrij završene zadatke",
+    addAnotherTask: "Dodaj još jedan zadatak",
+    completedTasksHeading: "Završeni zadaci",
+  },
+  tr: {
+    nextFocus: "SONRAKİ ODAK",
+    startFocus: "Odağı başlat",
+    resetBefore: "Mola ver",
+    moveUp: "Yukarı taşı",
+    moveDown: "Aşağı taşı",
+    moreOptions: "Daha fazla seçenek",
+    moveToFirstFocus: "İlk odağa taşı",
+    moveToLaterToday: "Bugün sonrasına taşı",
+    moveToOptional: "Kapasite kalırsa'ya taşı",
+    deferToTomorrow: "Yarına ertele",
+    routineContext: "Rutin",
+    visionContext: "Vizyon",
+    fixedContext: "Sabit yükümlülük",
+    deadlineContext: "Son tarih",
+    orderManuallyModified: "Sıralama manuel olarak değiştirildi.",
+    reevaluateWithAi: "Yapay zeka ile öncelikleri yeniden değerlendir",
+    allDoneTitle: "Bugün için her şey tamamlandı.",
+    allDoneSummary: "Planlanan tüm {count} görevi başarıyla tamamladınız ({minutes} dk).",
+    reviewCompleted: "Tamamlanan görevleri incele",
+    hideCompleted: "Tamamlanan görevleri gizle",
+    addAnotherTask: "Bir görev daha ekle",
+    completedTasksHeading: "Tamamlanan görevler",
+  },
+} as const;
 
 export default function TodayExecutionScreen({
   draft,
@@ -46,81 +142,37 @@ export default function TodayExecutionScreen({
   onQuickAddToday,
   onQuickSaveLater,
   onReevaluatePriorities,
+  onUpdateDraft,
 }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
-  
+  const c = COPY[language] || COPY.en;
+
   const { routines, completions, plannedRoutineIds } = useDailyRoutines(userId);
   const [focusItem, setFocusItem] = useState<DailyPlanItem | null>(null);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [showCompletedList, setShowCompletedList] = useState(false);
+
   const completed = normalizeCompletedItemIds(draft, completedItemIds);
-  const requiredItems = normalizeChronologicalOrder([...draft.firstFocus, ...draft.laterToday], completed);
+  const requiredItems = normalizeChronologicalOrder(
+    [...draft.firstFocus, ...draft.laterToday],
+    completed,
+  );
   const optionalItems = normalizeChronologicalOrder(draft.ifCapacityRemains, completed);
   const todayItems = [...requiredItems, ...optionalItems];
+
   const outsideCount =
-    draft.deferredItems.length + draft.longTermIdeas.length + draft.nonActionItems.length;
+    (draft.deferredItems?.length || 0) + (draft.longTermIdeas?.length || 0) + (draft.nonActionItems?.length || 0);
   const summary = t.completedSummary
     .replace("{completed}", String(completed.length))
     .replace("{total}", String(todayItems.length));
 
-  const renderItem = (item: DailyPlanItem, emphasized = false) => {
-    const isComplete = completed.includes(item.id);
-    return (
-      <div
-        key={item.id}
-        className={`app-a-focus-ring flex min-h-[64px] w-full items-start gap-3 rounded-[16px] border p-3.5 text-left transition-all sm:p-4 ${
-          isComplete
-            ? "border-black/[0.06] bg-black/[0.025] text-black/45 dark:border-white/[0.06] dark:bg-white/[0.035] dark:text-white/45"
-            : emphasized
-              ? "border-[#0A84FF]/30 bg-white text-black shadow-[0_10px_32px_rgba(0,113,227,0.10)] dark:bg-[#242426] dark:text-white"
-              : "border-black/[0.07] bg-white/70 text-black dark:border-white/[0.08] dark:bg-white/[0.035] dark:text-white"
-        }`}
-      >
-        <button
-          type="button"
-          aria-label={item.title}
-          aria-pressed={isComplete}
-          disabled={Boolean(updatingItemId)}
-          onClick={() => onToggle(item.id)}
-          className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-            isComplete
-              ? "border-[#34C759] bg-[#34C759] text-white"
-              : "border-black/20 bg-transparent dark:border-white/25"
-          }`}
-        >
-          {isComplete && <Check className="h-4 w-4" strokeWidth={3} />}
-        </button>
-        <span className="min-w-0 flex-1">
-          <span className={`block text-[16px] font-semibold leading-snug ${isComplete ? "line-through" : ""}`}>
-            {item.title}
-          </span>
-          {item.description && (
-            <span className="mt-1 block text-[14px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
-              {item.description}
-            </span>
-          )}
-          <span className="mt-2 flex items-center gap-1.5 text-[13px] font-medium text-[#6E6E73] dark:text-[#AEAEB2]">
-            <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
-            {item.estimatedMinutes} min
-            {item.capacityType === "fixed" && (
-              <span className="ml-1 text-[#6E6E73] dark:text-[#AEAEB2]">
-                · {language === "sr" ? "fiksna obaveza" : language === "tr" ? "sabit yükümlülük" : "fixed commitment"}
-              </span>
-            )}
-            {(item.deadlineText || item.deadlineIso) && (
-              <span className="ml-1" style={{ color: "var(--app-a-warning)" }}>
-                · {item.deadlineText || item.deadlineIso}
-              </span>
-            )}
-          </span>
-        </span>
-        {!isComplete && <div className="flex shrink-0 flex-col gap-1.5 sm:flex-row">{item.capacityType !== "fixed" ? <button type="button" onClick={() => setFocusItem(item)} className={emphasized ? "app-a-primary-button app-a-focus-ring justify-center gap-1.5 px-3 text-[13px]" : "app-a-secondary-button app-a-focus-ring p-2.5"} aria-label={`Focus: ${item.title}`}><Timer className="h-4 w-4" />{emphasized ? <span>{language === "sr" ? "Pokreni fokus" : language === "tr" ? "Odağı başlat" : "Start focus"}</span> : null}</button> : null}<button type="button" onClick={onOpenReset} className="app-a-secondary-button app-a-focus-ring p-2.5" aria-label={language === "sr" ? `Predah pre: ${item.title}` : language === "tr" ? `${item.title} öncesi mola` : `Reset before: ${item.title}`}><Wind className="h-4 w-4" /></button></div>}
-      </div>
-    );
-  };
-
-  const [previewDraft, setPreviewDraft] = useState<DailyPlanDraft | null>(null);
+  // Determine Next Focus: first uncompleted required item, or first uncompleted optional item
+  const nextFocusItem = todayItems.find((item) => !completed.includes(item.id)) || null;
+  const allDone = todayItems.length > 0 && completed.length === todayItems.length;
 
   const effectiveTimeZone = getEffectiveTimeZone(loadAppAPreferences());
   const localDate = draft.localDate || getLocalDateKeyInTimeZone(effectiveTimeZone);
+
   const [isInterventionDismissed, setIsInterventionDismissed] = useState<boolean>(() => {
     if (!draft.intervention) return false;
     try {
@@ -143,7 +195,9 @@ export default function TodayExecutionScreen({
       const key = `app_a_dismissed_interventions_${localDate}`;
       const stored = localStorage.getItem(key);
       const existing = stored ? JSON.parse(stored) : [];
-      const updated = Array.isArray(existing) ? [...existing, draft.intervention.title] : [draft.intervention.title];
+      const updated = Array.isArray(existing)
+        ? [...existing, draft.intervention.title]
+        : [draft.intervention.title];
       localStorage.setItem(key, JSON.stringify(updated));
     } catch {
       // ignore storage error
@@ -160,7 +214,6 @@ export default function TodayExecutionScreen({
       if (completed.includes(targetTask.id)) return false;
     }
 
-    const allDone = todayItems.length > 0 && completed.length === todayItems.length;
     if (allDone && (intervention.type === "environment" || intervention.type === "focus")) {
       return false;
     }
@@ -170,7 +223,7 @@ export default function TodayExecutionScreen({
 
   const [showReevalDialog, setShowReevalDialog] = useState(false);
 
-  const handlePreviewSort = () => {
+  const handleOpenReevaluation = () => {
     setShowReevalDialog(true);
   };
 
@@ -180,22 +233,283 @@ export default function TodayExecutionScreen({
       approvedDelegationIds: string[];
       approvedEliminationIds: string[];
       approvedManualOverrideIds: string[];
-    }
+    },
   ) => {
     const { applyReevaluationProposal } = await import("../../screens/planReview");
     const finalDraft = applyReevaluationProposal(draft, proposal, modifications);
     if ((finalDraft as any).error) {
       alert((finalDraft as any).error);
-      return; // Do not close modal or persist
+      return;
     }
+    // Successfully applied reevaluation removes the manual override banner
+    finalDraft.manualPriorityOverride = false;
     if (onReevaluatePriorities) {
       onReevaluatePriorities(finalDraft);
+    } else if (onUpdateDraft) {
+      onUpdateDraft(finalDraft);
     }
     setShowReevalDialog(false);
   };
 
+  const handleReorder = (itemId: string, direction: "up" | "down") => {
+    const res = reorderPlanItems(draft, itemId, direction);
+    if (res.error) return;
+    onUpdateDraft?.(res.draft);
+  };
+
+  const handleMoveToBlock = (
+    itemId: string,
+    targetBlock: "first_focus" | "later_today" | "if_capacity_remains",
+  ) => {
+    setActiveMenuId(null);
+    const res = movePlanItemToBlock(draft, itemId, targetBlock);
+    if (res.error) return;
+    onUpdateDraft?.(res.draft);
+  };
+
+  const handleDeferItem = (itemId: string) => {
+    setActiveMenuId(null);
+    const all = [...draft.firstFocus, ...draft.laterToday, ...draft.ifCapacityRemains];
+    const item = all.find((i) => i.id === itemId);
+    if (!item) return;
+
+    const newFirst = draft.firstFocus.filter((i) => i.id !== itemId);
+    const newLater = draft.laterToday.filter((i) => i.id !== itemId);
+    const newOptional = draft.ifCapacityRemains.filter((i) => i.id !== itemId);
+
+    const deferredClassified = {
+      id: item.id,
+      originalText: item.title,
+      kind: "task" as const,
+      timeHorizon: "later" as const,
+      timeSensitivity: item.timeSensitivity,
+      isAmbiguous: false,
+      needsCheck: false,
+      priority: item.priority,
+    };
+
+    const updatedDraft = recalculatePlanTotals({
+      ...draft,
+      firstFocus: newFirst,
+      laterToday: newLater,
+      ifCapacityRemains: newOptional,
+      deferredItems: [...(draft.deferredItems || []), deferredClassified],
+      manualPriorityOverride: true,
+    });
+    onUpdateDraft?.(updatedDraft);
+  };
+
+  // Helper to render context provenance badges
+  const renderContextTag = (item: DailyPlanItem) => {
+    if (item.sourceRoutineId) {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-[#34C759]/10 px-1.5 py-0.5 text-[11px] font-medium text-[#248A3D] dark:text-[#30D158]">
+          <Leaf className="h-3 w-3" />
+          {c.routineContext}
+        </span>
+      );
+    }
+    if (item.id.startsWith("vision_plan_") || item.sourceItemIds?.some((sid) => sid.startsWith("vision_"))) {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-[#AF52DE]/10 px-1.5 py-0.5 text-[11px] font-medium text-[#8E44AD] dark:text-[#BF5AF2]">
+          <Compass className="h-3 w-3" />
+          {c.visionContext}
+        </span>
+      );
+    }
+    if (item.capacityType === "fixed") {
+      return (
+        <span className="inline-flex items-center rounded-md bg-black/5 dark:bg-white/10 px-1.5 py-0.5 text-[11px] font-medium text-[#6E6E73] dark:text-[#AEAEB2]">
+          {c.fixedContext}
+        </span>
+      );
+    }
+    if (item.deadlineText || item.deadlineIso) {
+      return (
+        <span
+          className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium"
+          style={{ backgroundColor: "var(--app-a-wash-peach)", color: "var(--app-a-text)" }}
+        >
+          {item.deadlineText || item.deadlineIso}
+        </span>
+      );
+    }
+    return null;
+  };
+
+  const renderItemRow = (
+    item: DailyPlanItem,
+    index: number,
+    totalInGroup: number,
+    canReorder = false,
+  ) => {
+    const isComplete = completed.includes(item.id);
+    const isMenuOpen = activeMenuId === item.id;
+
+    return (
+      <div
+        key={item.id}
+        className={`app-a-focus-ring relative flex min-h-[64px] w-full items-start gap-3 rounded-[18px] border p-3.5 text-left transition-all sm:p-4 ${
+          isComplete
+            ? "border-black/[0.06] bg-black/[0.025] text-black/45 dark:border-white/[0.06] dark:bg-white/[0.035] dark:text-white/45"
+            : "border-black/[0.07] bg-white/70 text-black dark:border-white/[0.08] dark:bg-white/[0.035] dark:text-white shadow-sm"
+        }`}
+      >
+        {/* Checkbox Touch Target >= 44x44px */}
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center -m-2">
+          <button
+            type="button"
+            aria-label={item.title}
+            aria-pressed={isComplete}
+            disabled={Boolean(updatingItemId)}
+            onClick={() => onToggle(item.id)}
+            className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors ${
+              isComplete
+                ? "border-[#34C759] bg-[#34C759] text-white"
+                : "border-black/25 bg-transparent hover:border-[#0071E3] dark:border-white/30"
+            }`}
+          >
+            {isComplete && <Check className="h-4 w-4" strokeWidth={3} />}
+          </button>
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <span
+            className={`block text-[15px] sm:text-[16px] font-semibold leading-snug ${
+              isComplete ? "line-through text-black/40 dark:text-white/40" : ""
+            }`}
+          >
+            {item.title}
+          </span>
+          {item.description && (
+            <p className="mt-1 text-[13px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
+              {item.description}
+            </p>
+          )}
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] font-medium text-[#6E6E73] dark:text-[#AEAEB2]">
+            <span className="flex items-center gap-1">
+              <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
+              {item.estimatedMinutes} min
+            </span>
+            {renderContextTag(item)}
+          </div>
+        </div>
+
+        {/* Action controls */}
+        {!isComplete && (
+          <div className="flex shrink-0 items-center gap-1">
+            {canReorder && item.capacityType !== "fixed" && (
+              <div className="flex flex-col sm:flex-row gap-0.5">
+                <button
+                  type="button"
+                  disabled={index === 0}
+                  onClick={() => handleReorder(item.id, "up")}
+                  aria-label={c.moveUp}
+                  className="app-a-focus-ring flex min-h-[44px] min-w-[44px] h-11 w-11 items-center justify-center rounded-lg text-[#86868B] hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-30"
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  disabled={index === totalInGroup - 1}
+                  onClick={() => handleReorder(item.id, "down")}
+                  aria-label={c.moveDown}
+                  className="app-a-focus-ring flex min-h-[44px] min-w-[44px] h-11 w-11 items-center justify-center rounded-lg text-[#86868B] hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-30"
+                >
+                  <ArrowDown className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            {item.capacityType !== "fixed" && (
+              <button
+                type="button"
+                onClick={() => setFocusItem(item)}
+                className="app-a-focus-ring flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 dark:border-white/15 bg-black/[0.04] dark:bg-white/[0.06] text-black dark:text-white hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                aria-label={`${c.startFocus}: ${item.title}`}
+              >
+                <Timer className="h-4 w-4" />
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onOpenReset}
+              className="app-a-focus-ring flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 dark:border-white/15 bg-black/[0.04] dark:bg-white/[0.06] text-black dark:text-white hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+              aria-label={`${c.resetBefore}: ${item.title}`}
+            >
+              <Wind className="h-4 w-4" />
+            </button>
+
+            {/* Overflow menu toggle */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setActiveMenuId(isMenuOpen ? null : item.id)}
+                aria-label={c.moreOptions}
+                aria-haspopup="true"
+                aria-expanded={isMenuOpen}
+                className="app-a-focus-ring flex h-11 w-11 items-center justify-center rounded-full text-[#6E6E73] dark:text-[#AEAEB2] hover:bg-black/5 dark:hover:bg-white/5"
+              >
+                <MoreHorizontal className="h-5 w-5" />
+              </button>
+
+              {isMenuOpen && (
+                <div
+                  className="absolute right-0 top-12 z-30 w-56 rounded-2xl border border-black/10 bg-white p-1.5 shadow-xl dark:border-white/15 dark:bg-[#1E1E20]"
+                  role="menu"
+                >
+                  {item.block !== "first_focus" &&
+                    item.capacityType !== "fixed" &&
+                    !isWaitingForItem(item, draft) && (
+                    <button
+                      type="button"
+                      onClick={() => handleMoveToBlock(item.id, "first_focus")}
+                      className="flex w-full min-h-[44px] items-center rounded-xl px-3 text-left text-[13px] font-medium text-black hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
+                      role="menuitem"
+                    >
+                      {c.moveToFirstFocus}
+                    </button>
+                  )}
+                  {item.block !== "later_today" && item.capacityType !== "fixed" && (
+                    <button
+                      type="button"
+                      onClick={() => handleMoveToBlock(item.id, "later_today")}
+                      className="flex w-full min-h-[44px] items-center rounded-xl px-3 text-left text-[13px] font-medium text-black hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
+                      role="menuitem"
+                    >
+                      {c.moveToLaterToday}
+                    </button>
+                  )}
+                  {item.block !== "if_capacity_remains" && item.capacityType !== "fixed" && (
+                    <button
+                      type="button"
+                      onClick={() => handleMoveToBlock(item.id, "if_capacity_remains")}
+                      className="flex w-full min-h-[44px] items-center rounded-xl px-3 text-left text-[13px] font-medium text-black hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
+                      role="menuitem"
+                    >
+                      {c.moveToOptional}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleDeferItem(item.id)}
+                    className="flex w-full min-h-[44px] items-center rounded-xl px-3 text-left text-[13px] font-medium text-[#FF3B30] hover:bg-red-500/10"
+                    role="menuitem"
+                  >
+                    {c.deferToTomorrow}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="mx-auto w-full max-w-[760px] px-5 sm:px-6">
+    <div className="mx-auto w-full max-w-[760px] px-5 sm:px-6 pb-32">
       {showReevalDialog && (
         <ReevaluationDialog
           draft={draft}
@@ -205,101 +519,87 @@ export default function TodayExecutionScreen({
           onConfirm={handleConfirmReeval}
         />
       )}
-      {focusItem && <FocusTimer item={focusItem} onClose={() => setFocusItem(null)} language={language} defaultMinutes={defaultFocusMinutes} />}
 
-      {/* AI Re-evaluation Modal */}
-      {previewDraft && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="app-a-surface w-full max-w-lg rounded-3xl p-6 shadow-2xl">
-            <h3 className="mb-4 text-xl font-bold tracking-tight text-black dark:text-white">
-              {language === "sr" ? "Preispitaj prioritete" : language === "tr" ? "Öncelikleri yeniden değerlendir" : "Re-evaluate priorities"}
-            </h3>
-            <p className="mb-5 text-[15px] text-[#6E6E73] dark:text-[#AEAEB2]">
-              {language === "sr" 
-                ? "Novi redosled na osnovu ABCDE/80-20 AI principa. Da li želite da primenite promene?" 
-                : "New order based on the ABCDE/80-20 AI principle. Do you want to apply the changes?"}
-            </p>
-            <div className="mb-6 max-h-[50vh] overflow-y-auto space-y-2 rounded-2xl border border-black/5 dark:border-white/5 bg-[#F5F5F7] dark:bg-[#1C1C1E] p-3">
-              {[...previewDraft.firstFocus, ...previewDraft.laterToday, ...previewDraft.ifCapacityRemains].map((item, idx) => (
-                <div key={item.id} className="text-[14px] font-medium text-black dark:text-white flex items-start gap-2">
-                  <span className="shrink-0 opacity-50 font-semibold">{idx + 1}.</span>
-                  <span className="flex-1">{item.title}</span>
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setPreviewDraft(null)}
-                className="app-a-secondary-button app-a-focus-ring min-h-[44px] rounded-xl px-5 text-[15px] font-semibold"
-              >
-                {t.cancelBtn}
-              </button>
-              <button
-                type="button"
-                onClick={handlePreviewSort}
-                className="app-a-primary-button app-a-focus-ring min-h-[44px] rounded-xl px-5 text-[15px] font-semibold"
-              >
-                {language === "sr" ? "Primeni" : language === "tr" ? "Uygula" : "Apply"}
-              </button>
-            </div>
-          </div>
-        </div>
+      {focusItem && (
+        <FocusTimer
+          item={focusItem}
+          language={language}
+          defaultMinutes={defaultFocusMinutes}
+          userId={userId}
+          onClose={() => setFocusItem(null)}
+          onCompleteTask={() => {
+            onToggle(focusItem.id);
+            setFocusItem(null);
+          }}
+        />
       )}
 
+      {/* Manual Priority Override Banner */}
       {draft.manualPriorityOverride && (
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-[#0A84FF]/20 bg-[#0A84FF]/5 p-4 dark:border-[#0A84FF]/30 dark:bg-[#0A84FF]/10">
-          <div className="space-y-1">
-            <p className="text-[14px] text-[#0071E3] dark:text-[#0A84FF]">
-              {language === "sr" ? "Redosled je ručno izmenjen." : language === "tr" ? "Sıralama manuel olarak değiştirildi." : "Order manually modified."}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-[#0A84FF]/25 bg-[#0A84FF]/5 p-4 dark:border-[#0A84FF]/35 dark:bg-[#0A84FF]/10 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <Sparkles className="h-4 w-4 text-[#0071E3] dark:text-[#0A84FF] shrink-0" />
+            <p className="text-[14px] font-medium text-[#0071E3] dark:text-[#0A84FF]">
+              {c.orderManuallyModified}
             </p>
-            
           </div>
           <button
             type="button"
-            onClick={handlePreviewSort}
-            className="app-a-primary-button app-a-focus-ring whitespace-nowrap min-h-[40px] px-4 text-[13px]"
+            onClick={handleOpenReevaluation}
+            className="app-a-primary-button app-a-focus-ring whitespace-nowrap min-h-[44px] px-4 text-[13px]"
           >
-            {language === "sr" ? "Preispitaj prioritete uz AI" : language === "tr" ? "Yapay zeka ile öncelikleri yeniden değerlendir" : "Re-evaluate via AI"}
+            {c.reevaluateWithAi}
           </button>
         </div>
       )}
 
-      <header className="mb-5">
+      {/* 1. Header and State of the Day */}
+      <header className="mb-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="app-a-eyebrow">
-              {t.today}
-            </p>
-            <h1 className="app-a-page-title">
-              {t.todayPlanTitle}
-            </h1>
+            <p className="app-a-eyebrow">{t.today}</p>
+            <h1 className="app-a-page-title">{t.todayPlanTitle}</h1>
           </div>
           <button
             type="button"
             onClick={onEditPlan}
-            className="app-a-secondary-button app-a-focus-ring flex shrink-0 items-center gap-2 px-3.5 text-[14px]"
+            className="app-a-secondary-button app-a-focus-ring flex shrink-0 items-center gap-2 min-h-[44px] px-4 text-[14px]"
           >
             <Pencil className="h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:inline">{t.editTodayPlan}</span>
           </button>
         </div>
-        <div className="mt-3 flex items-center gap-3 text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]" aria-label={summary}>
-          <span className="shrink-0 font-medium">{summary}</span>
-          <div className="h-1.5 min-w-16 max-w-40 flex-1 overflow-hidden rounded-full bg-black/[0.07] dark:bg-white/[0.1]">
-          <div
-            className="h-full rounded-full transition-[width]"
-            style={{
-              backgroundColor: "var(--app-a-success)",
-              width: `${todayItems.length ? (completed.length / todayItems.length) * 100 : 0}%`,
-            }}
-          />
+
+        {/* State of the Day: Progress and Minutes */}
+        <div
+          className="mt-4 flex items-center gap-3 text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]"
+          aria-label={summary}
+        >
+          <span className="shrink-0 font-semibold text-black dark:text-white">{summary}</span>
+          <div className="h-2 min-w-20 max-w-48 flex-1 overflow-hidden rounded-full bg-black/[0.08] dark:bg-white/[0.12]">
+            <div
+              className="h-full rounded-full transition-all duration-300"
+              style={{
+                backgroundColor: "var(--app-a-success)",
+                width: `${todayItems.length ? (completed.length / todayItems.length) * 100 : 0}%`,
+              }}
+            />
           </div>
-          <span className="shrink-0">{draft.plannedRequiredMinutes} min</span>
+          <span className="shrink-0 font-medium">{draft.plannedRequiredMinutes} min</span>
         </div>
-        {draft.plannedFixedMinutes ? <p className="mt-1.5 text-[12px] text-[#86868B]">{language === 'sr' ? `${draft.plannedFlexibleMinutes ?? 0} min fleksibilno · ${draft.plannedFixedMinutes} min fiksno` : language === 'tr' ? `${draft.plannedFlexibleMinutes ?? 0} dk esnek · ${draft.plannedFixedMinutes} dk sabit` : `${draft.plannedFlexibleMinutes ?? 0} min flexible · ${draft.plannedFixedMinutes} min fixed`}</p> : null}
+
+        {Boolean(draft.plannedFixedMinutes) && (
+          <p className="mt-1.5 text-[12px] text-[#86868B]">
+            {language === "sr"
+              ? `${draft.plannedFlexibleMinutes ?? 0} min fleksibilno · ${draft.plannedFixedMinutes} min fiksno`
+              : language === "tr"
+                ? `${draft.plannedFlexibleMinutes ?? 0} dk esnek · ${draft.plannedFixedMinutes} dk sabit`
+                : `${draft.plannedFlexibleMinutes ?? 0} min flexible · ${draft.plannedFixedMinutes} min fixed`}
+          </p>
+        )}
       </header>
 
+      {/* Daily Load Warning if over capacity */}
       <DailyLoadWarning
         draft={draft}
         language={language}
@@ -317,56 +617,276 @@ export default function TodayExecutionScreen({
         </div>
       )}
 
-      {userId && <DailyRoutinesSection userId={userId} language={language} />}
+      {/* 2. NEXT FOCUS HERO CARD (if not all done and nextFocusItem exists) */}
+      {!allDone && nextFocusItem && (
+        <section className="mb-7" aria-labelledby="next-focus-heading">
+          <div
+            className="rounded-[22px] border border-[#0071E3]/25 p-5 sm:p-6 shadow-md"
+            style={{
+              backgroundColor: "var(--app-a-surface)",
+            }}
+          >
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0071E3]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#0071E3] dark:text-[#0A84FF]">
+                <Sparkles className="h-3 w-3" />
+                {c.nextFocus}
+              </span>
+              <span className="text-[13px] font-medium text-[#6E6E73] dark:text-[#AEAEB2] flex items-center gap-1">
+                <Clock3 className="h-3.5 w-3.5" />
+                {nextFocusItem.estimatedMinutes} min
+              </span>
+            </div>
 
-      {todayItems.length > 0 && completed.length === todayItems.length && (
-        <div className="app-a-panel-success mb-5 flex items-center gap-3 text-[15px] font-medium">
-          <Sparkles className="h-5 w-5 shrink-0" aria-hidden="true" />
-          <span>{t.allTodayComplete}</span>
-        </div>
-      )}
+            <h2
+              id="next-focus-heading"
+              className="text-[18px] sm:text-[21px] font-bold text-black dark:text-white leading-tight mb-2"
+            >
+              {nextFocusItem.title}
+            </h2>
 
-      {requiredItems.length > 0 && (
-        <section className="mb-7" aria-labelledby="required-today-heading">
-          <h2 id="required-today-heading" className="mb-3 text-[14px] font-semibold uppercase tracking-[0.07em] text-[#6E6E73] dark:text-[#AEAEB2]">
-            {t.requiredTodayLabel}
-          </h2>
-          <div className="space-y-2.5">
-            {requiredItems.map((item, index) => renderItem(item, index === 0 && !completed.includes(item.id)))}
+            {nextFocusItem.description && (
+              <p className="text-[14px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2] mb-4">
+                {nextFocusItem.description}
+              </p>
+            )}
+
+            <div className="mb-5 flex flex-wrap items-center gap-2">
+              {renderContextTag(nextFocusItem)}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-black/[0.06] dark:border-white/[0.08]">
+              {nextFocusItem.capacityType !== "fixed" && (
+                <button
+                  type="button"
+                  onClick={() => setFocusItem(nextFocusItem)}
+                  className="app-a-primary-button app-a-focus-ring flex items-center gap-2 min-h-[44px] px-5 text-[14px] font-semibold"
+                >
+                  <Timer className="h-4 w-4" />
+                  {c.startFocus}
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => onToggle(nextFocusItem.id)}
+                className="app-a-secondary-button app-a-focus-ring flex items-center gap-2 min-h-[44px] px-4 text-[14px]"
+              >
+                <Check className="h-4 w-4 text-[#34C759]" />
+                <span>{language === "sr" ? "Završi" : language === "tr" ? "Tamamla" : "Complete"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onOpenReset}
+                className="app-a-focus-ring flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 dark:border-white/15 bg-black/[0.04] dark:bg-white/[0.06] text-black dark:text-white hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                aria-label={`${c.resetBefore}: ${nextFocusItem.title}`}
+              >
+                <Wind className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </section>
       )}
 
-      {optionalItems.length > 0 && (
-        <details className="mb-6 rounded-2xl border border-black/[0.07] p-3 dark:border-white/[0.08]">
-          <summary id="optional-today-heading" className="app-a-focus-ring cursor-pointer px-1 text-[14px] font-semibold uppercase tracking-[0.07em] text-[#86868B]">
-            {t.optionalTodayLabel} ({optionalItems.length})
-          </summary>
-          <div className="mt-3 space-y-2">{optionalItems.map((item) => renderItem(item))}</div>
-        </details>
+      {/* 3. COMPLETED DAY STATE (Calm, dignified success) */}
+      {allDone && (
+        <section
+          className="mb-8 rounded-[24px] border border-[#34C759]/25 p-6 sm:p-8 text-center shadow-sm"
+          style={{ backgroundColor: "var(--app-a-surface)" }}
+        >
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#34C759]/15 text-[#34C759]">
+            <Check className="h-8 w-8" strokeWidth={2.5} />
+          </div>
+          <h2 className="text-[20px] sm:text-[22px] font-bold text-black dark:text-white">
+            {c.allDoneTitle}
+          </h2>
+          <p className="mt-2 text-[14px] text-[#6E6E73] dark:text-[#AEAEB2]">
+            {c.allDoneSummary
+              .replace("{count}", String(todayItems.length))
+              .replace("{minutes}", String(draft.plannedRequiredMinutes))}
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowCompletedList(!showCompletedList)}
+              className="app-a-secondary-button app-a-focus-ring min-h-[44px] px-4 text-[14px]"
+            >
+              {showCompletedList ? c.hideCompleted : c.reviewCompleted}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById("quick-add-today");
+                el?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="app-a-primary-button app-a-focus-ring min-h-[44px] px-4 text-[14px]"
+            >
+              {c.addAnotherTask}
+            </button>
+          </div>
+
+          {showCompletedList && (
+            <div className="mt-6 border-t border-black/[0.06] pt-5 dark:border-white/[0.08] text-left space-y-2">
+              <h3 className="mb-3 text-[13px] font-semibold uppercase tracking-wider text-[#86868B]">
+                {c.completedTasksHeading}
+              </h3>
+              {todayItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-2.5 py-1 text-[14px] text-[#6E6E73] dark:text-[#AEAEB2]"
+                >
+                  <Check className="h-4 w-4 text-[#34C759] shrink-0" />
+                  <span className="line-through">{item.title}</span>
+                  <span className="text-[12px] opacity-70">({item.estimatedMinutes} min)</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       )}
 
+      {/* 4. DAILY ROUTINES SECTION */}
+      {userId && <DailyRoutinesSection userId={userId} language={language} />}
+
+      {/* 5. REMAINING TASK BLOCKS (if not all done or if user views list) */}
+      {!allDone && (
+        <>
+          {/* Prvi fokus block */}
+          {draft.firstFocus.length > 0 && (
+            <section className="mb-6" aria-labelledby="first-focus-heading">
+              <h2
+                id="first-focus-heading"
+                className="mb-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6E6E73] dark:text-[#AEAEB2]"
+              >
+                {t.firstFocusTitle} ({draft.firstFocus.length})
+              </h2>
+              <div className="space-y-2.5">
+                {draft.firstFocus.map((item, index) =>
+                  renderItemRow(item, index, draft.firstFocus.length, true),
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Kasnije danas block */}
+          {draft.laterToday.length > 0 && (
+            <section className="mb-6" aria-labelledby="later-today-heading">
+              <h2
+                id="later-today-heading"
+                className="mb-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#6E6E73] dark:text-[#AEAEB2]"
+              >
+                {t.laterTodayTitle} ({draft.laterToday.length})
+              </h2>
+              <div className="space-y-2.5">
+                {draft.laterToday.map((item, index) =>
+                  renderItemRow(item, index, draft.laterToday.length, true),
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Ako ostane kapaciteta (Optional) block */}
+          {optionalItems.length > 0 && (
+            <details className="mb-6 rounded-[20px] border border-black/[0.07] p-3.5 dark:border-white/[0.08]">
+              <summary
+                id="optional-today-heading"
+                className="app-a-focus-ring cursor-pointer px-1 text-[13px] font-semibold uppercase tracking-[0.08em] text-[#86868B]"
+              >
+                {t.optionalTodayLabel} ({optionalItems.length})
+              </summary>
+              <div className="mt-3 space-y-2.5">
+                {optionalItems.map((item, index) =>
+                  renderItemRow(item, index, optionalItems.length, false),
+                )}
+              </div>
+            </details>
+          )}
+        </>
+      )}
+
+      {/* 6. SAFE INTERVENTION CARD */}
       {isInterventionRelevant && draft.intervention && (
-        <SafeInterventionCard intervention={draft.intervention} language={language} onOpenReset={onOpenReset} onDismiss={handleDismissIntervention} />
+        <SafeInterventionCard
+          intervention={draft.intervention}
+          language={language}
+          onOpenReset={onOpenReset}
+          onDismiss={handleDismissIntervention}
+        />
       )}
 
-      <div className="mt-7 border-t border-black/[0.07] pt-5 dark:border-white/[0.08]">
-        <QuickAddTodayTask language={language} availableMinutes={draft.availableMinutes} plannedRequiredMinutes={draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes} onAddToday={onQuickAddToday} onSaveLater={onQuickSaveLater} onAdjustPlan={onEditPlan} />
+      {/* 7. QUICK ADD TODAY TASK */}
+      <div
+        id="quick-add-today"
+        className="mt-7 border-t border-black/[0.07] pt-5 dark:border-white/[0.08]"
+      >
+        <QuickAddTodayTask
+          language={language}
+          availableMinutes={draft.availableMinutes}
+          plannedRequiredMinutes={draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes}
+          onAddToday={onQuickAddToday}
+          onSaveLater={onQuickSaveLater}
+          onAdjustPlan={onEditPlan}
+        />
       </div>
 
+      {/* 8. OUTSIDE TODAY ITEMS (Deferred / Long term ideas / Non-action) */}
       {outsideCount > 0 && (
         <details className="mt-6 rounded-2xl border border-black/[0.07] bg-black/[0.025] p-4 text-[14px] dark:border-white/[0.08] dark:bg-white/[0.035]">
           <summary className="app-a-focus-ring cursor-pointer font-medium text-[#6E6E73] dark:text-[#AEAEB2]">
             {t.outsideTodaySummary.replace("{count}", String(outsideCount))}
           </summary>
           <div className="mt-3 space-y-3 border-t border-black/[0.07] pt-3 dark:border-white/[0.08]">
-            {draft.deferredItems.length ? <div><p className="text-[12px] font-semibold uppercase tracking-wide text-[#86868B]">{language === "sr" ? "Sačuvano u Inboksu za kasnije" : language === "tr" ? "Daha sonrası için Gelen Kutusuna kaydedildi" : "Saved in Inbox for later"}</p><ul className="mt-1.5 space-y-1">{draft.deferredItems.map((item) => <li key={item.id}>• {item.suggestedAction || item.originalText}</li>)}</ul></div> : null}
-            {draft.longTermIdeas.length ? <div><p className="text-[12px] font-semibold uppercase tracking-wide text-[#86868B]">{language === "sr" ? "Dugoročne ideje — sačuvane u Vision" : language === "tr" ? "Uzun vadeli fikirler — Vision'da saklandı" : "Long-term ideas — saved in Vision"}</p><ul className="mt-1.5 space-y-1 text-[#6E6E73] dark:text-[#AEAEB2]">{draft.longTermIdeas.map((item) => <li key={item.id}>• {item.originalText}</li>)}</ul></div> : null}
-            {draft.nonActionItems.length ? <div><p className="text-[12px] font-semibold uppercase tracking-wide text-[#86868B]">{language === "sr" ? "Beleške — Inboks › Za razjašnjenje" : language === "tr" ? "Notlar — Gelen Kutusu › Netleştirilecek" : "Notes — Inbox › To clarify"}</p><ul className="mt-1.5 space-y-1 text-[#6E6E73] dark:text-[#AEAEB2]">{draft.nonActionItems.map((item) => <li key={item.id}>• {item.originalText}</li>)}</ul></div> : null}
+            {draft.deferredItems.length > 0 && (
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#86868B]">
+                  {language === "sr"
+                    ? "Sačuvano u Inboksu za kasnije"
+                    : language === "tr"
+                      ? "Daha sonrası için Gelen Kutusuna kaydedildi"
+                      : "Saved in Inbox for later"}
+                </p>
+                <ul className="mt-1.5 space-y-1">
+                  {draft.deferredItems.map((item) => (
+                    <li key={item.id}>• {item.suggestedAction || item.originalText}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {draft.longTermIdeas.length > 0 && (
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#86868B]">
+                  {language === "sr"
+                    ? "Dugoročne ideje — sačuvane u Vision"
+                    : language === "tr"
+                      ? "Uzun vadeli fikirler — Vision'da saklandı"
+                      : "Long-term ideas — saved in Vision"}
+                </p>
+                <ul className="mt-1.5 space-y-1 text-[#6E6E73] dark:text-[#AEAEB2]">
+                  {draft.longTermIdeas.map((item) => (
+                    <li key={item.id}>• {item.originalText}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {draft.nonActionItems.length > 0 && (
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#86868B]">
+                  {language === "sr"
+                    ? "Beleške — Inboks › Za razjašnjenje"
+                    : language === "tr"
+                      ? "Notlar — Gelen Kutusu › Netleştirilecek"
+                      : "Notes — Inbox › To clarify"}
+                </p>
+                <ul className="mt-1.5 space-y-1 text-[#6E6E73] dark:text-[#AEAEB2]">
+                  {draft.nonActionItems.map((item) => (
+                    <li key={item.id}>• {item.originalText}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </details>
       )}
-      {focusItem ? <FocusTimer item={focusItem} language={language} defaultMinutes={defaultFocusMinutes} onClose={() => setFocusItem(null)} /> : null}
     </div>
   );
 }

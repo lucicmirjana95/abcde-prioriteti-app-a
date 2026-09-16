@@ -10,6 +10,29 @@ export interface DailyResetInput {
   stateNote?: string;
 }
 
+export type ClarificationMode = "continue" | "draft_now";
+
+export type MaterialImpact =
+  | "priority"
+  | "deadline"
+  | "duration"
+  | "dependency"
+  | "classification"
+  | "goal_relationship"
+  | "capacity"
+  | "other";
+
+export interface ClarificationHistoryItem {
+  roundIndex: number;
+  questionId: string;
+  question: string;
+  context: string;
+  materialImpact: MaterialImpact;
+  relatedItemIds: string[];
+  answer: string;
+  isUnknown?: boolean;
+}
+
 export interface ClarificationAnswer {
   questionId: string;
   answer: string;
@@ -17,6 +40,9 @@ export interface ClarificationAnswer {
 
 export interface DailyResetClarificationSubmission extends DailyResetInput {
   clarificationAnswers: ClarificationAnswer[];
+  clarificationRound?: number;
+  clarificationMode?: ClarificationMode;
+  clarificationHistory?: ClarificationHistoryItem[];
 }
 
 export type BrainDumpItemKind = "task" | "idea" | "worry" | "fact" | "waiting_for";
@@ -86,13 +112,7 @@ export interface ClarificationQuestion {
   question: string;
   context: string;
   relatedItemIds: string[];
-  materialImpact:
-    | "priority"
-    | "deadline"
-    | "duration"
-    | "classification"
-    | "goal_relationship"
-    | "other";
+  materialImpact: MaterialImpact;
 }
 
 export interface ClarificationNeededResponse {

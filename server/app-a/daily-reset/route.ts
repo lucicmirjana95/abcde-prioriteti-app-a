@@ -249,7 +249,20 @@ export function createDailyResetRoute(
           return;
         }
         
-        const validation = validateClarificationSubmission(body.submission || {}, body.questions);
+        const clarificationRound = Number(body.clarificationRound ?? body.submission?.clarificationRound ?? 1);
+        const clarificationMode = (body.clarificationMode ?? body.submission?.clarificationMode) as ("continue" | "draft_now" | undefined);
+        const clarificationHistory = Array.isArray(body.clarificationHistory)
+          ? body.clarificationHistory
+          : Array.isArray(body.submission?.clarificationHistory)
+          ? body.submission.clarificationHistory
+          : [];
+
+        const validation = validateClarificationSubmission(
+          body.submission || {},
+          body.questions,
+          clarificationMode,
+          clarificationHistory
+        );
         if (!validation.valid) {
           res.status(400).json({
             success: false,
@@ -266,9 +279,19 @@ export function createDailyResetRoute(
           res.status(400).json({ success: false, phase: "error", code: "invalid_input", error: localizeInvalidInput(body.submission?.language || "en"), retryable: false, fieldErrors: stateValidation.fieldErrors });
           return;
         }
-        prompt = buildDailyResetPrompt(body.submission, body.questions);
+        prompt = buildDailyResetPrompt(
+          body.submission,
+          body.questions,
+          clarificationRound,
+          clarificationMode,
+          clarificationHistory
+        );
         isClarification = true;
-        knownQuestionIds = body.questions.map((q: any) => String(q.id));
+        const historyQuestionIds = clarificationHistory.map((h: any) => String(h.questionId || h.question?.id)).filter(Boolean);
+        knownQuestionIds = [
+          ...body.questions.map((q: any) => String(q.id)),
+          ...historyQuestionIds
+        ];
         language = body.submission.language;
         brainDumpCharCount = String(body.submission.brainDump || "").length;
         if (Array.isArray(body.submission.clarificationAnswers)) {
@@ -469,13 +492,24 @@ export function createDailyResetRoute(
       const parseStartTime = clock();
       let rejectionReason = 'cross_field_validation';
       const recordRejection = (reason: string) => { rejectionReason = reason.replace(/[^a-z_]/g, '').slice(0, 80); onRejection?.(reason); };
+      const reqClarificationMode = body.clarificationMode ?? body.submission?.clarificationMode;
+      const clarificationOptions = (body.phase === 'resolve' && reqClarificationMode) ? {
+        clarificationRound: Number(body.clarificationRound ?? body.submission?.clarificationRound ?? 1),
+        clarificationMode: reqClarificationMode as "continue" | "draft_now",
+        clarificationHistory: Array.isArray(body.clarificationHistory)
+          ? body.clarificationHistory
+          : Array.isArray(body.submission?.clarificationHistory)
+          ? body.submission.clarificationHistory
+          : [],
+      } : undefined;
       let parsed = parseModelResponse(
         rawResponse,
         idFactory,
         isClarification,
         knownQuestionIds,
         recordRejection,
-        body.phase === 'initial' ? body.input : body.submission
+        body.phase === 'initial' ? body.input : body.submission,
+        clarificationOptions
       );
       const parseEndTime = clock();
 
@@ -498,7 +532,15 @@ export function createDailyResetRoute(
               }),
               repairTimeout,
             ]);
-            parsed = parseModelResponse(repairedRaw, idFactory, isClarification, knownQuestionIds, onRejection, body.phase === 'initial' ? body.input : body.submission);
+            parsed = parseModelResponse(
+              repairedRaw,
+              idFactory,
+              isClarification,
+              knownQuestionIds,
+              onRejection,
+              body.phase === 'initial' ? body.input : body.submission,
+              clarificationOptions
+            );
           } catch {
             // Preserve the original, localized invalid-response result below.
           } finally {

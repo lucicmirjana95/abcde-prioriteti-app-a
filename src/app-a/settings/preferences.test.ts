@@ -31,6 +31,9 @@ const autoPref: AppAPreferences = {
   timeZoneSetting: { mode: "automatic" },
   defaultFocusMinutes: 25,
   aiSuggestionsEnabled: true,
+  reducedMotion: "system",
+  soundEnabled: true,
+  notificationsEnabled: false,
 };
 assert.equal(getEffectiveTimeZone(autoPref), detected);
 assert.equal(getEffectiveTimeZone(autoPref.timeZoneSetting), detected);
@@ -43,6 +46,9 @@ const overridePref: AppAPreferences = {
   timeZoneSetting: { mode: "override", timeZone: "Asia/Tokyo" },
   defaultFocusMinutes: 25,
   aiSuggestionsEnabled: true,
+  reducedMotion: "system",
+  soundEnabled: true,
+  notificationsEnabled: false,
 };
 assert.equal(getEffectiveTimeZone(overridePref), "Asia/Tokyo");
 assert.equal(getEffectiveTimeZone(overridePref.timeZoneSetting), "Asia/Tokyo");
@@ -125,6 +131,9 @@ let currentPrefs: AppAPreferences = {
   timeZoneSetting: { mode: "automatic" },
   defaultFocusMinutes: 25,
   aiSuggestionsEnabled: true,
+  reducedMotion: "system",
+  soundEnabled: true,
+  notificationsEnabled: false,
 };
 assert.equal(getEffectiveTimeZone(currentPrefs), detected);
 
@@ -149,6 +158,9 @@ const originalInput: AppAPreferences = Object.freeze({
   timeZoneSetting: Object.freeze({ mode: "override", timeZone: "America/Chicago" }) as unknown as AppAPreferences["timeZoneSetting"],
   defaultFocusMinutes: 15,
   aiSuggestionsEnabled: true,
+  reducedMotion: "reduced" as const,
+  soundEnabled: false,
+  notificationsEnabled: true,
 });
 
 const normalizedOutput = normalizeAppAPreferences(originalInput);

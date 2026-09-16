@@ -131,6 +131,9 @@ export function getDefaultAppAPreferences(): AppAPreferences {
     timeZoneSetting: { mode: "automatic" },
     defaultFocusMinutes: 25,
     aiSuggestionsEnabled: true,
+    reducedMotion: "system",
+    soundEnabled: true,
+    notificationsEnabled: false,
   };
 }
 
@@ -152,6 +155,9 @@ export function normalizeAppAPreferences(value: unknown): AppAPreferences {
       timeZoneSetting: { ...fallback.timeZoneSetting },
       defaultFocusMinutes: fallback.defaultFocusMinutes,
       aiSuggestionsEnabled: fallback.aiSuggestionsEnabled,
+      reducedMotion: fallback.reducedMotion,
+      soundEnabled: fallback.soundEnabled,
+      notificationsEnabled: fallback.notificationsEnabled,
     };
   }
   const item = value as Record<string, unknown>;
@@ -159,6 +165,9 @@ export function normalizeAppAPreferences(value: unknown): AppAPreferences {
   const theme = item.theme === "light" || item.theme === "dark" || item.theme === "system" ? item.theme : "system";
   const defaultFocusMinutes = item.defaultFocusMinutes === 15 || item.defaultFocusMinutes === 25 || item.defaultFocusMinutes === 45 || item.defaultFocusMinutes === 60 ? item.defaultFocusMinutes : 25;
   const aiSuggestionsEnabled = typeof item.aiSuggestionsEnabled === "boolean" ? item.aiSuggestionsEnabled : true;
+  const reducedMotion = item.reducedMotion === "reduced" || item.reducedMotion === "standard" || item.reducedMotion === "system" ? item.reducedMotion : "system";
+  const soundEnabled = typeof item.soundEnabled === "boolean" ? item.soundEnabled : true;
+  const notificationsEnabled = typeof item.notificationsEnabled === "boolean" ? item.notificationsEnabled : false;
 
   let timeZoneSetting: AppATimeZoneSetting = { mode: "automatic" };
   if (item.timeZoneSetting && typeof item.timeZoneSetting === "object") {
@@ -178,6 +187,9 @@ export function normalizeAppAPreferences(value: unknown): AppAPreferences {
     timeZoneSetting,
     defaultFocusMinutes,
     aiSuggestionsEnabled,
+    reducedMotion,
+    soundEnabled,
+    notificationsEnabled,
   };
 }
 

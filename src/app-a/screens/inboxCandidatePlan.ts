@@ -1,6 +1,5 @@
 import type { ClassifiedBrainDumpItem, DailyPlanDraft, DailyPlanItem } from "../domain/daily-reset/contracts";
 import type { AppAInboxItem } from "../domain/inbox/contracts";
-import { normalizeInboxTitle } from "../domain/inbox/contracts";
 import { recalculatePlanTotals, validatePlanDraft } from "../domain/daily-reset/validation";
 
 export type AddInboxItemResult = { draft: DailyPlanDraft } | { error: "duplicate" | "duration_required" | "capacity_unknown" | "capacity_exceeded" | "invalid_plan" };
@@ -48,9 +47,8 @@ export function addInboxItemToPlan(draft: DailyPlanDraft, item: AppAInboxItem, o
   const sourceId = `inbox_source_${item.id}`;
   const planItemId = `inbox_plan_${item.id}`;
   const allPlanItems = [...draft.firstFocus, ...draft.laterToday, ...draft.ifCapacityRemains];
-  const title = normalizeInboxTitle(item.title);
-  if (draft.classifiedItems.some((entry) => entry.id === sourceId || normalizeInboxTitle(entry.suggestedAction || entry.originalText) === title)
-    || allPlanItems.some((entry) => entry.id === planItemId || entry.sourceItemIds.includes(sourceId) || normalizeInboxTitle(entry.title) === title)) {
+  if (draft.classifiedItems.some((entry) => entry.id === sourceId)
+    || allPlanItems.some((entry) => entry.id === planItemId || entry.sourceItemIds.includes(sourceId))) {
     return { error: "duplicate" };
   }
   const capacityType = item.capacityType || "flexible";

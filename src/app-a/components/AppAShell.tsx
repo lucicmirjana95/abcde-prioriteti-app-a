@@ -1,19 +1,22 @@
 import { ReactNode, useEffect, useState } from "react";
-import { AppADestination, AppALanguage, APP_A_TRANSLATIONS, type AppATheme } from "../types";
-import { Sun, Inbox, Eye, TrendingUp, Sparkles, Settings } from "lucide-react";
+import { AppADestination, AppALanguage, APP_A_TRANSLATIONS, type AppATheme, type AppAReducedMotion } from "../types";
+import { Home, FileText, Sprout, BarChart3, Sparkles, Settings } from "lucide-react";
 import AccountStatus from "./AccountStatus";
 
 interface Props {
   currentDestination: AppADestination;
   onNavigate: (dest: AppADestination) => void;
   language: AppALanguage;
-  children: ReactNode;
+  children?: ReactNode;
   theme: AppATheme;
+  reducedMotion?: AppAReducedMotion;
 }
 
-export default function AppAShell({ currentDestination, onNavigate, language, theme, children }: Props) {
+export default function AppAShell({ currentDestination, onNavigate, language, theme, reducedMotion = "system", children }: Props) {
   const t = APP_A_TRANSLATIONS[language];
   const [systemDark, setSystemDark] = useState(() => typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const [systemReducedMotion, setSystemReducedMotion] = useState(() => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const update = () => setSystemDark(media.matches);
@@ -21,13 +24,35 @@ export default function AppAShell({ currentDestination, onNavigate, language, th
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
   }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setSystemReducedMotion(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
   const isDark = theme === "dark" || (theme === "system" && systemDark);
+  const isReducedMotion = reducedMotion === "reduced" || (reducedMotion !== "standard" && systemReducedMotion);
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.classList.toggle("dark", isDark);
+    }
+  }, [isDark]);
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.classList.toggle("reduce-motion", isReducedMotion);
+    }
+  }, [isReducedMotion]);
 
   const navItems = [
-    { id: "today" as const, label: t.today, icon: Sun },
-    { id: "inbox" as const, label: t.inbox, icon: Inbox },
-    { id: "vision" as const, label: t.vision, icon: Eye },
-    { id: "progress" as const, label: t.progress, icon: TrendingUp },
+    { id: "today" as const, label: t.today, icon: Home },
+    { id: "inbox" as const, label: t.inbox, icon: FileText },
+    { id: "vision" as const, label: t.vision, icon: Sprout },
+    { id: "progress" as const, label: t.progress, icon: BarChart3 },
     { id: "settings" as const, label: language === "sr" ? "Podešavanja" : language === "tr" ? "Ayarlar" : "Settings", icon: Settings },
   ];
 
@@ -137,7 +162,7 @@ export default function AppAShell({ currentDestination, onNavigate, language, th
                 type="button"
                 onClick={() => onNavigate(item.id)}
                 aria-current={isCurrent ? "page" : undefined}
-                className="flex flex-1 flex-col items-center justify-end gap-[3px] pt-2 pb-1.5 transition-opacity active:opacity-50"
+                className="flex flex-1 flex-col items-center justify-end gap-[2px] pt-1.5 pb-1 transition-opacity active:opacity-50"
                 style={{
                   color: isCurrent ? "var(--app-a-accent)" : "var(--app-a-tab-inactive)",
                   WebkitTapHighlightColor: "transparent",
@@ -155,6 +180,15 @@ export default function AppAShell({ currentDestination, onNavigate, language, th
                 >
                   {item.label}
                 </span>
+                {isCurrent ? (
+                  <span
+                    className="h-1 w-1 rounded-full mt-[1px]"
+                    style={{ backgroundColor: "var(--app-a-accent)" }}
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <span className="h-1 w-1 mt-[1px] opacity-0" aria-hidden="true" />
+                )}
               </button>
             );
           })}

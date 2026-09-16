@@ -15,10 +15,18 @@ import "./app-a.css";
 import { useAppAPreferences } from "./settings/useAppAPreferences";
 import { useAppAAuth } from "./auth/useAppAAuth";
 import { clearSessionDrafts } from './persistence/sessionDraft';
-
 export default function AppA() {
-  const [destination, setDestination] = useState<AppADestination>("today");
-  const [visited, setVisited] = useState<AppADestination[]>(["today"]);
+  const initialDestination: AppADestination = useMemo(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search).get("dest");
+      if (p === "inbox" || p === "vision" || p === "progress" || p === "settings" || p === "today") {
+        return p;
+      }
+    }
+    return "today";
+  }, []);
+  const [destination, setDestination] = useState<AppADestination>(initialDestination);
+  const [visited, setVisited] = useState<AppADestination[]>([initialDestination]);
   const [targetVisionId, setTargetVisionId] = useState<string | null>(null);
   const { user, authReady } = useAppAAuth();
   const previousUser = useRef(user?.uid);
@@ -80,7 +88,18 @@ export default function AppA() {
       );
       break;
     case "inbox":
-      screen = <InboxScreen language={language} preferences={preferences} />;
+      screen = (
+        <InboxScreen
+          language={language}
+          preferences={preferences}
+          onOpenVision={(visionId) => {
+            setTargetVisionId(visionId || null);
+            setDestination("vision");
+            setVisited((items) => items.includes("vision") ? items : [...items, "vision"]);
+            window.dispatchEvent(new Event("app-a-navigation"));
+          }}
+        />
+      );
       break;
     case "vision":
       screen = <VisionScreen language={language} targetVisionId={targetVisionId} />;
@@ -96,7 +115,13 @@ export default function AppA() {
   };
 
   return (
-    <AppAShell currentDestination={destination} onNavigate={(next) => { setDestination(next); setVisited((items) => items.includes(next) ? items : [...items, next]); window.dispatchEvent(new Event('app-a-navigation')); }} language={language} theme={preferences.theme}>
+    <AppAShell
+      currentDestination={destination}
+      onNavigate={(next) => { setDestination(next); setVisited((items) => items.includes(next) ? items : [...items, next]); window.dispatchEvent(new Event('app-a-navigation')); }}
+      language={language}
+      theme={preferences.theme}
+      reducedMotion={preferences.reducedMotion}
+    >
       {authReady && visited.map((screen) => <div key={`${accountBoundary}:${screen}`} hidden={destination !== screen}>{renderScreen(screen)}</div>)}
     </AppAShell>
   );

@@ -87,9 +87,27 @@ function languageOf(value?: string): SupportedLanguage {
   return value === "sr" || value === "tr" ? value : "en";
 }
 
-export function getDailyResetDemoConfig(search: string): DailyResetDemoConfig | null {
+export function getDailyResetDemoConfig(
+  search: string,
+  isProd = typeof import.meta !== "undefined" && Boolean(import.meta.env?.PROD),
+): DailyResetDemoConfig | null {
+  // Demo mode is development-only and must never run in production builds
+  if (isProd) {
+    return null;
+  }
   const params = new URLSearchParams(search);
-  if (params.get("app") !== "a" || params.get("demo") !== "daily-reset") return null;
+  const appParam = params.get("app");
+  const demoParam = params.get("demo");
+  const isPreview = params.get("preview") === "true";
+
+  // If another app is explicitly targeted, never enable App A demo
+  if (appParam !== null && appParam !== "a") return null;
+
+  const isCanonicalDemo = appParam === "a" && demoParam === "daily-reset";
+  const isLocalPreview = demoParam === "daily-reset" || demoParam === "preview" || isPreview;
+
+  if (!isCanonicalDemo && !isLocalPreview) return null;
+
   const requested = params.get("scenario");
   const scenario = DAILY_RESET_DEMO_SCENARIOS.includes(requested as DailyResetDemoScenario)
     ? (requested as DailyResetDemoScenario)

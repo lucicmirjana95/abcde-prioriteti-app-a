@@ -28,6 +28,9 @@ export type DailyResetResolveRequest = {
   phase: "resolve";
   submission: DailyResetClarificationSubmission;
   questions: ClarificationQuestion[];
+  clarificationRound?: number;
+  clarificationMode?: "continue" | "draft_now";
+  clarificationHistory?: any[];
 };
 
 export type DailyResetRequest =
@@ -199,7 +202,12 @@ class DailyResetApiClientImpl implements DailyResetApiClient {
         : submission?.clarificationAnswers,
     };
 
-    const val = validateClarificationSubmission(normalizedSubmission, questions);
+    const val = validateClarificationSubmission(
+      normalizedSubmission,
+      questions,
+      submission?.clarificationMode,
+      submission?.clarificationHistory
+    );
     if (!val.valid) {
       return createErrorResponse(
         "invalid_input",
@@ -212,8 +220,16 @@ class DailyResetApiClientImpl implements DailyResetApiClient {
 
     const payload: DailyResetResolveRequest = {
       phase: "resolve",
-      submission: normalizedSubmission,
+      submission: {
+        ...normalizedSubmission,
+        clarificationRound: submission?.clarificationRound,
+        clarificationMode: submission?.clarificationMode,
+        clarificationHistory: submission?.clarificationHistory,
+      },
       questions,
+      clarificationRound: submission?.clarificationRound,
+      clarificationMode: submission?.clarificationMode,
+      clarificationHistory: submission?.clarificationHistory,
     };
 
     return this.sendRequest(payload, normalizedInput.language, questions, signal);

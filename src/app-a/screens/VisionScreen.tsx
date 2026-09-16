@@ -270,7 +270,24 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
   const [saved, setSaved] = useState<SavedVisionStrategy[]>([]);
   const [view, setView] = useState<"active" | "archived">("active");
   const [deletedFingerprints, setDeletedFingerprints] = useState<string[]>([]);
-  const [suppressedIdeas, setSuppressedIdeas] = useState<string[]>([]);
+  const [suppressedIdeas, setSuppressedIdeas] = useState<string[]>(() => {
+    try {
+      const dateKey = `app-a:vision:suppressed:${new Date().toISOString().slice(0, 10)}`;
+      const saved = localStorage.getItem(dateKey);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      const dateKey = `app-a:vision:suppressed:${new Date().toISOString().slice(0, 10)}`;
+      localStorage.setItem(dateKey, JSON.stringify(suppressedIdeas));
+    } catch {
+      // Ignore
+    }
+  }, [suppressedIdeas]);
   const [selected, setSelected] = useState<string | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);

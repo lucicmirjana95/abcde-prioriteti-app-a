@@ -21,8 +21,17 @@ const COPY = {
     language: "Language",
     theme: "Appearance",
     system: "System",
-    light: "Light",
-    dark: "Dark",
+    light: "Day",
+    dark: "Evening",
+    reducedMotion: "Reduced motion",
+    reducedMotionHelp: "Limits interface animations and motion effects.",
+    motionSystem: "System",
+    motionReduced: "Reduced",
+    motionStandard: "Standard",
+    sound: "Sound effects",
+    soundHelp: "Subtle audio cues during focus and completion.",
+    notifications: "Notifications",
+    notificationsHelp: "Reminders for daily planning and focus sessions.",
     zone: "Time zone",
     zoneHelp: "Used for daily plans and routine dates.",
     automatic: "Automatic",
@@ -42,8 +51,17 @@ const COPY = {
     language: "Jezik",
     theme: "Izgled",
     system: "Sistemski",
-    light: "Svetli",
-    dark: "Tamni",
+    light: "Dan",
+    dark: "Veče",
+    reducedMotion: "Smanjeno kretanje",
+    reducedMotionHelp: "Ograničava animacije i efekte kretanja u interfejsu.",
+    motionSystem: "Sistemski",
+    motionReduced: "Smanjeno",
+    motionStandard: "Standardno",
+    sound: "Zvučni efekti",
+    soundHelp: "Suptilni zvučni signali tokom rada u fokusu i završetka zadatka.",
+    notifications: "Notifikacije",
+    notificationsHelp: "Podsetnici za dnevno planiranje i fokus sesije.",
     zone: "Vremenska zona",
     zoneHelp: "Koristi se za dnevne planove i datume rutina.",
     automatic: "Automatski",
@@ -63,8 +81,17 @@ const COPY = {
     language: "Dil",
     theme: "Görünüm",
     system: "Sistem",
-    light: "Açık",
-    dark: "Koyu",
+    light: "Gündüz",
+    dark: "Akşam",
+    reducedMotion: "Azaltılmış hareket",
+    reducedMotionHelp: "Arayüz animasyonlarını ve hareket efektlerini sınırlar.",
+    motionSystem: "Sistem",
+    motionReduced: "Azaltılmış",
+    motionStandard: "Standart",
+    sound: "Ses efektleri",
+    soundHelp: "Odak ve tamamlama sırasında hafif sesli uyarılar çal.",
+    notifications: "Bildirimler",
+    notificationsHelp: "Günlük planlama ve odak oturumları için hatırlatıcılar.",
     zone: "Saat dilimi",
     zoneHelp: "Günlük planlar ve rutin tarihleri için kullanılır.",
     automatic: "Otomatik",
@@ -318,21 +345,118 @@ export default function SettingsScreen({
         {/* Theme */}
         <section className="p-5">
           <p className="text-[15px] font-semibold text-black dark:text-white">{t.theme}</p>
-          <div className="mt-2.5 flex rounded-[12px] p-1 bg-black/[0.06] dark:bg-white/[0.08]" role="group">
-            {(["system", "light", "dark"] as const).map((theme) => (
-              <button
-                key={theme}
-                type="button"
-                onClick={() => update("theme", theme)}
-                className={`app-a-focus-ring flex-1 min-h-[36px] rounded-[9px] text-[13px] font-semibold transition-all ${
-                  preferences.theme === theme
-                    ? "bg-white text-black shadow-sm dark:bg-[#3A3A3C] dark:text-white"
-                    : "text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white"
+          <div className="mt-2.5 flex rounded-[12px] p-1 bg-black/[0.06] dark:bg-white/[0.08]" role="group" aria-label={t.theme}>
+            {(["system", "light", "dark"] as const).map((theme) => {
+              const isSelected = preferences.theme === theme;
+              return (
+                <button
+                  key={theme}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => update("theme", theme)}
+                  className={`app-a-focus-ring flex-1 min-h-[40px] rounded-[9px] text-[13px] font-semibold transition-all ${
+                    isSelected
+                      ? "bg-white text-black shadow-sm dark:bg-[#3A3A3C] dark:text-white"
+                      : "text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white"
+                  }`}
+                >
+                  {t[theme]}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Reduced Motion */}
+        <section className="p-5">
+          <p className="text-[15px] font-semibold text-black dark:text-white">{t.reducedMotion}</p>
+          <p className="mt-1 text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]">{t.reducedMotionHelp}</p>
+          <div className="mt-2.5 flex rounded-[12px] p-1 bg-black/[0.06] dark:bg-white/[0.08]" role="group" aria-label={t.reducedMotion}>
+            {(["system", "reduced", "standard"] as const).map((motion) => {
+              const label = motion === "system" ? t.motionSystem : motion === "reduced" ? t.motionReduced : t.motionStandard;
+              const isSelected = preferences.reducedMotion === motion;
+              return (
+                <button
+                  key={motion}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => update("reducedMotion", motion)}
+                  className={`app-a-focus-ring flex-1 min-h-[40px] rounded-[9px] text-[13px] font-semibold transition-all ${
+                    isSelected
+                      ? "bg-white text-black shadow-sm dark:bg-[#3A3A3C] dark:text-white"
+                      : "text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Sound Effects Toggle */}
+        <section className="flex items-center justify-between gap-4 p-5">
+          <div className="flex-1 pr-2">
+            <label htmlFor="sound-effects-switch" className="text-[15px] font-semibold text-black dark:text-white cursor-pointer">
+              {t.sound}
+            </label>
+            <p className="mt-1 text-[12px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
+              {t.soundHelp}
+            </p>
+          </div>
+          <div className="flex h-11 min-w-[44px] shrink-0 items-center justify-center">
+            <button
+              type="button"
+              role="switch"
+              id="sound-effects-switch"
+              aria-checked={preferences.soundEnabled}
+              onClick={() => update("soundEnabled", !preferences.soundEnabled)}
+              className={`app-a-focus-ring relative flex h-6 w-[44px] shrink-0 cursor-pointer items-center rounded-full p-[2px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3] focus-visible:ring-offset-2 dark:focus-visible:ring-[#2997ff] ${
+                preferences.soundEnabled
+                  ? "bg-[#0071E3] dark:bg-[#2997ff]"
+                  : "bg-black/20 dark:bg-white/20"
+              }`}
+              style={{ boxSizing: "border-box" }}
+            >
+              <span
+                className={`block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                  preferences.soundEnabled ? "translate-x-[20px]" : "translate-x-0"
                 }`}
-              >
-                {t[theme]}
-              </button>
-            ))}
+              />
+            </button>
+          </div>
+        </section>
+
+        {/* Notifications Toggle */}
+        <section className="flex items-center justify-between gap-4 p-5">
+          <div className="flex-1 pr-2">
+            <label htmlFor="notifications-switch" className="text-[15px] font-semibold text-black dark:text-white cursor-pointer">
+              {t.notifications}
+            </label>
+            <p className="mt-1 text-[12px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
+              {t.notificationsHelp}
+            </p>
+          </div>
+          <div className="flex h-11 min-w-[44px] shrink-0 items-center justify-center">
+            <button
+              type="button"
+              role="switch"
+              id="notifications-switch"
+              aria-checked={preferences.notificationsEnabled}
+              onClick={() => update("notificationsEnabled", !preferences.notificationsEnabled)}
+              className={`app-a-focus-ring relative flex h-6 w-[44px] shrink-0 cursor-pointer items-center rounded-full p-[2px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3] focus-visible:ring-offset-2 dark:focus-visible:ring-[#2997ff] ${
+                preferences.notificationsEnabled
+                  ? "bg-[#0071E3] dark:bg-[#2997ff]"
+                  : "bg-black/20 dark:bg-white/20"
+              }`}
+              style={{ boxSizing: "border-box" }}
+            >
+              <span
+                className={`block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                  preferences.notificationsEnabled ? "translate-x-[20px]" : "translate-x-0"
+                }`}
+              />
+            </button>
           </div>
         </section>
 

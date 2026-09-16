@@ -22,6 +22,7 @@ export type RemoteCollectionName =
   | "dailyResets"
   | "rolloverDecisions"
   | "inboxItems"
+  | "inboxMutationReceipts"
   | "visionStrategies"
   | "todayCandidates"
   | "routines"
@@ -73,6 +74,11 @@ export const SUPPORTED_REMOTE_COLLECTIONS: readonly RemoteCollectionTarget[] = O
   Object.freeze({
     scopeCategory: "app_a_daily",
     collectionName: "inboxItems",
+    rootCollection: "appAUsers",
+  }),
+  Object.freeze({
+    scopeCategory: "app_a_daily",
+    collectionName: "inboxMutationReceipts",
     rootCollection: "appAUsers",
   }),
   Object.freeze({

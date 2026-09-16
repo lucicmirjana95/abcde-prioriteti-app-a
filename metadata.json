@@ -1,0 +1,10 @@
+{
+  "name": "Remix abcde-prioriteti-app-a",
+  "description": "Imported from GitHub: lucicmirjana95/abcde-prioriteti-app-a",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

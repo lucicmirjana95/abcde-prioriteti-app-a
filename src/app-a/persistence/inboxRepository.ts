@@ -11,8 +11,9 @@ import {
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import type { ClassifiedBrainDumpItem } from "../domain/daily-reset/contracts";
-import type { AppAInboxItem, InboxItemStatus } from "../domain/inbox/contracts";
+import type { AppAInboxItem, InboxItemStatus, InboxMutationReceipt } from "../domain/inbox/contracts";
 import {
+  computeInboxItemSemanticFingerprint,
   createImportedInboxItemId,
   isAppAInboxItem,
 } from "../domain/inbox/contracts";
@@ -142,9 +143,73 @@ export async function loadDueScheduledInboxItems(userId: string, localDate: stri
   return dueScheduledInboxItems(items, localDate).filter(item => !scheduledIds.has(`inbox_plan_${item.id}`));
 }
 
-export async function saveInboxItem(userId: string, item: AppAInboxItem): Promise<void> {
+export type SaveInboxItemResult =
+  | { type: "success"; item: AppAInboxItem }
+  | { type: "already_applied"; item: AppAInboxItem };
+
+export async function saveInboxItem(userId: string, item: AppAInboxItem): Promise<SaveInboxItemResult> {
   if (!isAppAInboxItem(item)) throw new Error("invalid_inbox_item");
-  await setDoc(inboxRef(userId, item.id), item, { merge: false });
+  const uid = requireUserId(userId);
+  const itemReference = inboxRef(uid, item.id);
+  const mutationId = item.mutationId;
+  const fingerprint = computeInboxItemSemanticFingerprint(item);
+  const receiptReference = mutationId
+    ? doc(db, "appAUsers", uid, "inboxMutationReceipts", mutationId)
+    : null;
+
+  return runTransaction(db, async (transaction) => {
+    const itemSnapshot = await transaction.get(itemReference);
+    const receiptSnapshot = receiptReference ? await transaction.get(receiptReference) : null;
+
+    if (receiptSnapshot && receiptSnapshot.exists()) {
+      const receipt = receiptSnapshot.data() as InboxMutationReceipt;
+      if (receipt.itemId !== item.id) {
+        throw new Error("conflict:mutation_id_used_for_different_item");
+      }
+      if (receipt.semanticPayloadFingerprint !== fingerprint) {
+        throw new Error("conflict:mutation_payload_mismatch");
+      }
+      if (!itemSnapshot.exists()) {
+        throw new Error("conflict:inbox_receipt_inconsistent");
+      }
+      const existing = itemSnapshot.data() as AppAInboxItem;
+      const existingFingerprint = computeInboxItemSemanticFingerprint(existing);
+      if (existing.mutationId !== mutationId || existingFingerprint !== fingerprint) {
+        throw new Error("conflict:inbox_receipt_inconsistent");
+      }
+      return { type: "already_applied", item: existing };
+    }
+
+    if (itemSnapshot.exists()) {
+      const existing = itemSnapshot.data() as AppAInboxItem;
+      const existingFingerprint = computeInboxItemSemanticFingerprint(existing);
+      if (mutationId && existing.mutationId === mutationId && existingFingerprint === fingerprint) {
+        if (receiptReference) {
+          const receiptDoc: InboxMutationReceipt = {
+            mutationId,
+            itemId: item.id,
+            semanticPayloadFingerprint: fingerprint,
+            createdAt: new Date().toISOString(),
+          };
+          transaction.set(receiptReference, receiptDoc);
+        }
+        return { type: "already_applied", item: existing };
+      }
+      throw new Error("conflict:existing_inbox_item_mismatch");
+    }
+
+    transaction.set(itemReference, JSON.parse(JSON.stringify(item)));
+    if (receiptReference && mutationId) {
+      const receiptDoc: InboxMutationReceipt = {
+        mutationId,
+        itemId: item.id,
+        semanticPayloadFingerprint: fingerprint,
+        createdAt: new Date().toISOString(),
+      };
+      transaction.set(receiptReference, receiptDoc);
+    }
+    return { type: "success", item };
+  });
 }
 
 export async function addMissingInboxDuration(userId: string, itemId: string, minutes: number): Promise<AppAInboxItem> {

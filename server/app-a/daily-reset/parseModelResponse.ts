@@ -135,6 +135,11 @@ export function parseModelResponse(
   knownQuestionIds?: string[],
   onRejection?: (reason: string) => void,
   authoritativeInput?: { availableMinutes?: number; brainDump?: string },
+  clarificationOptions?: {
+    clarificationRound?: number;
+    clarificationMode?: "continue" | "draft_now";
+    clarificationHistory?: any[];
+  }
 ): ClarificationNeededResponse | PlanReadyResponse | DailyResetErrorResponse {
   const logSanitizedRejection = (reason: string) => {
     if (onRejection) {
@@ -156,8 +161,20 @@ export function parseModelResponse(
 
   if (modelResp.phase === "clarification_needed") {
     if (isClarificationPhase) {
-      logSanitizedRejection("clarification_in_resolve_phase");
-      return createError("invalid_ai_response", "Model returned clarification questions during the clarification phase.", false);
+      if (clarificationOptions?.clarificationMode !== "continue") {
+        logSanitizedRejection("clarification_in_resolve_phase");
+        return createError("invalid_ai_response", "Model returned clarification questions during the resolution phase.", false);
+      }
+      const round = clarificationOptions.clarificationRound ?? 1;
+      const history = clarificationOptions.clarificationHistory ?? [];
+      if (round >= 5) {
+        logSanitizedRejection("clarification_round_cap_exceeded");
+        return createError("invalid_ai_response", "Model returned clarification questions after maximum rounds (5).", false);
+      }
+      if (history.length >= 12) {
+        logSanitizedRejection("clarification_question_cap_exceeded");
+        return createError("invalid_ai_response", "Model returned clarification questions after maximum questions limit (12).", false);
+      }
     }
     if (isPopulatedDraft(modelResp.draft)) {
       logSanitizedRejection("provisional_draft_with_clarification");
@@ -187,7 +204,16 @@ export function parseModelResponse(
       const newId = idFactory();
       idMap.set(q.id, newId);
 
-      const validMaterialImpacts = ["priority", "deadline", "duration", "classification", "goal_relationship", "other"];
+      const validMaterialImpacts = [
+        "priority",
+        "deadline",
+        "duration",
+        "dependency",
+        "classification",
+        "goal_relationship",
+        "capacity",
+        "other"
+      ];
       const materialImpact = validMaterialImpacts.includes(q.materialImpact as string)
         ? q.materialImpact as any
         : "other";

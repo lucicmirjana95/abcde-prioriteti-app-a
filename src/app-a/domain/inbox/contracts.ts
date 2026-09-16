@@ -24,7 +24,17 @@ export interface AppAInboxItem {
   language: AppALanguage;
   createdAt: string;
   updatedAt: string;
+  mutationId?: string;
 }
+
+export interface InboxMutationReceipt {
+  mutationId: string;
+  itemId: string;
+  semanticPayloadFingerprint: string;
+  createdAt: string;
+}
+
+export * from "./fingerprint";
 
 export function createImportedInboxItemId(sourceLocalDate: string, sourceItemId: string): string {
   return `in_${computeDeterministicDigest128(`${sourceLocalDate}\u0000${sourceItemId}`)}`;
@@ -35,6 +45,13 @@ export function createManualInboxItemId(): string {
     ? crypto.randomUUID().replace(/-/g, "")
     : `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
   return `in_manual_${random.slice(0, 48)}`;
+}
+
+export function createInboxMutationId(): string {
+  const random = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID().replace(/-/g, "")
+    : `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+  return `mut_in_${random.slice(0, 48)}`;
 }
 
 export function isLocalDate(value: unknown): value is string {
@@ -54,7 +71,8 @@ export function isAppAInboxItem(value: unknown): value is AppAInboxItem {
     && typeof item.createdAt === "string" && typeof item.updatedAt === "string"
     && (item.estimatedMinutes === undefined || (Number.isInteger(item.estimatedMinutes) && item.estimatedMinutes > 0 && item.estimatedMinutes <= 1440))
     && (item.capacityType === undefined || item.capacityType === "flexible" || item.capacityType === "fixed")
-    && (item.scheduledLocalDate === undefined || isLocalDate(item.scheduledLocalDate));
+    && (item.scheduledLocalDate === undefined || isLocalDate(item.scheduledLocalDate))
+    && (item.mutationId === undefined || (typeof item.mutationId === "string" && item.mutationId.length > 0 && item.mutationId.length <= 128));
 }
 
 export function normalizeInboxTitle(value: string): string {

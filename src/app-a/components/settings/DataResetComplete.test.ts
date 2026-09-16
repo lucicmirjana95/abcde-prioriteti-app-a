@@ -130,6 +130,7 @@ async function runCompleteDataResetTest() {
     "appAUsers/user-test-123/dailyResets": [{ id: "date-1", ref: {} }],
     "appAUsers/user-test-123/rolloverDecisions": [{ id: "roll-1", ref: {} }],
     "appAUsers/user-test-123/inboxItems": [{ id: "inbox-1", ref: {} }],
+    "appAUsers/user-test-123/inboxMutationReceipts": [{ id: "mut-1", ref: {} }],
     "users/user-test-123/visionStrategies": [{ id: "vis-1", ref: {} }],
     "users/user-test-123/todayCandidates": [{ id: "cand-1", ref: {} }],
     "users/user-test-123/routines": [{ id: "rout-1", ref: {} }],

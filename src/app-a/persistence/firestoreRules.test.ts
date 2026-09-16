@@ -14,6 +14,7 @@ for (const requiredMatch of [
   "match /dailyResets/{dateKey}",
   "match /rolloverDecisions/{decisionId}",
   "match /inboxItems/{inboxItemId}",
+  "match /inboxMutationReceipts/{mutationId}",
 ]) {
   assert.ok(rules.includes(requiredMatch), `Missing required App A rule: ${requiredMatch}`);
 }
