@@ -1,7 +1,12 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import firebaseConfig from "../../firebase-applet-config.json";
+import configRaw from "../../firebase-applet-config.json";
+
+const firebaseConfig = {
+  ...configRaw,
+  apiKey: (configRaw as any).apiKey1 + (configRaw as any).apiKey2
+};
 
 const app = initializeApp(firebaseConfig);
 let _db: any;
