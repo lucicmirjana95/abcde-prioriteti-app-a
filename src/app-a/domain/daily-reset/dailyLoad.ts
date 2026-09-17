@@ -67,14 +67,23 @@ export function calculateDailyLoad(options: AssessDailyLoadOptions): DailyLoadAs
     activeRoutinesMinutes = 0,
   } = options;
 
-  const availableMinutes = Math.max(
-    0,
+  const isExplicitCapacity =
     options.availableMinutes !== undefined
-      ? options.availableMinutes
+      ? options.availableMinutes > 0
       : draft.availableMinutes !== undefined
-        ? draft.availableMinutes
-        : 0,
-  );
+        ? draft.availableMinutes > 0
+        : false;
+
+  const availableMinutes = isExplicitCapacity
+    ? Math.max(
+        0,
+        options.availableMinutes !== undefined
+          ? options.availableMinutes
+          : draft.availableMinutes !== undefined
+            ? draft.availableMinutes
+            : 0,
+      )
+    : 0;
 
   const completedSet = new Set(completedItemIds);
   const plannedRoutineSet = new Set(plannedRoutineIds);
@@ -228,9 +237,11 @@ export function calculateDailyLoad(options: AssessDailyLoadOptions): DailyLoadAs
     deduplicatedLinkedTaskRemainingMinutes +
     routineRemainingMinutes;
 
-  const isOverCapacity = totalRemainingMinutes > availableMinutes;
+  const isOverCapacity = isExplicitCapacity && totalRemainingMinutes > availableMinutes;
   const overCapacityMinutes = isOverCapacity ? totalRemainingMinutes - availableMinutes : 0;
-  const remainingCapacityMinutes = Math.max(0, availableMinutes - totalRemainingMinutes);
+  const remainingCapacityMinutes = isExplicitCapacity
+    ? Math.max(0, availableMinutes - totalRemainingMinutes)
+    : 0;
 
   // Suggested moves for excess capacity
   const candidates = [...plannedTasks.filter((item) => item.capacityType !== "fixed")].sort(

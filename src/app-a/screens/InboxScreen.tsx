@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useAppAAuth } from "../auth/useAppAAuth";
 import PlanHistoryState from "../components/PlanHistoryState";
-import GrowthPathArt from "../components/GrowthPathArt";
 import type { AppAInboxItem } from "../domain/inbox/contracts";
 import { normalizeInboxTitle } from "../domain/inbox/contracts";
 import { getLocalDateKeyInTimeZone } from "../persistence/dailyPlanDocument";
@@ -16,6 +15,7 @@ import { useInboxMutations } from "../components/inbox/useInboxMutations";
 import InboxQuickCapture from "../components/inbox/InboxQuickCapture";
 import InboxSections, { type InboxFilter } from "../components/inbox/InboxSections";
 import InboxItemCard from "../components/inbox/InboxItemCard";
+import FlowHeader from "../components/daily-reset/FlowHeader";
 
 const COPY = {
   en: {
@@ -481,34 +481,20 @@ export default function InboxScreen({
   );
 
   return (
-    <div className="mx-auto w-full max-w-[760px] px-4 pb-28 sm:px-6 sm:pb-32">
-      {/* 1. Header */}
-      <header className="relative mb-5 overflow-hidden rounded-[20px] p-5 sm:p-6 app-a-surface">
-        <GrowthPathArt variant="header" className="absolute inset-0 opacity-40 dark:opacity-30" />
-        <div className="relative z-10">
-          <p className="app-a-eyebrow">{t.eyebrow}</p>
-          <h1 className="app-a-page-title text-[24px] sm:text-[28px]">{t.title}</h1>
-          <p className="app-a-page-intro mt-1 max-w-[560px] text-[14px] sm:text-[15px]">{t.intro}</p>
-        </div>
-      </header>
-
-      {/* 2. Quick Capture (Stable identity, retained text on failure, Retry button) */}
-      <InboxQuickCapture
-        language={language}
-        draftTitle={draft.title}
-        onDraftTitleChange={setDraftTitle}
-        onSubmit={submitDraft}
-        onRetry={retryDraft}
-        isSubmitting={processingId === "new"}
-        draftError={draftError}
-        translations={t}
+    <div className="mx-auto w-full max-w-[1100px] px-4 pb-28 sm:px-6 sm:pb-32 md:px-0">
+      {/* 1. Header with Watercolor Horizon Art */}
+      <FlowHeader
+        eyebrow={t.eyebrow}
+        title={t.title}
+        intro={t.intro}
+        className="mb-6"
       />
 
       {/* Global Alerts / Notices */}
       {/* Load Error — with Retry */}
       {loadError ? (
         <div
-          className="mb-4 flex items-center justify-between gap-3 rounded-xl p-3.5 text-[13px] font-medium"
+          className="mb-5 flex items-center justify-between gap-3 rounded-xl p-3.5 text-[13px] font-medium"
           style={{ background: "var(--app-a-danger-soft)", color: "var(--app-a-danger)" }}
         >
           <span role="alert">{loadError}</span>
@@ -526,7 +512,7 @@ export default function InboxScreen({
       {error ? (
         <div
           role="alert"
-          className="mb-4 rounded-xl p-3.5 text-[13px] font-medium"
+          className="mb-5 rounded-xl p-3.5 text-[13px] font-medium"
           style={{ background: "var(--app-a-danger-soft)", color: "var(--app-a-danger)" }}
         >
           {error}
@@ -537,25 +523,44 @@ export default function InboxScreen({
         <div
           role="status"
           aria-live="polite"
-          className="mb-4 rounded-xl p-3.5 text-[13px] font-medium"
+          className="mb-5 rounded-xl p-3.5 text-[13px] font-medium"
           style={{ background: "var(--app-a-accent-soft)", color: "var(--app-a-accent)" }}
         >
           {notice}
         </div>
       ) : null}
 
-      {/* 3. Sections & Filters */}
-      <InboxSections
-        filter={filter}
-        onFilterChange={setFilter}
-        search={search}
-        onSearchChange={setSearch}
-        visibleItems={visible}
-        groupedSections={groupedSections}
-        renderItemCard={renderCard}
-        hasLoadError={!!loadError}
-        translations={t}
-      />
+      {/* 2. Responsive 2-Column Layout on Desktop */}
+      <div className="lg:grid lg:grid-cols-12 lg:gap-8 lg:items-start">
+        {/* Left Column: Quick Capture (Sticky on desktop) */}
+        <div className="lg:col-span-5 lg:sticky lg:top-6 space-y-4">
+          <InboxQuickCapture
+            language={language}
+            draftTitle={draft.title}
+            onDraftTitleChange={setDraftTitle}
+            onSubmit={submitDraft}
+            onRetry={retryDraft}
+            isSubmitting={processingId === "new"}
+            draftError={draftError}
+            translations={t}
+          />
+        </div>
+
+        {/* Right Column: Filters, Search & Item Sections */}
+        <div className="lg:col-span-7 mt-6 lg:mt-0">
+          <InboxSections
+            filter={filter}
+            onFilterChange={setFilter}
+            search={search}
+            onSearchChange={setSearch}
+            visibleItems={visible}
+            groupedSections={groupedSections}
+            renderItemCard={renderCard}
+            hasLoadError={!!loadError}
+            translations={t}
+          />
+        </div>
+      </div>
     </div>
   );
 }

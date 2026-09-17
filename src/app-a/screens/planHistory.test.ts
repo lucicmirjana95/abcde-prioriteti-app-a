@@ -229,4 +229,80 @@ console.log("Starting Progress Deduplication & Routine Integration Tests...");
   console.log("✅ 5. Full completion with linked task counts as exactly 1 event");
 }
 
+// 6. Guest daily plans from localStorage
+{
+  const storage = new Map<string, string>();
+  const mockStorage = {
+    get length() { return storage.size; },
+    key: (i: number) => Array.from(storage.keys())[i] || null,
+    getItem: (k: string) => storage.get(k) || null,
+    setItem: (k: string, v: string) => { storage.set(k, v); },
+    removeItem: (k: string) => { storage.delete(k); },
+    clear: () => { storage.clear(); },
+  };
+  (globalThis as any).window = { localStorage: mockStorage };
+  (global as any).window = (globalThis as any).window;
+  (globalThis as any).localStorage = mockStorage;
+  (global as any).localStorage = mockStorage;
+
+  const { loadGuestDailyPlans } = await import("../persistence/dailyPlanRepository");
+
+  const mockPlan1 = {
+    schemaVersion: 1,
+    localDate: "2026-09-08",
+    timezone: "UTC",
+    language: "sr",
+    status: "confirmed",
+    checkIn: {},
+    plan: {
+      classifiedItems: [],
+      firstFocus: [{ id: "f1", title: "Prioritet", block: "first_focus", estimatedMinutes: 30, requiredEnergy: 2 }],
+      laterToday: [],
+      ifCapacityRemains: [],
+      deferredItems: [],
+      longTermIdeas: [],
+      nonActionItems: [],
+      planRationale: "Test",
+      plannedRequiredMinutes: 30,
+      plannedOptionalMinutes: 0,
+    },
+    execution: { completedItemIds: ["f1"] },
+  };
+  const mockPlan2 = {
+    schemaVersion: 1,
+    localDate: "2026-09-09",
+    timezone: "UTC",
+    language: "sr",
+    status: "confirmed",
+    checkIn: {},
+    plan: {
+      classifiedItems: [],
+      firstFocus: [{ id: "f2", title: "Novi zadatak", block: "first_focus", estimatedMinutes: 30, requiredEnergy: 2 }],
+      laterToday: [],
+      ifCapacityRemains: [],
+      deferredItems: [],
+      longTermIdeas: [],
+      nonActionItems: [],
+      planRationale: "Test",
+      plannedRequiredMinutes: 30,
+      plannedOptionalMinutes: 0,
+    },
+    execution: { completedItemIds: [] },
+  };
+
+  storage.set("app_a_guest_daily_plan_2026-09-08", JSON.stringify(mockPlan1));
+  storage.set("app_a_guest_daily_plan_2026-09-09", JSON.stringify(mockPlan2));
+
+  const guestPlans = loadGuestDailyPlans(10);
+  assert.strictEqual(guestPlans.length, 2);
+  assert.strictEqual(guestPlans[0].localDate, "2026-09-09");
+  assert.strictEqual(guestPlans[1].localDate, "2026-09-08");
+
+  const guestSummary = getProgressSummary(guestPlans);
+  assert.strictEqual(guestSummary.plannedDays, 2);
+  assert.strictEqual(guestSummary.completedTasks, 1);
+  assert.strictEqual(guestSummary.completedFocusCount, 1);
+  console.log("✅ 6. Guest daily plans load from localStorage and compute progress summary correctly");
+}
+
 console.log("All plan history tests passed successfully!");

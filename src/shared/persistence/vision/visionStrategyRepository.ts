@@ -59,7 +59,15 @@ export function checkVisionStrategyRevision(
   return { valid: true, nextRevision: existingRevision + 1 };
 }
 
+const GUEST_STRATEGIES_KEY = "app_a_guest_vision_strategies";
+const GUEST_FOCUS_KEY = "app_a_guest_vision_focus";
+
+function isGuestUser(userId: string): boolean {
+  return !userId || userId.startsWith("guest") || userId === "local-guest-user";
+}
+
 async function requireUser(userId: string) {
+  if (isGuestUser(userId)) return;
   if (isResetBlocked(userId)) {
     throw Object.assign(new Error("reset_in_progress"), { code: "failed-precondition" });
   }
@@ -72,6 +80,22 @@ export async function saveVisionStrategy(
   userId: string,
   strategy: SavedVisionStrategy,
 ): Promise<SavedVisionStrategy> {
+  if (isGuestUser(userId)) {
+    try {
+      const now = new Date().toISOString();
+      const safe: SavedVisionStrategy = { ...strategy, revision: (strategy.revision || 0) + 1, updatedAt: now };
+      const raw = typeof localStorage !== "undefined" ? localStorage.getItem(GUEST_STRATEGIES_KEY) : null;
+      const list: SavedVisionStrategy[] = raw ? JSON.parse(raw) : [];
+      const next = [safe, ...list.filter((x) => x.id !== safe.id)];
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(GUEST_STRATEGIES_KEY, JSON.stringify(next));
+      }
+      return safe;
+    } catch {
+      return strategy;
+    }
+  }
+
   try {
     await requireUser(userId);
     if (!isSavedVisionStrategy(strategy)) throw Object.assign(new Error("invalid_vision_strategy"), { code: "invalid-data" });
@@ -118,6 +142,13 @@ export async function loadVisionStrategies(userId: string): Promise<SavedVisionS
 }
 
 export async function loadCurrentVisionId(userId: string): Promise<string | null> {
+  if (isGuestUser(userId)) {
+    try {
+      return typeof localStorage !== "undefined" ? localStorage.getItem(GUEST_FOCUS_KEY) : null;
+    } catch {
+      return null;
+    }
+  }
   await requireUser(userId);
   const snapshot = await getDoc(doc(db, "users", userId));
   const value = snapshot.data()?.currentVisionId;
@@ -125,6 +156,17 @@ export async function loadCurrentVisionId(userId: string): Promise<string | null
 }
 
 export async function setCurrentVisionId(userId: string, strategyId: string | null): Promise<void> {
+  if (isGuestUser(userId)) {
+    try {
+      if (typeof localStorage !== "undefined") {
+        if (strategyId) localStorage.setItem(GUEST_FOCUS_KEY, strategyId);
+        else localStorage.removeItem(GUEST_FOCUS_KEY);
+      }
+      return;
+    } catch {
+      return;
+    }
+  }
   await requireUser(userId);
   if (strategyId !== null && !/^vision_[a-z0-9_]{4,80}$/.test(strategyId)) throw new Error("invalid_vision_strategy_id");
   const userReference = doc(db, "users", userId);
@@ -145,6 +187,18 @@ export async function visionIdeaFingerprint(idea: string): Promise<string> {
 }
 
 export async function loadVisionLibrary(userId: string): Promise<{ strategies: SavedVisionStrategy[]; deletedFingerprints: string[] }> {
+  if (isGuestUser(userId)) {
+    try {
+      const raw = typeof localStorage !== "undefined" ? localStorage.getItem(GUEST_STRATEGIES_KEY) : null;
+      const list: SavedVisionStrategy[] = raw ? JSON.parse(raw) : [];
+      return {
+        strategies: list.filter(isSavedVisionStrategy).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+        deletedFingerprints: [],
+      };
+    } catch {
+      return { strategies: [], deletedFingerprints: [] };
+    }
+  }
   await requireUser(userId);
   const snapshot = await getDocs(collection(db, "users", userId, "visionStrategies"));
   const documents = snapshot.docs.map(entry => entry.data());
@@ -172,6 +226,19 @@ export async function setVisionStrategyArchived(
 }
 
 export async function deleteVisionStrategy(userId: string, strategyId: string): Promise<void> {
+  if (isGuestUser(userId)) {
+    try {
+      const raw = typeof localStorage !== "undefined" ? localStorage.getItem(GUEST_STRATEGIES_KEY) : null;
+      const list: SavedVisionStrategy[] = raw ? JSON.parse(raw) : [];
+      const next = list.filter((x) => x.id !== strategyId);
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(GUEST_STRATEGIES_KEY, JSON.stringify(next));
+      }
+      return;
+    } catch {
+      return;
+    }
+  }
   await requireUser(userId);
   if (!/^vision_[a-z0-9_]{4,80}$/.test(strategyId)) throw new Error("invalid_vision_strategy_id");
   const reference = doc(db, "users", userId, "visionStrategies", strategyId);

@@ -1,4 +1,4 @@
-import { Mic, Square, ShieldAlert, X, Settings2, Sparkles } from "lucide-react";
+import { Mic, Square, ShieldAlert, X, Settings2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { AppALanguage } from "../../types";
 import { appendVoiceTranscript, SPEECH_LANGUAGE, VOICE_INPUT_COPY, voiceErrorMessageKey } from "./voiceInput";

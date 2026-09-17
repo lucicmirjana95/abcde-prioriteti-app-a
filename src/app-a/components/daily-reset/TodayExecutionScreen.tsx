@@ -1,6 +1,6 @@
 import { ReevaluationDialog } from "./ReevaluationDialog";
 import { StructuredReevaluationProposal } from "../../screens/planReview";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   AlertTriangle,
   ArrowDown,
@@ -12,8 +12,9 @@ import {
   Leaf,
   MoreHorizontal,
   Pencil,
-  Sparkles,
+  Target,
   Timer,
+  Trash2,
   Wind,
 } from "lucide-react";
 import type { DailyPlanDraft, DailyPlanItem } from "../../domain/daily-reset/contracts";
@@ -40,6 +41,8 @@ interface Props {
   draft: DailyPlanDraft;
   language: AppALanguage;
   userId?: string;
+  energy?: number;
+  pleasantness?: number;
   completedItemIds: string[];
   updatingItemId?: string | null;
   error?: string | null;
@@ -51,13 +54,14 @@ interface Props {
   onQuickSaveLater: (title: string, minutes: number, capacityType: "flexible" | "fixed") => Promise<boolean>;
   onReevaluatePriorities?: (draft: DailyPlanDraft) => void;
   onUpdateDraft?: (draft: DailyPlanDraft) => void;
+  onDeleteTask?: (itemId: string) => void;
 }
 
 const COPY = {
   en: {
     nextFocus: "NEXT FOCUS",
     startFocus: "Start focus",
-    resetBefore: "Reset before",
+    resetBefore: "Reset",
     moveUp: "Move up",
     moveDown: "Move down",
     moreOptions: "More options",
@@ -65,6 +69,7 @@ const COPY = {
     moveToLaterToday: "Move to Later today",
     moveToOptional: "Move to If capacity remains",
     deferToTomorrow: "Defer for tomorrow",
+    deleteTask: "Delete task",
     routineContext: "Routine",
     visionContext: "Vision",
     fixedContext: "Fixed commitment",
@@ -77,11 +82,12 @@ const COPY = {
     hideCompleted: "Hide completed tasks",
     addAnotherTask: "Add another task",
     completedTasksHeading: "Completed tasks",
+    completeTask: "Complete",
   },
   sr: {
     nextFocus: "SLEDEĆI FOKUS",
     startFocus: "Pokreni fokus",
-    resetBefore: "Predah pre",
+    resetBefore: "Predah",
     moveUp: "Pomeri nagore",
     moveDown: "Pomeri nadole",
     moreOptions: "Više opcija",
@@ -89,6 +95,7 @@ const COPY = {
     moveToLaterToday: "Prebaci na Kasnije danas",
     moveToOptional: "Prebaci u Ako ostane kapaciteta",
     deferToTomorrow: "Odloži za sutra",
+    deleteTask: "Izbriši zadatak",
     routineContext: "Rutina",
     visionContext: "Vizija",
     fixedContext: "Fiksna obaveza",
@@ -101,11 +108,12 @@ const COPY = {
     hideCompleted: "Sakrij završene zadatke",
     addAnotherTask: "Dodaj još jedan zadatak",
     completedTasksHeading: "Završeni zadaci",
+    completeTask: "Završi",
   },
   tr: {
     nextFocus: "SONRAKİ ODAK",
     startFocus: "Odağı başlat",
-    resetBefore: "Mola ver",
+    resetBefore: "Mola",
     moveUp: "Yukarı taşı",
     moveDown: "Aşağı taşı",
     moreOptions: "Daha fazla seçenek",
@@ -113,6 +121,7 @@ const COPY = {
     moveToLaterToday: "Bugün sonrasına taşı",
     moveToOptional: "Kapasite kalırsa'ya taşı",
     deferToTomorrow: "Yarına ertele",
+    deleteTask: "Görevi sil",
     routineContext: "Rutin",
     visionContext: "Vizyon",
     fixedContext: "Sabit yükümlülük",
@@ -125,6 +134,7 @@ const COPY = {
     hideCompleted: "Tamamlanan görevleri gizle",
     addAnotherTask: "Bir görev daha ekle",
     completedTasksHeading: "Tamamlanan görevler",
+    completeTask: "Tamamla",
   },
 } as const;
 
@@ -132,6 +142,8 @@ export default function TodayExecutionScreen({
   draft,
   language,
   userId,
+  energy = 3,
+  pleasantness = 3,
   completedItemIds,
   updatingItemId,
   error,
@@ -143,6 +155,7 @@ export default function TodayExecutionScreen({
   onQuickSaveLater,
   onReevaluatePriorities,
   onUpdateDraft,
+  onDeleteTask,
 }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
   const c = COPY[language] || COPY.en;
@@ -151,6 +164,43 @@ export default function TodayExecutionScreen({
   const [focusItem, setFocusItem] = useState<DailyPlanItem | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [showCompletedList, setShowCompletedList] = useState(false);
+  const [activeVisions, setActiveVisions] = useState<Array<{ id: string; title: string }>>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchVisions() {
+      try {
+        if (userId) {
+          const { loadVisionStrategies } = await import("../../../shared/persistence/vision/visionStrategyRepository");
+          const list = await loadVisionStrategies(userId);
+          if (isMounted) {
+            setActiveVisions(list.filter(v => v.status === "active").map(v => ({ id: v.id, title: v.strategy.horizonVision })));
+          }
+        } else {
+          const raw = localStorage.getItem("app_a_guest_vision_strategies");
+          if (raw && isMounted) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              setActiveVisions(parsed.filter((v: any) => v.status === "active").map((v: any) => ({ id: v.id, title: v.strategy?.horizonVision || v.id })));
+            }
+          }
+        }
+      } catch {}
+    }
+    fetchVisions();
+    return () => { isMounted = false; };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!activeMenuId) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActiveMenuId(null);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [activeMenuId]);
 
   const completed = normalizeCompletedItemIds(draft, completedItemIds);
   const requiredItems = normalizeChronologicalOrder(
@@ -299,6 +349,22 @@ export default function TodayExecutionScreen({
     onUpdateDraft?.(updatedDraft);
   };
 
+  const handleDeleteItem = (itemId: string) => {
+    setActiveMenuId(null);
+    const newFirst = draft.firstFocus.filter((i) => i.id !== itemId);
+    const newLater = draft.laterToday.filter((i) => i.id !== itemId);
+    const newOptional = draft.ifCapacityRemains.filter((i) => i.id !== itemId);
+    const updatedDraft = recalculatePlanTotals({
+      ...draft,
+      firstFocus: newFirst,
+      laterToday: newLater,
+      ifCapacityRemains: newOptional,
+      manualPriorityOverride: true,
+    });
+    onUpdateDraft?.(updatedDraft);
+    onDeleteTask?.(itemId);
+  };
+
   // Helper to render context provenance badges
   const renderContextTag = (item: DailyPlanItem) => {
     if (item.sourceRoutineId) {
@@ -396,10 +462,10 @@ export default function TodayExecutionScreen({
         </div>
 
         {/* Action controls */}
-        {!isComplete && (
-          <div className="flex shrink-0 items-center gap-1">
+        {!isComplete ? (
+          <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
             {canReorder && item.capacityType !== "fixed" && (
-              <div className="flex flex-col sm:flex-row gap-0.5">
+              <div className="hidden sm:flex flex-row gap-0.5">
                 <button
                   type="button"
                   disabled={index === 0}
@@ -435,7 +501,7 @@ export default function TodayExecutionScreen({
             <button
               type="button"
               onClick={onOpenReset}
-              className="app-a-focus-ring flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 dark:border-white/15 bg-black/[0.04] dark:bg-white/[0.06] text-black dark:text-white hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+              className="app-a-focus-ring hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 dark:border-white/15 bg-black/[0.04] dark:bg-white/[0.06] text-black dark:text-white hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
               aria-label={`${c.resetBefore}: ${item.title}`}
             >
               <Wind className="h-4 w-4" />
@@ -455,10 +521,63 @@ export default function TodayExecutionScreen({
               </button>
 
               {isMenuOpen && (
-                <div
-                  className="absolute right-0 top-12 z-30 w-56 rounded-2xl border border-black/10 bg-white p-1.5 shadow-xl dark:border-white/15 dark:bg-[#1E1E20]"
-                  role="menu"
-                >
+                <>
+                  <div
+                    className="fixed inset-0 z-20 bg-transparent"
+                    onClick={() => setActiveMenuId(null)}
+                    aria-hidden="true"
+                  />
+                  <div
+                    className="absolute right-0 top-12 z-30 w-56 rounded-2xl border border-black/10 bg-white p-1.5 shadow-xl dark:border-white/15 dark:bg-[#1E1E20]"
+                    role="menu"
+                  >
+                  {/* Mobile-accessible reorder and reset */}
+                  {canReorder && item.capacityType !== "fixed" && (
+                    <div className="sm:hidden flex flex-col">
+                      <button
+                        type="button"
+                        disabled={index === 0}
+                        onClick={() => {
+                          setActiveMenuId(null);
+                          handleReorder(item.id, "up");
+                        }}
+                        aria-label={c.moveUp}
+                        className="flex w-full min-h-[44px] min-w-[44px] items-center gap-2 rounded-xl px-3 text-left text-[13px] font-medium text-black hover:bg-black/5 dark:text-white dark:hover:bg-white/10 disabled:opacity-30"
+                        role="menuitem"
+                      >
+                        <ArrowUp className="h-4 w-4 text-[#86868B]" />
+                        {c.moveUp}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={index === totalInGroup - 1}
+                        onClick={() => {
+                          setActiveMenuId(null);
+                          handleReorder(item.id, "down");
+                        }}
+                        aria-label={c.moveDown}
+                        className="flex w-full min-h-[44px] min-w-[44px] items-center gap-2 rounded-xl px-3 text-left text-[13px] font-medium text-black hover:bg-black/5 dark:text-white dark:hover:bg-white/10 disabled:opacity-30"
+                        role="menuitem"
+                      >
+                        <ArrowDown className="h-4 w-4 text-[#86868B]" />
+                        {c.moveDown}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveMenuId(null);
+                          onOpenReset();
+                        }}
+                        className="flex w-full min-h-[44px] items-center gap-2 rounded-xl px-3 text-left text-[13px] font-medium text-black hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
+                        role="menuitem"
+                      >
+                        <Wind className="h-4 w-4 text-[#86868B]" />
+                        {c.resetBefore}
+                      </button>
+                      <hr className="my-1 border-t border-black/5 dark:border-white/10" />
+                    </div>
+                  )}
+
                   {item.block !== "first_focus" &&
                     item.capacityType !== "fixed" &&
                     !isWaitingForItem(item, draft) && (
@@ -494,14 +613,61 @@ export default function TodayExecutionScreen({
                   <button
                     type="button"
                     onClick={() => handleDeferItem(item.id)}
-                    className="flex w-full min-h-[44px] items-center rounded-xl px-3 text-left text-[13px] font-medium text-[#FF3B30] hover:bg-red-500/10"
+                    className="flex w-full min-h-[44px] items-center rounded-xl px-3 text-left text-[13px] font-medium text-[#FF9500] hover:bg-amber-500/10"
                     role="menuitem"
                   >
                     {c.deferToTomorrow}
                   </button>
-                </div>
+                  <hr className="my-1 border-t border-black/5 dark:border-white/10" />
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteItem(item.id)}
+                    className="flex w-full min-h-[44px] items-center gap-2 rounded-xl px-3 text-left text-[13px] font-medium text-[#FF3B30] hover:bg-red-500/10"
+                    role="menuitem"
+                  >
+                    <Trash2 className="h-4 w-4 shrink-0" />
+                    {c.deleteTask}
+                  </button>
+                  </div>
+                </>
               )}
             </div>
+          </div>
+        ) : (
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveMenuId(isMenuOpen ? null : item.id)}
+              aria-label={c.moreOptions}
+              aria-haspopup="true"
+              aria-expanded={isMenuOpen}
+              className="app-a-focus-ring flex h-11 w-11 items-center justify-center rounded-full text-[#8E8E93] hover:bg-black/5 dark:hover:bg-white/5"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+            {isMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-20 bg-transparent"
+                  onClick={() => setActiveMenuId(null)}
+                  aria-hidden="true"
+                />
+                <div
+                  className="absolute right-0 top-12 z-30 w-52 rounded-2xl border border-black/10 bg-white p-1.5 shadow-xl dark:border-white/15 dark:bg-[#1E1E20]"
+                  role="menu"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteItem(item.id)}
+                    className="flex w-full min-h-[44px] items-center gap-2 rounded-xl px-3 text-left text-[13px] font-medium text-[#FF3B30] hover:bg-red-500/10"
+                    role="menuitem"
+                  >
+                    <Trash2 className="h-4 w-4 shrink-0" />
+                    {c.deleteTask}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -509,7 +675,7 @@ export default function TodayExecutionScreen({
   };
 
   return (
-    <div className="mx-auto w-full max-w-[760px] px-5 sm:px-6 pb-32">
+    <div className="mx-auto w-full max-w-[780px] px-4 sm:px-6 pb-32">
       {showReevalDialog && (
         <ReevaluationDialog
           draft={draft}
@@ -520,6 +686,7 @@ export default function TodayExecutionScreen({
         />
       )}
 
+      {/* Focus Timer Modal */}
       {focusItem && (
         <FocusTimer
           item={focusItem}
@@ -538,7 +705,7 @@ export default function TodayExecutionScreen({
       {draft.manualPriorityOverride && (
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-[#0A84FF]/25 bg-[#0A84FF]/5 p-4 dark:border-[#0A84FF]/35 dark:bg-[#0A84FF]/10 shadow-sm">
           <div className="flex items-center gap-2.5">
-            <Sparkles className="h-4 w-4 text-[#0071E3] dark:text-[#0A84FF] shrink-0" />
+            <Compass className="h-4 w-4 text-[#0071E3] dark:text-[#0A84FF] shrink-0" />
             <p className="text-[14px] font-medium text-[#0071E3] dark:text-[#0A84FF]">
               {c.orderManuallyModified}
             </p>
@@ -554,7 +721,7 @@ export default function TodayExecutionScreen({
       )}
 
       {/* 1. Header and State of the Day */}
-      <header className="mb-6">
+      <header className="mb-6 w-full px-1 sm:px-0">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="app-a-eyebrow">{t.today}</p>
@@ -628,7 +795,7 @@ export default function TodayExecutionScreen({
           >
             <div className="flex items-center justify-between gap-3 mb-3">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0071E3]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#0071E3] dark:text-[#0A84FF]">
-                <Sparkles className="h-3 w-3" />
+                <Target className="h-3.5 w-3.5" />
                 {c.nextFocus}
               </span>
               <span className="text-[13px] font-medium text-[#6E6E73] dark:text-[#AEAEB2] flex items-center gap-1">
@@ -654,34 +821,35 @@ export default function TodayExecutionScreen({
               {renderContextTag(nextFocusItem)}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-black/[0.06] dark:border-white/[0.08]">
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2.5 pt-3.5 border-t border-black/[0.06] dark:border-white/[0.08]">
               {nextFocusItem.capacityType !== "fixed" && (
                 <button
                   type="button"
                   onClick={() => setFocusItem(nextFocusItem)}
-                  className="app-a-primary-button app-a-focus-ring flex items-center gap-2 min-h-[44px] px-5 text-[14px] font-semibold"
+                  className="col-span-2 sm:col-span-1 app-a-primary-button app-a-focus-ring flex items-center justify-center gap-2 min-h-[48px] px-6 !rounded-xl text-[15px] font-semibold !shadow-xs"
                 >
                   <Timer className="h-4 w-4" />
-                  {c.startFocus}
+                  <span>{c.startFocus}</span>
                 </button>
               )}
 
               <button
                 type="button"
                 onClick={() => onToggle(nextFocusItem.id)}
-                className="app-a-secondary-button app-a-focus-ring flex items-center gap-2 min-h-[44px] px-4 text-[14px]"
+                className="col-span-1 app-a-focus-ring flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl border border-black/10 dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] hover:bg-black/[0.06] dark:hover:bg-white/[0.10] text-black dark:text-white font-medium text-[14px] transition-all active:scale-[0.985]"
               >
-                <Check className="h-4 w-4 text-[#34C759]" />
-                <span>{language === "sr" ? "Završi" : language === "tr" ? "Tamamla" : "Complete"}</span>
+                <Check className="h-4 w-4 text-[#34C759]" strokeWidth={2.5} />
+                <span>{c.completeTask}</span>
               </button>
 
               <button
                 type="button"
                 onClick={onOpenReset}
-                className="app-a-focus-ring flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 dark:border-white/15 bg-black/[0.04] dark:bg-white/[0.06] text-black dark:text-white hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                className="col-span-1 app-a-focus-ring flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-xl border border-black/10 dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.06] hover:bg-black/[0.06] dark:hover:bg-white/[0.10] text-black dark:text-white font-medium text-[14px] transition-all active:scale-[0.985]"
                 aria-label={`${c.resetBefore}: ${nextFocusItem.title}`}
               >
-                <Wind className="h-4 w-4" />
+                <Wind className="h-4 w-4 text-[#0071E3] dark:text-[#0A84FF]" />
+                <span>{c.resetBefore}</span>
               </button>
             </div>
           </div>
@@ -694,8 +862,13 @@ export default function TodayExecutionScreen({
           className="mb-8 rounded-[24px] border border-[#34C759]/25 p-6 sm:p-8 text-center shadow-sm"
           style={{ backgroundColor: "var(--app-a-surface)" }}
         >
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#34C759]/15 text-[#34C759]">
-            <Check className="h-8 w-8" strokeWidth={2.5} />
+          <div className="mx-auto mb-4 flex items-center justify-center">
+            <img
+              src="/app-a/illustrations/plan-ready.png"
+              alt=""
+              className="h-28 w-28 object-contain select-none pointer-events-none"
+              draggable={false}
+            />
           </div>
           <h2 className="text-[20px] sm:text-[22px] font-bold text-black dark:text-white">
             {c.allDoneTitle}
@@ -823,6 +996,10 @@ export default function TodayExecutionScreen({
           language={language}
           availableMinutes={draft.availableMinutes}
           plannedRequiredMinutes={draft.plannedFlexibleMinutes ?? draft.plannedRequiredMinutes}
+          firstFocusCount={draft.firstFocus.length}
+          energy={energy}
+          pleasantness={pleasantness}
+          activeVisions={activeVisions}
           onAddToday={onQuickAddToday}
           onSaveLater={onQuickSaveLater}
           onAdjustPlan={onEditPlan}

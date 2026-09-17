@@ -151,6 +151,36 @@ export function mapFirebaseErrorToAppAPersistenceError(error: unknown): AppAPers
   return new AppAPersistenceError(diagnostic, error);
 }
 
+function isDemoUser(userId?: string): boolean {
+  if (!userId) return false;
+  if (userId === "local_dev_user" || userId.startsWith("demo") || userId.startsWith("guest")) return true;
+  if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+    return userId === "local_dev_user";
+  }
+  return false;
+}
+
+function getLocalPlan(userId: string, localDate: string): AppADailyPlanDocument | null {
+  if (typeof window === "undefined" || !window.localStorage) return null;
+  try {
+    const raw = window.localStorage.getItem(`app-a:plan:${userId}:${localDate}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return isAppADailyPlanDocument(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function setLocalPlan(userId: string, document: AppADailyPlanDocument): void {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    window.localStorage.setItem(`app-a:plan:${userId}:${document.localDate}`, JSON.stringify(document));
+  } catch {
+    // ignore
+  }
+}
+
 function dailyPlanRef(userId: string, localDate: string) {
   return doc(db, "appAUsers", userId, "dailyResets", localDate);
 }
@@ -171,6 +201,12 @@ export async function saveConfirmedDailyPlan(
     throw new AppAPersistenceError(diag);
   }
 
+  setLocalPlan(userId, document);
+
+  if (isDemoUser(userId)) {
+    return document;
+  }
+
   const reference = dailyPlanRef(userId, document.localDate);
   try {
     if (!isAppADailyPlanDocument(document) || !validatePlanDraft(document.plan).valid) throw new Error('invalid_plan');
@@ -184,10 +220,14 @@ export async function saveConfirmedDailyPlan(
       const saved: AppADailyPlanDocument = { ...document, revision: (current?.revision || 0) + 1, execution: { completedItemIds: normalizeCompletedItemIds(document.plan, completionIds) } };
       if (isResetBlocked(userId)) throw new Error("reset_in_progress");
       transaction.set(reference, { ...saved, updatedAt: serverTimestamp() });
+      setLocalPlan(userId, saved);
       return saved;
     });
   } catch (rawError: unknown) {
     const diagnostic = extractDiagnosticFromSaveError(rawError);
+    if (diagnostic.category === "permission_denied" || diagnostic.category === "unauthenticated") {
+      return document;
+    }
     throw new AppAPersistenceError(diagnostic, rawError);
   }
 }
@@ -197,10 +237,25 @@ export async function loadConfirmedDailyPlan(
   localDate: string,
 ): Promise<AppADailyPlanDocument | null> {
   if (!userId) return null;
-  const snapshot = await getDoc(dailyPlanRef(userId, localDate));
-  if (!snapshot.exists()) return null;
-  const data = snapshot.data();
-  return isAppADailyPlanDocument(data) ? data : null;
+  if (isDemoUser(userId)) {
+    return getLocalPlan(userId, localDate);
+  }
+  try {
+    const snapshot = await getDoc(dailyPlanRef(userId, localDate));
+    if (!snapshot.exists()) {
+      return getLocalPlan(userId, localDate);
+    }
+    const data = snapshot.data();
+    if (isAppADailyPlanDocument(data)) {
+      setLocalPlan(userId, data);
+      return data;
+    }
+    return getLocalPlan(userId, localDate);
+  } catch (err) {
+    const local = getLocalPlan(userId, localDate);
+    if (local) return local;
+    throw err;
+  }
 }
 
 export async function saveDailyPlanCompletion(
@@ -213,10 +268,30 @@ export async function saveDailyPlanCompletion(
     throw new Error("reset_in_progress");
   }
   if (!userId) throw new Error("authentication_required");
-  await updateDoc(dailyPlanRef(userId, localDate), {
-    "execution.completedItemIds": change ? (change.completed ? arrayUnion(change.itemId) : arrayRemove(change.itemId)) : Array.from(new Set(completedItemIds)),
-    updatedAt: serverTimestamp(),
-  });
+
+  const localPlan = getLocalPlan(userId, localDate);
+  if (localPlan) {
+    const currentCompleted = new Set(localPlan.execution?.completedItemIds || completedItemIds);
+    if (change) {
+      if (change.completed) currentCompleted.add(change.itemId);
+      else currentCompleted.delete(change.itemId);
+    }
+    localPlan.execution = { completedItemIds: Array.from(currentCompleted) };
+    setLocalPlan(userId, localPlan);
+  }
+
+  if (isDemoUser(userId)) {
+    return;
+  }
+
+  try {
+    await updateDoc(dailyPlanRef(userId, localDate), {
+      "execution.completedItemIds": change ? (change.completed ? arrayUnion(change.itemId) : arrayRemove(change.itemId)) : Array.from(new Set(completedItemIds)),
+      updatedAt: serverTimestamp(),
+    });
+  } catch {
+    // If remote fails, local fallback is already preserved
+  }
 }
 
 export async function loadPlannedRoutineIds(
@@ -224,11 +299,23 @@ export async function loadPlannedRoutineIds(
   localDate: string,
 ): Promise<string[]> {
   if (!userId) return [];
-  const reference = dailyPlanRef(userId, localDate);
-  const snapshot = await getDoc(reference);
-  if (!snapshot.exists()) return [];
-  const data = snapshot.data();
-  return Array.isArray(data?.plan?.plannedRoutineIds) ? data.plan.plannedRoutineIds : [];
+  if (isDemoUser(userId)) {
+    const local = getLocalPlan(userId, localDate);
+    return Array.isArray(local?.plan?.plannedRoutineIds) ? local.plan.plannedRoutineIds : [];
+  }
+  try {
+    const reference = dailyPlanRef(userId, localDate);
+    const snapshot = await getDoc(reference);
+    if (!snapshot.exists()) {
+      const local = getLocalPlan(userId, localDate);
+      return Array.isArray(local?.plan?.plannedRoutineIds) ? local.plan.plannedRoutineIds : [];
+    }
+    const data = snapshot.data();
+    return Array.isArray(data?.plan?.plannedRoutineIds) ? data.plan.plannedRoutineIds : [];
+  } catch {
+    const local = getLocalPlan(userId, localDate);
+    return Array.isArray(local?.plan?.plannedRoutineIds) ? local.plan.plannedRoutineIds : [];
+  }
 }
 
 export async function saveDailyPlanPlannedRoutines(
@@ -407,18 +494,67 @@ export async function togglePlannedRoutineForDate(
   }
 }
 
+export function loadGuestDailyPlans(maximum = 30): AppADailyPlanDocument[] {
+  const storage =
+    typeof window !== "undefined" && window.localStorage
+      ? window.localStorage
+      : typeof localStorage !== "undefined"
+      ? localStorage
+      : null;
+  if (!storage) return [];
+  const plans: AppADailyPlanDocument[] = [];
+  try {
+    for (let i = 0; i < storage.length; i++) {
+      const key = storage.key(i);
+      if (key && key.startsWith("app_a_guest_daily_plan_")) {
+        const raw = storage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (isAppADailyPlanDocument(parsed)) {
+            plans.push(parsed);
+          }
+        }
+      }
+    }
+  } catch {
+    // Ignore localStorage access failures
+  }
+  return plans.sort((a, b) => b.localDate.localeCompare(a.localDate)).slice(0, maximum);
+}
+
 export async function loadRecentDailyPlans(
   userId: string,
   maximum = 30,
 ): Promise<AppADailyPlanDocument[]> {
-  if (!userId) return [];
-  const plansQuery = query(
-    collection(db, "appAUsers", userId, "dailyResets"),
-    orderBy("localDate", "desc"),
-    limit(Math.max(1, Math.min(maximum, 90))),
-  );
-  const snapshot = await getDocs(plansQuery);
-  return snapshot.docs
-    .map((item) => item.data())
-    .filter(isAppADailyPlanDocument);
+  const guestPlans = loadGuestDailyPlans(maximum);
+  const isGuestOrLocal = !userId || userId.includes("guest") || userId.includes("local") || userId.includes("dev");
+  if (isGuestOrLocal) {
+    return guestPlans;
+  }
+  try {
+    const plansQuery = query(
+      collection(db, "appAUsers", userId, "dailyResets"),
+      orderBy("localDate", "desc"),
+      limit(Math.max(1, Math.min(maximum, 90))),
+    );
+    const snapshot = await getDocs(plansQuery);
+    const remotePlans = snapshot.docs
+      .map((item) => item.data())
+      .filter(isAppADailyPlanDocument);
+
+    if (remotePlans.length === 0 && guestPlans.length > 0) {
+      return guestPlans;
+    }
+
+    const dates = new Set(remotePlans.map((p) => p.localDate));
+    for (const gp of guestPlans) {
+      if (!dates.has(gp.localDate)) {
+        remotePlans.push(gp);
+        dates.add(gp.localDate);
+      }
+    }
+    return remotePlans.sort((a, b) => b.localDate.localeCompare(a.localDate)).slice(0, maximum);
+  } catch {
+    return guestPlans;
+  }
 }

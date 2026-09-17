@@ -14,6 +14,7 @@ import type { DailyResetData } from '../types';
 import { useEffect, useRef, useState } from 'react';
 import { useAppAAuth } from '../auth/useAppAAuth';
 import {
+  type AppADailyPlanDocument,
   createDailyPlanDocument,
   dailyResetDataFromDocument,
   getLocalDateKeyInTimeZone,
@@ -69,6 +70,12 @@ function readOnboardingCompleted(): boolean {
   } catch {
     return false;
   }
+}
+
+function isAppAGuestUser(user: { uid?: string } | null | undefined): boolean {
+  if (!user || !user.uid) return true;
+  const uid = user.uid.toLowerCase();
+  return uid.includes('local') || uid.includes('guest') || uid.includes('dev');
 }
 
 export default function TodayScreen({ language, client, demoConfig, initialData, preferences, onOpenVision }: Props) {
@@ -209,7 +216,19 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     loadedForUserAndDate.current = loadKey;
     setIsLoadingSavedPlan(true);
 
-    void loadConfirmedDailyPlan(user.uid, localDate)
+    const isGuest = isAppAGuestUser(user);
+    const loadPromise = isGuest
+      ? Promise.resolve((() => {
+          try {
+            const raw = localStorage.getItem(`app_a_guest_daily_plan_${localDate}`);
+            return raw ? (JSON.parse(raw) as AppADailyPlanDocument) : null;
+          } catch {
+            return null;
+          }
+        })())
+      : loadConfirmedDailyPlan(user.uid, localDate);
+
+    void loadPromise
       .then((saved) => {
         if (loadedForUserAndDate.current !== loadKey) return;
         if (saved && !liveState.current.unsaved) {
@@ -255,12 +274,24 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
         setSaveStatus('saved');
         return;
       }
-      const activeUser = user || await signInWithGoogle();
+      const isGuest = isAppAGuestUser(user);
+      const activeUser = user || { uid: 'guest-local-user' };
       const localDate = getLocalDateKeyInTimeZone(effectiveTimeZone);
       const document = createDailyPlanDocument(state.inputData, draft, language, localDate, effectiveTimeZone);
       document.revision = activePlanDate === localDate ? planRevision.current : 0;
       document.execution = { completedItemIds: normalizeCompletedItemIds(draft, activePlanDate === localDate ? completedItemIds : []) };
-      const savedDocument = await saveConfirmedPlanAndInboxAtomic(activeUser.uid, document);
+      let savedDocument: AppADailyPlanDocument;
+      if (isGuest) {
+        savedDocument = { ...document, revision: (document.revision || 0) + 1 };
+        try {
+          localStorage.setItem(`app_a_guest_daily_plan_${localDate}`, JSON.stringify(savedDocument));
+        } catch {
+          // Ignore
+        }
+      } else {
+        const authedUser = user || await signInWithGoogle();
+        savedDocument = await saveConfirmedPlanAndInboxAtomic(authedUser.uid, document);
+      }
       document.execution = savedDocument.execution;
       planRevision.current = savedDocument.revision || 0;
       loadedForUserAndDate.current = `${activeUser.uid}:${document.localDate}`;
@@ -270,6 +301,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
       setViewMode('execution');
       setSaveStatus('saved');
       setOnboardingCompleted(true);
+      window.dispatchEvent(new Event('app-a-plan-changed'));
       try {
         localStorage.setItem(APP_A_ONBOARDING_KEY, 'completed');
       } catch {
@@ -341,37 +373,53 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
         const linkedItem = allPlanItems.find((it) => it.id === itemId);
         const sourceRoutineId = linkedItem?.sourceRoutineId;
 
-        if (sourceRoutineId) {
-          const { recordRoutineCompletion, clearRoutineCompletion } = await import('../../shared/persistence/routines/routineRepository');
-          if (newlyCompleted) {
-            const nowIso = new Date().toISOString();
-            await recordRoutineCompletion(
-              user.uid,
-              {
-                routineId: sourceRoutineId,
-                localDate: activePlanDate,
-                status: 'full',
-                sourceApp: 'app_a',
-                recordedAt: nowIso,
-                completedAt: nowIso,
-                timeZone: effectiveTimeZone,
-              },
-              effectiveTimeZone,
-            );
-          } else {
-            await clearRoutineCompletion(user.uid, sourceRoutineId, activePlanDate);
+        const isGuest = isAppAGuestUser(user);
+        if (isGuest) {
+          try {
+            const raw = localStorage.getItem(`app_a_guest_daily_plan_${activePlanDate}`);
+            if (raw) {
+              const guestDoc = JSON.parse(raw) as AppADailyPlanDocument;
+              guestDoc.execution = { completedItemIds: next };
+              localStorage.setItem(`app_a_guest_daily_plan_${activePlanDate}`, JSON.stringify(guestDoc));
+            }
+          } catch {
+            // Ignore
           }
-          window.dispatchEvent(new Event('app-a-routines-changed'));
-        }
-
-        if (inboxItemId) {
-          await saveDailyPlanCompletionAndInboxStatusAtomic(user.uid, activePlanDate, next, inboxItemId, newlyCompleted);
-          window.dispatchEvent(new Event('app-a-inbox-changed'));
-        } else if (visionCandidateId) {
-          await saveCompletionAndAdvanceVision(user.uid, activePlanDate, next, visionCandidateId, newlyCompleted);
-          window.dispatchEvent(new Event('app-a-vision-candidates-changed'));
+          window.dispatchEvent(new Event('app-a-plan-changed'));
         } else {
-          await saveDailyPlanCompletion(user.uid, activePlanDate, next, { itemId, completed: newlyCompleted });
+          if (sourceRoutineId) {
+            const { recordRoutineCompletion, clearRoutineCompletion } = await import('../../shared/persistence/routines/routineRepository');
+            if (newlyCompleted) {
+              const nowIso = new Date().toISOString();
+              await recordRoutineCompletion(
+                user.uid,
+                {
+                  routineId: sourceRoutineId,
+                  localDate: activePlanDate,
+                  status: 'full',
+                  sourceApp: 'app_a',
+                  recordedAt: nowIso,
+                  completedAt: nowIso,
+                  timeZone: effectiveTimeZone,
+                },
+                effectiveTimeZone,
+              );
+            } else {
+              await clearRoutineCompletion(user.uid, sourceRoutineId, activePlanDate);
+            }
+            window.dispatchEvent(new Event('app-a-routines-changed'));
+          }
+
+          if (inboxItemId) {
+            await saveDailyPlanCompletionAndInboxStatusAtomic(user.uid, activePlanDate, next, inboxItemId, newlyCompleted);
+            window.dispatchEvent(new Event('app-a-inbox-changed'));
+          } else if (visionCandidateId) {
+            await saveCompletionAndAdvanceVision(user.uid, activePlanDate, next, visionCandidateId, newlyCompleted);
+            window.dispatchEvent(new Event('app-a-vision-candidates-changed'));
+          } else {
+            await saveDailyPlanCompletion(user.uid, activePlanDate, next, { itemId, completed: newlyCompleted });
+          }
+          window.dispatchEvent(new Event('app-a-plan-changed'));
         }
       }
     } catch {
@@ -731,6 +779,8 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
         draft={state.planDraft}
         language={language}
         userId={user?.uid}
+        energy={state.inputData?.energy}
+        pleasantness={state.inputData?.pleasantness}
         completedItemIds={completedItemIds}
         updatingItemId={updatingItemId}
         error={executionError}

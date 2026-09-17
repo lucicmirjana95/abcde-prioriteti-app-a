@@ -364,7 +364,7 @@ export default function NsdrPlayer({ language, isCompact = false }: NsdrPlayerPr
             <div className="text-left">
               <h5 className="text-xs font-bold text-black dark:text-white leading-tight">NSDR Protocol</h5>
               <p className="text-[10px] text-[#8E8E93] leading-none mt-0.5">
-                {isPlaying ? currentStageInfo.title : (sessionType === "theta" ? "Theta Focus (4Hz)" : "Delta Sleep (2Hz)")}
+                {isPlaying ? currentStageInfo.title : (sessionType === "theta" ? (isEn ? "Deep Restful Waves" : isTr ? "Derin Dinlenme Dalgası" : "Duboki NSDR Odmor") : (isEn ? "Restorative Sleep" : isTr ? "Yenileyici Uyku" : "Noćni Oporavak"))}
               </p>
             </div>
           </div>

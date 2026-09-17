@@ -16,9 +16,9 @@ export function useVisionBuilderAdapter() {
       const { saveVisionStrategy } = await import("../../shared/persistence/vision");
       return saveVisionStrategy(u, s);
     },
-    createVisionStrategy: async (i, h) => {
+    createVisionStrategy: async (i, h, signal, context) => {
       const { createVisionStrategy } = await import("../api/visionStrategyApi");
-      return createVisionStrategy(i, h as any);
+      return createVisionStrategy(i, h as any, signal, context);
     }
   }), []);
 

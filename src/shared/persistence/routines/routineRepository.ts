@@ -61,6 +61,50 @@ function completionRef(userId: string, routineId: string, localDate: string) {
   );
 }
 
+function isDemoUser(userId?: string): boolean {
+  if (!userId) return false;
+  if (userId === "local_dev_user" || userId.startsWith("demo") || userId.startsWith("guest")) return true;
+  return false;
+}
+
+function getLocalRoutines(userId: string): SharedRoutine[] {
+  if (typeof window === "undefined" || !window.localStorage) return [];
+  try {
+    const raw = window.localStorage.getItem(`app-a:routines:${userId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function setLocalRoutines(userId: string, routines: SharedRoutine[]): void {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    window.localStorage.setItem(`app-a:routines:${userId}`, JSON.stringify(routines));
+  } catch {
+    // ignore
+  }
+}
+
+function getLocalRoutineCompletions(userId: string): RoutineCompletion[] {
+  if (typeof window === "undefined" || !window.localStorage) return [];
+  try {
+    const raw = window.localStorage.getItem(`app-a:routine-completions:${userId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function setLocalRoutineCompletions(userId: string, completions: RoutineCompletion[]): void {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    window.localStorage.setItem(`app-a:routine-completions:${userId}`, JSON.stringify(completions));
+  } catch {
+    // ignore
+  }
+}
+
 export async function createRoutine(
   userId: string,
   routine: SharedRoutine,
@@ -272,32 +316,42 @@ export interface LoadRoutinesResult {
 
 export async function loadRoutinesWithDiagnostics(userId: string): Promise<LoadRoutinesResult> {
   requireUserId(userId);
-  const snapshot = await firestoreAdapter.getDocs(
-    firestoreAdapter.collection(firestoreAdapter.db, "users", userId, "routines"),
-  );
-  const diagnostics: RoutineLoadDiagnostic[] = [];
-  const routines: SharedRoutine[] = [];
-
-  for (const entry of snapshot.docs) {
-    const rawData = entry.data();
-    const docId = entry.id || (rawData && (rawData as any).id) || "unknown_doc";
-    const result = normalizeSharedRoutine(rawData);
-
-    if (result.type === "valid" || result.type === "valid_legacy") {
-      routines.push(result.routine);
-    } else {
-      diagnostics.push({
-        docId: typeof docId === "string" ? docId : "unknown_doc",
-        errors: result.errors,
-      });
-      console.warn(
-        `[RoutineRepository] Skipped invalid routine document. ID: ${docId}, errors: ${result.errors.join(", ")}`,
-      );
-    }
+  if (isDemoUser(userId)) {
+    const local = getLocalRoutines(userId);
+    return { routines: local, diagnostics: [] };
   }
+  try {
+    const snapshot = await firestoreAdapter.getDocs(
+      firestoreAdapter.collection(firestoreAdapter.db, "users", userId, "routines"),
+    );
+    const diagnostics: RoutineLoadDiagnostic[] = [];
+    const routines: SharedRoutine[] = [];
 
-  routines.sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt));
-  return { routines, diagnostics };
+    for (const entry of snapshot.docs) {
+      const rawData = entry.data();
+      const docId = entry.id || (rawData && (rawData as any).id) || "unknown_doc";
+      const result = normalizeSharedRoutine(rawData);
+
+      if (result.type === "valid" || result.type === "valid_legacy") {
+        routines.push(result.routine);
+      } else {
+        diagnostics.push({
+          docId: typeof docId === "string" ? docId : "unknown_doc",
+          errors: result.errors,
+        });
+        console.warn(
+          `[RoutineRepository] Skipped invalid routine document. ID: ${docId}, errors: ${result.errors.join(", ")}`,
+        );
+      }
+    }
+
+    routines.sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt));
+    setLocalRoutines(userId, routines);
+    return { routines, diagnostics };
+  } catch {
+    const local = getLocalRoutines(userId);
+    return { routines: local, diagnostics: [] };
+  }
 }
 
 export async function loadRoutines(userId: string): Promise<SharedRoutine[]> {
@@ -326,11 +380,31 @@ export async function recordRoutineCompletion(
   requireUserId(userId);
   const validation = validateRoutineCompletion(completion, effectiveTimeZone, now);
   if (!validation.valid) throw new Error(`invalid_completion:${validation.errors.join(",")}`);
-  await firestoreAdapter.setDoc(
-    completionRef(userId, completion.routineId, completion.localDate),
-    JSON.parse(JSON.stringify(completion)),
-    { merge: false },
-  );
+
+  const current = getLocalRoutineCompletions(userId);
+  const next = [
+    ...current.filter((c) => !(c.routineId === completion.routineId && c.localDate === completion.localDate)),
+    completion,
+  ];
+  setLocalRoutineCompletions(userId, next);
+
+  if (isDemoUser(userId)) {
+    return;
+  }
+
+  try {
+    await firestoreAdapter.setDoc(
+      completionRef(userId, completion.routineId, completion.localDate),
+      JSON.parse(JSON.stringify(completion)),
+      { merge: false },
+    );
+  } catch (err: any) {
+    const msg = String(err?.message || err?.code || "");
+    if (msg.includes("permission") || msg.includes("auth") || msg.includes("unavailable")) {
+      return;
+    }
+    throw err;
+  }
 }
 
 export async function clearRoutineCompletion(
@@ -339,7 +413,23 @@ export async function clearRoutineCompletion(
   localDate: string,
 ): Promise<void> {
   requireUserId(userId);
-  await firestoreAdapter.deleteDoc(completionRef(userId, routineId, localDate));
+  const current = getLocalRoutineCompletions(userId);
+  const next = current.filter((c) => !(c.routineId === routineId && c.localDate === localDate));
+  setLocalRoutineCompletions(userId, next);
+
+  if (isDemoUser(userId)) {
+    return;
+  }
+
+  try {
+    await firestoreAdapter.deleteDoc(completionRef(userId, routineId, localDate));
+  } catch (err: any) {
+    const msg = String(err?.message || err?.code || "");
+    if (msg.includes("permission") || msg.includes("auth") || msg.includes("unavailable")) {
+      return;
+    }
+    throw err;
+  }
 }
 
 export async function loadRoutineCompletions(
@@ -348,15 +438,29 @@ export async function loadRoutineCompletions(
   endLocalDate: string,
 ): Promise<RoutineCompletion[]> {
   requireUserId(userId);
-  const completionQuery = firestoreAdapter.query(
-    firestoreAdapter.collection(firestoreAdapter.db, "users", userId, "routineCompletions"),
-    firestoreAdapter.where("localDate", ">=", startLocalDate),
-    firestoreAdapter.where("localDate", "<=", endLocalDate),
-  );
-  const snapshot = await firestoreAdapter.getDocs(completionQuery);
-  return snapshot.docs
-    .map((entry: any) => entry.data())
-    .filter(isRoutineCompletionDocument)
-    .sort((a, b) => a.localDate.localeCompare(b.localDate));
+  if (isDemoUser(userId)) {
+    const all = getLocalRoutineCompletions(userId);
+    return all
+      .filter((c) => c.localDate >= startLocalDate && c.localDate <= endLocalDate)
+      .sort((a, b) => a.localDate.localeCompare(b.localDate));
+  }
+  try {
+    const completionQuery = firestoreAdapter.query(
+      firestoreAdapter.collection(firestoreAdapter.db, "users", userId, "routineCompletions"),
+      firestoreAdapter.where("localDate", ">=", startLocalDate),
+      firestoreAdapter.where("localDate", "<=", endLocalDate),
+    );
+    const snapshot = await firestoreAdapter.getDocs(completionQuery);
+    const results = snapshot.docs
+      .map((entry: any) => entry.data())
+      .filter(isRoutineCompletionDocument)
+      .sort((a, b) => a.localDate.localeCompare(b.localDate));
+    return results;
+  } catch {
+    const all = getLocalRoutineCompletions(userId);
+    return all
+      .filter((c) => c.localDate >= startLocalDate && c.localDate <= endLocalDate)
+      .sort((a, b) => a.localDate.localeCompare(b.localDate));
+  }
 }
 

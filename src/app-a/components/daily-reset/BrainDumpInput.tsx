@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from "react";
 import type { AppALanguage } from "../../types";
 import VoiceInputButton from "../voice/VoiceInputButton";
+import InputCopyButton from "../common/InputCopyButton";
 
 interface Props {
   value: string;
@@ -52,8 +53,11 @@ export default function BrainDumpInput({ value, onChange, t, language, error }: 
           className="w-full bg-transparent resize-y outline-none border-0 p-0 text-[16px] leading-relaxed text-[var(--app-a-text)] placeholder:text-[var(--app-a-text-tertiary)] min-h-[110px] max-h-[300px]"
         />
 
-        <div className="absolute bottom-2.5 right-2.5 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--app-a-surface-elevated)] shadow-sm border border-[var(--app-a-border)]">
-          <VoiceInputButton language={language} value={value} onChange={onChange} maxLength={MAX_CHARS} describedBy="brain-dump-voice-status" />
+        <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1.5">
+          <InputCopyButton text={value} language={language} />
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--app-a-surface-elevated)] shadow-sm border border-[var(--app-a-border)]">
+            <VoiceInputButton language={language} value={value} onChange={onChange} maxLength={MAX_CHARS} describedBy="brain-dump-voice-status" />
+          </div>
         </div>
       </div>
 

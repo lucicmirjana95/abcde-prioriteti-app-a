@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Activity, CalendarDays, CheckCircle2, ChevronDown, Sparkles, TrendingUp, Zap } from "lucide-react";
+import { Activity, CalendarDays, CheckCircle2, ChevronDown, Compass, TrendingUp, Zap } from "lucide-react";
 import PlanHistoryState from "../components/PlanHistoryState";
 import GrowthPathArt from "../components/GrowthPathArt";
 import type { AppALanguage } from "../types";
@@ -92,7 +92,7 @@ export default function ProgressScreen({ language }: { language: AppALanguage })
     );
   }
 
-  if (!history.user) {
+  if (!history.user && history.plans.length === 0) {
     return (
       <PlanHistoryState
         language={language}
@@ -105,7 +105,7 @@ export default function ProgressScreen({ language }: { language: AppALanguage })
   const summary = getProgressSummary(history.plans);
 
   return (
-    <div className="mx-auto w-full max-w-[760px] px-4 sm:px-6">
+    <div className="mx-auto w-full max-w-[860px] px-4 sm:px-6 md:px-0 pb-28 sm:pb-32">
       <header className="mb-7 flex items-start justify-between gap-4">
         <div>
           <p className="app-a-eyebrow">{t.eyebrow}</p>
@@ -134,7 +134,7 @@ export default function ProgressScreen({ language }: { language: AppALanguage })
             aria-labelledby="what-changed-heading"
           >
             <div className="flex items-center gap-2.5 text-[#0071E3] dark:text-[#2997ff]">
-              <Sparkles className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <Compass className="h-4 w-4 shrink-0" aria-hidden="true" />
               <h2 id="what-changed-heading" className="text-[13px] font-semibold uppercase tracking-[0.06em]">
                 {t.whatChanged}
               </h2>
@@ -288,7 +288,7 @@ export default function ProgressScreen({ language }: { language: AppALanguage })
         </>
       )}
 
-      <RoutineWeekOverview userId={history.user.uid} language={language} />
+      {history.user && <RoutineWeekOverview userId={history.user.uid} language={language} />}
     </div>
   );
 }

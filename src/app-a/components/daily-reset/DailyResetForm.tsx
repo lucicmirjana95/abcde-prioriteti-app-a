@@ -4,6 +4,7 @@ import { DailyResetData, EnergyLevel, PleasantnessLevel, type AppALanguage } fro
 import FiveLevelScale from './FiveLevelScale';
 import BrainDumpInput from './BrainDumpInput';
 import PlanCreationDisclosure from './PlanCreationDisclosure';
+import InputCopyButton from '../common/InputCopyButton';
 
 interface Props {
   t: any;
@@ -114,8 +115,8 @@ export default function DailyResetForm({
         />
       </div>
 
-      {/* 2. State (Energy & Mood) Cards - side by side */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+      {/* 2. State (Energy & Mood) Cards - responsive 1-col on mobile, 2-col on tablet+ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <section
           className="app-a-surface rounded-[24px] border p-4 sm:p-5 shadow-sm transition-shadow flex flex-col justify-between"
           style={{ borderColor: "var(--app-a-border)" }}
@@ -181,18 +182,23 @@ export default function DailyResetForm({
             {t.stateNoteSubtitle || (language === 'sr' ? 'Opciono' : language === 'tr' ? 'İsteğe bağlı' : 'Optional')}
           </span>
         </div>
-        <input
-          id="state-note"
-          type="text"
-          value={stateNote}
-          onChange={(e) => {
-            setStateNote(e.target.value);
-            onDraftChange?.({ stateNote: e.target.value });
-          }}
-          placeholder={t.stateNotePlaceholder || (language === 'sr' ? 'Na primer: loše sam spavao, imam važan sastanak...' : language === 'tr' ? 'Örneğin: kötü uyudum, önemli bir toplantım var...' : 'For example: slept poorly, have an important meeting...')}
-          className="app-a-field min-h-[46px] w-full px-4 text-[16px] rounded-[16px] transition-shadow"
-          style={{ background: "var(--app-a-surface-secondary)" }}
-        />
+        <div className="relative flex items-center">
+          <input
+            id="state-note"
+            type="text"
+            value={stateNote}
+            onChange={(e) => {
+              setStateNote(e.target.value);
+              onDraftChange?.({ stateNote: e.target.value });
+            }}
+            placeholder={t.stateNotePlaceholder || (language === 'sr' ? 'Na primer: loše sam spavao, imam važan sastanak...' : language === 'tr' ? 'Örneğin: kötü uyudum, önemli bir toplantım var...' : 'For example: slept poorly, have an important meeting...')}
+            className="app-a-field min-h-[46px] w-full px-4 pr-12 text-[16px] rounded-[16px] transition-shadow"
+            style={{ background: "var(--app-a-surface-secondary)" }}
+          />
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
+            <InputCopyButton text={stateNote} language={language} size="sm" />
+          </div>
+        </div>
       </section>
 
       {/* 4. CTA Action */}

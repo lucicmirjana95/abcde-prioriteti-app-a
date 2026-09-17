@@ -192,7 +192,9 @@ export default function TodayCandidatesSection({ userId, language, localDate, pl
       if (!value) return;
       if (typeof window !== 'undefined' && (window as any).__app_a_reset_in_progress) return;
       if (active) { setItems(value.items); setCurrentVisionId(value.currentVisionId); }
-    }).catch(() => { if (active) setError("error"); });
+    }).catch(() => {
+      if (active) { setItems([]); }
+    });
     return () => { active = false; };
   }, [userId, refreshVersion]);
 
@@ -293,7 +295,7 @@ export default function TodayCandidatesSection({ userId, language, localDate, pl
   if (!userId) return null;
 
   const unmutedItems = items.filter((item) => !mutedVisionIds.includes(item.sourceId) && !skippedIds.includes(item.id));
-  if (!error && unmutedItems.length === 0 && !skippedCandidate) return null;
+  if (unmutedItems.length === 0 && !skippedCandidate) return null;
 
   const errorText = error ? (t[error as keyof typeof t] || t.error) : null;
   const guidance = planState === "none" ? t.noPlan : planState === "draft" ? t.draftPlan : error === "capacity_exceeded" ? t.capacity_exceeded : null;

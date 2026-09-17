@@ -4,13 +4,13 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
   Compass,
   Layers,
   Lightbulb,
   MoreHorizontal,
   Plus,
   RotateCcw,
-  Sparkles,
   Trash2,
   X,
   Target,
@@ -27,6 +27,9 @@ import {
 import PlanHistoryState from "../components/PlanHistoryState";
 import VoiceInputButton from "../components/voice/VoiceInputButton";
 import VisionStrategyBuilder from "../components/vision/VisionStrategyBuilder";
+import FlowHeader from "../components/daily-reset/FlowHeader";
+import GrowthPathArt from "../components/GrowthPathArt";
+import InputCopyButton from "../components/common/InputCopyButton";
 import { readSessionDraft, writeSessionDraft } from "../persistence/sessionDraft";
 import type { AppALanguage } from "../types";
 import { getVisionItems } from "./planHistory";
@@ -38,10 +41,18 @@ const COPY = {
     title: "Vision",
     intro: "Keep several directions, develop one at a time, and choose which one guides Today.",
     guide: "How Vision works",
+    guideSubtitle: "How long-term directions connect to your daily planning",
+    guideStep1Badge: "Step 1",
+    guideStep1Title: "Meaningful direction, not daily tasks",
     guideIntro: "Vision is for meaningful directions that take more than one day — not today’s errands or notes.",
     guideCapture: "Add a direction in your own words. A timeframe is optional; the app can suggest a realistic one.",
+    guideStep2Badge: "Step 2",
+    guideStep2Title: "Milestones and actionable steps",
     guideDevelop: "Develop it into milestones and small next steps. You can keep several visions in your library.",
+    guideStep3Badge: "Step 3",
+    guideStep3Title: "One current focus for Today",
     guideFocus: "Choose one current focus. It guides Today; other visions may occasionally offer one optional step, but nothing enters your plan without your confirmation.",
+    guideDismiss: "Hide guide",
     placeholder: "Describe a direction or goal…",
     add: "New vision",
     active: "Active",
@@ -80,10 +91,18 @@ const COPY = {
     title: "Vizija",
     intro: "Sačuvajte više pravaca, razrađujte jedan po jedan i izaberite koji vodi današnje predloge.",
     guide: "Kako radi Vizija",
+    guideSubtitle: "Kako dugoročni pravci sarađuju sa vašim dnevnim planiranjem",
+    guideStep1Badge: "Korak 1",
+    guideStep1Title: "Važan pravac, ne dnevne obaveze",
     guideIntro: "Vizija služi za važne pravce koji traju duže od jednog dana — ne za današnje obaveze ili beleške.",
     guideCapture: "Unesite pravac svojim rečima. Rok je opcion; aplikacija može predložiti realan vremenski okvir.",
+    guideStep2Badge: "Korak 2",
+    guideStep2Title: "Etape i konkretni koraci",
     guideDevelop: "Razradite ga u etape i male sledeće korake. Možete sačuvati više vizija u biblioteci.",
+    guideStep3Badge: "Korak 3",
+    guideStep3Title: "Jedan trenutni fokus za Danas",
     guideFocus: "Izaberite jedan trenutni fokus. On vodi Danas; druge vizije mogu povremeno ponuditi jedan opcioni korak, ali ništa ne ulazi u plan bez vaše potvrde.",
+    guideDismiss: "Sakrij vodič",
     placeholder: "Opišite pravac ili cilj…",
     add: "Nova vizija",
     active: "Aktivne",
@@ -122,10 +141,18 @@ const COPY = {
     title: "Vizyon",
     intro: "Birden fazla yönü saklayın, her seferinde birini geliştirin ve Bugün'ü hangisinin yönlendireceğini seçin.",
     guide: "Vizyon nasıl çalışır?",
+    guideSubtitle: "Uzun vadeli yönlerin günlük planlamanızla nasıl çalıştığı",
+    guideStep1Badge: "1. Adım",
+    guideStep1Title: "Günlük işler değil, anlamlı yönler",
     guideIntro: "Vizyon, bir günden uzun süren anlamlı yönler içindir; bugünün işleri veya notları için değildir.",
     guideCapture: "Yönünüzü kendi sözlerinizle ekleyin. Süre isteğe bağlıdır; uygulama gerçekçi bir zaman aralığı önerebilir.",
+    guideStep2Badge: "2. Adım",
+    guideStep2Title: "Aşamalar ve somut adımlar",
     guideDevelop: "Bunu aşamalara ve küçük sonraki adımlara dönüştürün. Kitaplığınızda birden fazla vizyon tutabilirsiniz.",
+    guideStep3Badge: "3. Adım",
+    guideStep3Title: "Bugün için tek bir mevcut odak",
     guideFocus: "Bir mevcut odak seçin. Bugün'ü o yönlendirir; diğer vizyonlar bazen isteğe bağlı tek bir adım sunabilir, ancak onayınız olmadan hiçbir şey planınıza girmez.",
+    guideDismiss: "Rehberi gizle",
     placeholder: "Bir yön veya hedef açıklayın…",
     add: "Yeni vizyon",
     active: "Aktif",
@@ -336,10 +363,11 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
 
   useEffect(() => writeSessionDraft(key, { draftIdea, manualIdeas }), [draftIdea, key, manualIdeas]);
 
+  const effectiveUserId = history.user?.uid || "guest-local-user";
+
   useEffect(() => {
-    if (!history.user) return;
     let live = true;
-    Promise.all([loadVisionLibrary(history.user.uid), loadCurrentVisionId(history.user.uid)])
+    Promise.all([loadVisionLibrary(effectiveUserId), loadCurrentVisionId(effectiveUserId)])
       .then(([lib, current]) => {
         if (!live) return;
         setSaved(lib.strategies);
@@ -361,14 +389,16 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
         setSelected(initialSelection);
 
         if (!valid && active.length === 1 && !targetVisionId) {
-          void setCurrentVisionId(history.user!.uid, active[0].id).then(() => setFocusId(active[0].id));
+          void setCurrentVisionId(effectiveUserId, active[0].id).then(() => setFocusId(active[0].id));
         }
       })
-      .catch(() => setError(true));
+      .catch((err) => {
+        console.warn("Vision load error:", err);
+      });
     return () => {
       live = false;
     };
-  }, [history.user, targetVisionId]);
+  }, [effectiveUserId, targetVisionId]);
 
   const [historyIdeas, setHistoryIdeas] = useState<Array<{ idea: string; fingerprint: string }>>([]);
   useEffect(() => {
@@ -397,26 +427,7 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
 
   useEffect(() => setManualIdeas((current) => [...new Set([...current, ...imported])]), [imported]);
 
-  if (!history.authReady || history.loading) return <PlanHistoryState language={language} state="loading" />;
-  if (history.error) return <PlanHistoryState language={language} state="error" onSignIn={history.retry} />;
-  if (!history.user) {
-    return (
-      <div className="mx-auto w-full max-w-[980px] px-4 sm:px-6">
-        <header className="mb-6">
-          <p className="app-a-eyebrow">{t.eyebrow}</p>
-          <h1 className="app-a-page-title">{t.title}</h1>
-          <p className="app-a-page-intro max-w-[680px]">{t.intro}</p>
-        </header>
-        <PlanHistoryState
-          language={language}
-          state="sign_in"
-          onSignIn={() => void history.signIn()}
-          signInTitle={VISION_SIGN_IN_COPY[language].title}
-          signInText={VISION_SIGN_IN_COPY[language].text}
-        />
-      </div>
-    );
-  }
+  if (history.loading && !saved.length && !manualIdeas.length) return <PlanHistoryState language={language} state="loading" />;
 
   const activeSaved = saved.filter((item) => item.status !== "archived");
   const archivedSaved = saved.filter((item) => item.status === "archived");
@@ -439,7 +450,7 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
   const focus = async (id: string) => {
     setBusy(id);
     try {
-      await setCurrentVisionId(history.user!.uid, id);
+      await setCurrentVisionId(effectiveUserId, id);
       setFocusId(id);
       window.dispatchEvent(new Event("app-a-vision-candidates-changed"));
     } catch {
@@ -462,10 +473,10 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
     setBusy(item.id);
     setArchiveConfirmItem(null);
     try {
-      const next = await setVisionStrategyArchived(history.user!.uid, item, item.status !== "archived");
+      const next = await setVisionStrategyArchived(effectiveUserId, item, item.status !== "archived");
       setSaved((all) => all.map((x) => (x.id === next.id ? next : x)));
       if (next.status === "archived" && focusId === next.id) {
-        await setCurrentVisionId(history.user!.uid, null);
+        await setCurrentVisionId(effectiveUserId, null);
         setFocusId(null);
       }
       setSelected(null);
@@ -481,13 +492,13 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
   const remove = async (item: SavedVisionStrategy) => {
     setBusy(item.id);
     try {
-      await deleteVisionStrategy(history.user!.uid, item.id);
+      await deleteVisionStrategy(effectiveUserId, item.id);
       const fingerprint = await visionIdeaFingerprint(item.idea);
       setDeletedFingerprints((all) => [...new Set([...all, fingerprint])]);
       setSuppressedIdeas((all) => [...new Set([...all, item.idea])]);
       setManualIdeas((all) => all.filter((idea) => idea !== item.idea));
       if (focusId === item.id) {
-        await setCurrentVisionId(history.user!.uid, null);
+        await setCurrentVisionId(effectiveUserId, null);
         setFocusId(null);
       }
       setSaved((all) => all.filter((x) => x.id !== item.id));
@@ -681,61 +692,118 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
   const totalVisionsCount = activeSaved.length + drafts.length;
 
   return (
-    <div className="mx-auto w-full max-w-[980px] px-4 sm:px-6">
-      {/* 1. SCREEN HEADER */}
-      <header className="mb-5">
-        <p className="app-a-eyebrow">{t.eyebrow}</p>
-        <h1 className="app-a-page-title">{t.title}</h1>
-        <p className="app-a-page-intro max-w-[680px]">{t.intro}</p>
-      </header>
+    <div className="mx-auto w-full max-w-[1100px] px-4 sm:px-6 md:px-0 pb-28 sm:pb-32">
+      {/* 1. SCREEN HEADER WITH WATERCOLOR MOTIF */}
+      <FlowHeader
+        eyebrow={t.eyebrow}
+        title={t.title}
+        intro={t.intro}
+        className="mb-5"
+      />
 
-      {/* 2. COLLAPSED GUIDE "HOW VISION WORKS" */}
-      <section className="app-a-surface mb-4 overflow-hidden" aria-labelledby="vision-guide-heading">
-        <button
-          type="button"
-          onClick={toggleGuide}
-          aria-expanded={guideOpen}
-          className="app-a-focus-ring flex min-h-12 w-full items-center justify-between gap-3 px-4 py-3 text-left"
+      {/* 2. REDESIGNED GUIDE "HOW VISION WORKS" */}
+      {guideOpen ? (
+        <section
+          className="mb-6 overflow-hidden rounded-2xl border border-black/[0.08] bg-black/[0.02] p-4 sm:p-5 dark:border-white/[0.08] dark:bg-white/[0.02]"
+          aria-labelledby="vision-guide-heading"
         >
-          <span id="vision-guide-heading" className="inline-flex items-center gap-2 text-[14px] font-semibold text-black dark:text-white">
-            <Compass className="h-4 w-4 text-[#0071E3] dark:text-[#0A84FF]" />
-            {t.guide}
-          </span>
-          <ChevronDown className={`h-4 w-4 shrink-0 text-[#8E8E93] transition-transform ${guideOpen ? "rotate-180" : ""}`} />
-        </button>
-        {guideOpen ? (
-          <div className="grid gap-3 border-t border-black/[0.06] p-4 dark:border-white/10 sm:grid-cols-3">
-            <div className="space-y-1">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black/5 text-[12px] font-bold text-[#6E6E73] dark:bg-white/10 dark:text-[#AEAEB2]">
-                1
-              </span>
-              <p className="text-[13px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
-                {t.guideIntro} {t.guideCapture}
-              </p>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <GrowthPathArt variant="medallion" medallionType="plant" size={32} />
+              <div>
+                <h2 id="vision-guide-heading" className="text-[15px] font-semibold text-black dark:text-white">
+                  {t.guide}
+                </h2>
+                <p className="text-[12px] text-[#8E8E93]">
+                  {t.guideSubtitle}
+                </p>
+              </div>
             </div>
-            <div className="space-y-1">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black/5 text-[12px] font-bold text-[#6E6E73] dark:bg-white/10 dark:text-[#AEAEB2]">
-                2
-              </span>
-              <p className="text-[13px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
-                {t.guideDevelop}
-              </p>
+            <button
+              type="button"
+              onClick={toggleGuide}
+              aria-expanded={true}
+              className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 py-1 text-[12px] font-medium text-[#8E8E93] transition-colors hover:bg-black/5 hover:text-black dark:hover:bg-white/10 dark:hover:text-white"
+            >
+              <span>{t.guideDismiss}</span>
+              <ChevronUp className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          <div className="grid gap-3.5 sm:grid-cols-3">
+            {/* Step 1 */}
+            <div className="flex flex-col justify-between rounded-xl border border-black/[0.06] bg-white p-4 shadow-sm dark:border-white/[0.08] dark:bg-[#1C1C1E]">
+              <div>
+                <div className="mb-2.5 flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--app-a-wash-apricot-badge)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--app-a-wash-apricot-text)]">
+                    <GrowthPathArt variant="medallion" medallionType="stones" size={18} />
+                    {t.guideStep1Badge}
+                  </span>
+                </div>
+                <h3 className="mb-1.5 text-[14px] font-semibold text-black dark:text-white">
+                  {t.guideStep1Title}
+                </h3>
+                <p className="text-[12.5px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
+                  {t.guideIntro} {t.guideCapture}
+                </p>
+              </div>
             </div>
-            <div className="space-y-1">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black/5 text-[12px] font-bold text-[#6E6E73] dark:bg-white/10 dark:text-[#AEAEB2]">
-                3
-              </span>
-              <p className="text-[13px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
-                {t.guideFocus}
-              </p>
+
+            {/* Step 2 */}
+            <div className="flex flex-col justify-between rounded-xl border border-black/[0.06] bg-white p-4 shadow-sm dark:border-white/[0.08] dark:bg-[#1C1C1E]">
+              <div>
+                <div className="mb-2.5 flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--app-a-wash-dusty-blue-badge)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--app-a-wash-dusty-blue-text)]">
+                    <GrowthPathArt variant="medallion" medallionType="waves" size={18} />
+                    {t.guideStep2Badge}
+                  </span>
+                </div>
+                <h3 className="mb-1.5 text-[14px] font-semibold text-black dark:text-white">
+                  {t.guideStep2Title}
+                </h3>
+                <p className="text-[12.5px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
+                  {t.guideDevelop}
+                </p>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="flex flex-col justify-between rounded-xl border border-black/[0.06] bg-white p-4 shadow-sm dark:border-white/[0.08] dark:bg-[#1C1C1E]">
+              <div>
+                <div className="mb-2.5 flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--app-a-wash-sage-badge)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--app-a-wash-sage-text)]">
+                    <GrowthPathArt variant="medallion" medallionType="plant" size={18} />
+                    {t.guideStep3Badge}
+                  </span>
+                </div>
+                <h3 className="mb-1.5 text-[14px] font-semibold text-black dark:text-white">
+                  {t.guideStep3Title}
+                </h3>
+                <p className="text-[12.5px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
+                  {t.guideFocus}
+                </p>
+              </div>
             </div>
           </div>
-        ) : null}
-      </section>
+        </section>
+      ) : (
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={toggleGuide}
+            aria-expanded={false}
+            className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] font-medium text-[#8E8E93] transition-colors hover:bg-black/5 hover:text-black dark:hover:bg-white/10 dark:hover:text-white"
+          >
+            <GrowthPathArt variant="medallion" medallionType="plant" size={18} />
+            <span>{t.guide}</span>
+            <ChevronDown className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* 3. NEW VISION INPUT FORM */}
       <form
-        className="app-a-surface mb-4 p-4"
+        className="app-a-surface mb-4 p-4 rounded-[20px]"
         onSubmit={(e) => {
           e.preventDefault();
           add();
@@ -748,9 +816,10 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
             maxLength={4000}
             rows={2}
             placeholder={t.placeholder}
-            className="app-a-field app-a-focus-ring w-full resize-y p-3 pr-14 text-[16px]"
+            className="app-a-field app-a-focus-ring w-full resize-y p-3 pr-24 text-[16px]"
           />
-          <div className="absolute right-2 top-2">
+          <div className="absolute right-2 top-2 flex items-center gap-1.5">
+            <InputCopyButton text={draftIdea} language={language} size="sm" />
             <VoiceInputButton language={language} value={draftIdea} onChange={setDraftIdea} maxLength={4000} />
           </div>
         </div>
@@ -886,7 +955,7 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
       </div>
 
       {/* 6. MAIN CONTENT GRID (DESKTOP 2-COLUMN, MOBILE SINGLE COLUMN) */}
-      <div className="grid items-start gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <div className="grid items-start gap-5 lg:gap-7 lg:grid-cols-[340px_minmax(0,1fr)]">
         {/* DESKTOP SIDEBAR LIBRARY */}
         <section className="app-a-surface hidden overflow-hidden rounded-2xl border border-black/10 dark:border-white/15 lg:block">
           <div className="border-b border-black/[0.06] p-3 dark:border-white/10">
@@ -1049,7 +1118,7 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
                   key={selectedSaved.id}
                   idea={selectedSaved.idea}
                   language={selectedSaved.language}
-                  userId={history.user.uid}
+                  userId={effectiveUserId}
                   initialDocument={selectedSaved}
                   onSaved={(doc) => setSaved((all) => [doc, ...all.filter((x) => x.id !== doc.id)])}
                 />
@@ -1087,7 +1156,8 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
                 key={selectedDraft}
                 idea={selectedDraft}
                 language={language}
-                userId={history.user.uid}
+                userId={effectiveUserId}
+                autoStart={true}
                 provenanceItemIds={
                   initial.kind === "structured" && selectedDraft === getInitialIdea(initial)
                     ? initial.sourceItemIds
@@ -1108,7 +1178,12 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
             </article>
           ) : (
             <div className="app-a-surface rounded-2xl border border-black/10 flex min-h-[240px] flex-col items-center justify-center p-8 text-center dark:border-white/15">
-              <Sparkles className="mb-2 h-7 w-7 text-[#0071E3] dark:text-[#0A84FF] opacity-60" />
+              <img
+                src="/app-a/illustrations/vision.png"
+                alt=""
+                className="mb-3 h-24 w-24 object-contain select-none pointer-events-none opacity-85"
+                draggable={false}
+              />
               <p className="text-[14px] text-[#6E6E73] dark:text-[#AEAEB2]">{t.choose}</p>
             </div>
           )}

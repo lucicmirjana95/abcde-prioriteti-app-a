@@ -5,7 +5,6 @@ import {
   Clock3,
   Compass,
   Pencil,
-  Sparkles,
   Trash2,
   Undo2,
 } from "lucide-react";
@@ -189,7 +188,7 @@ export default function InboxOverflowMenu({
         }}
         className="app-a-secondary-button app-a-focus-ring min-h-[44px] justify-start px-3 text-[13px]"
       >
-        <Sparkles className="mr-1.5 h-4 w-4 text-purple-500" />
+        <Compass className="mr-1.5 h-4 w-4 text-purple-500" />
         {t.developVision}
       </button>
 

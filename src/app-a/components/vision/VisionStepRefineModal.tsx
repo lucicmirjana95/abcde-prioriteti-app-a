@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { AlertCircle, AlertTriangle, Check, Clock3, Loader2, Sparkles, X, Edit3, ArrowRight, CornerDownRight, RotateCcw } from "lucide-react";
+import { AlertCircle, AlertTriangle, Check, Clock3, Compass, Loader2, X, Edit3, ArrowRight, CornerDownRight, RotateCcw } from "lucide-react";
 import type { VisionStepRefinementResult } from "../../../shared/domain/vision";
 import { refineVisionStep } from "../../api/visionStrategyApi";
 import type { AppALanguage } from "../../types";
 import VoiceInputButton from "../voice/VoiceInputButton";
+import GrowthPathArt from "../GrowthPathArt";
+import InputCopyButton from "../common/InputCopyButton";
 
 interface Props {
   stepText: string;
@@ -232,7 +234,7 @@ export default function VisionStepRefineModal({
         <div className="flex items-center justify-between border-b border-black/[0.08] px-5 py-4 dark:border-white/10 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#0071E3]/10 text-[#0071E3] dark:bg-[#0A84FF]/20 dark:text-[#0A84FF]">
-              <Sparkles className="h-4 w-4" />
+              <Compass className="h-4 w-4" />
             </div>
             <div>
               <h2 id="refine-step-title" className="text-[16px] font-semibold">
@@ -303,9 +305,10 @@ export default function VisionStepRefineModal({
                   rows={3}
                   disabled={loading}
                   placeholder={t.feedbackPlaceholder}
-                  className="app-a-field app-a-focus-ring w-full p-3.5 pr-12 text-[14px] resize-none"
+                  className="app-a-field app-a-focus-ring w-full p-3.5 pr-20 text-[14px] resize-none"
                 />
-                <div className="absolute right-2.5 bottom-3.5">
+                <div className="absolute right-2.5 bottom-3.5 flex items-center gap-1.5">
+                  <InputCopyButton text={userFeedback} language={language} size="sm" />
                   <VoiceInputButton
                     language={language}
                     value={userFeedback}
@@ -326,9 +329,9 @@ export default function VisionStepRefineModal({
             /* Proposal Review Phase */
             <div className="space-y-4 animate-in fade-in duration-200">
               {/* Diff / Comparison Box */}
-              <div className="rounded-2xl border border-[#0071E3]/30 bg-[#0071E3]/5 p-4 dark:border-[#0A84FF]/30 dark:bg-[#0A84FF]/10">
-                <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#0071E3] dark:text-[#0A84FF]">
-                  <Sparkles className="h-3.5 w-3.5" />
+              <div className="rounded-2xl border border-[var(--app-a-accent)]/30 bg-[var(--app-a-surface)] p-4 dark:border-[var(--app-a-accent)]/40">
+                <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--app-a-accent)]">
+                  <GrowthPathArt variant="medallion" medallionType="plant" size={18} className="shrink-0" />
                   {t.proposedHeading}
                 </div>
                 <p className="mt-2 text-[16px] font-bold text-black dark:text-white leading-snug">
@@ -346,8 +349,9 @@ export default function VisionStepRefineModal({
               {/* Smaller First Move */}
               {proposal.smallerFirstMove && (
                 <div className="rounded-xl border border-[#34C759]/30 bg-[#34C759]/5 p-3.5 dark:border-[#30D158]/30 dark:bg-[#30D158]/10">
-                  <p className="text-[12px] font-semibold text-[#248A3D] dark:text-[#30D158]">
-                    ⚡ {t.smallerFirstMove}
+                  <p className="flex items-center gap-1.5 text-[12px] font-semibold text-[#248A3D] dark:text-[#30D158]">
+                    <GrowthPathArt variant="medallion" medallionType="stones" size={16} className="shrink-0" />
+                    <span>{t.smallerFirstMove}</span>
                   </p>
                   <p className="mt-1 text-[14px] font-medium text-black dark:text-white">
                     {proposal.smallerFirstMove}
@@ -381,8 +385,9 @@ export default function VisionStepRefineModal({
 
               {/* Alignment Reason */}
               {proposal.alignmentReason && (
-                <p className="text-[13px] text-[#6E6E73] dark:text-[#AEAEB2] italic leading-relaxed">
-                  💡 {proposal.alignmentReason}
+                <p className="text-[13px] text-[#6E6E73] dark:text-[#AEAEB2] italic leading-relaxed flex items-center gap-1.5">
+                  <Compass className="h-3.5 w-3.5 shrink-0 text-[var(--app-a-accent)]" />
+                  <span>{proposal.alignmentReason}</span>
                 </p>
               )}
 
@@ -453,7 +458,7 @@ export default function VisionStepRefineModal({
                     </>
                   ) : (
                     <>
-                      <Sparkles className="h-4 w-4" />
+                      <Compass className="h-4 w-4" />
                       {t.submitButton}
                     </>
                   )}

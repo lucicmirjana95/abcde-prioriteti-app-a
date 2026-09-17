@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   Compass,
-  Sparkles,
   Inbox,
   X,
   ArrowRight,
@@ -75,7 +74,7 @@ export default function VisionSuggestionCard({
                 {t.visionSuggestionBadge}
               </span>
               <span className="inline-flex app-a-focus-ring items-center rounded-full bg-sky-100/80 px-2 py-0.5 text-[10px] font-medium text-sky-800 dark:bg-sky-900/60 dark:text-sky-200">
-                <Sparkles className="mr-1 h-2.5 w-2.5" />
+                <Compass className="mr-1 h-2.5 w-2.5" />
                 {suggestion.confidence === "high" ? "High" : "Suggested"}
               </span>
             </div>

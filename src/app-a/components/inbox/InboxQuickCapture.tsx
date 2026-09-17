@@ -1,6 +1,7 @@
 import React from "react";
 import { Loader2, Plus, AlertCircle, RefreshCw } from "lucide-react";
 import VoiceInputButton from "../voice/VoiceInputButton";
+import InputCopyButton from "../common/InputCopyButton";
 import type { AppALanguage } from "../../types";
 
 export interface InboxQuickCaptureProps {
@@ -58,15 +59,20 @@ export default function InboxQuickCapture({
             }
           }}
         />
-        <div className="absolute bottom-2.5 right-2.5 flex items-center gap-2">
+        <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1.5">
           {draftTitle.length > 0 ? (
             <span
-              className="text-[11px] tabular-nums"
+              className="text-[11px] tabular-nums mr-1"
               style={{ color: "var(--app-a-text-secondary)" }}
             >
               {draftTitle.length} / 500
             </span>
           ) : null}
+          <InputCopyButton
+            text={draftTitle}
+            language={language}
+            size="sm"
+          />
           <VoiceInputButton
             language={language}
             value={draftTitle}

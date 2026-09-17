@@ -128,33 +128,46 @@
   --app-a-wash-lavender-badge: rgba(175, 161, 222, 0.22);
 }
 
+/* ─── Desktop Layout Tokens ─────────────────────────────── */
+@media (min-width: 768px) {
+  .app-a-root {
+    --app-a-radius: 20px;
+    --app-a-shadow: 0 2px 12px rgba(16, 27, 45, 0.055), 0 1px 3px rgba(16, 27, 45, 0.04);
+    --app-a-shadow-lg: 0 16px 48px rgba(16, 27, 45, 0.10), 0 4px 12px rgba(16, 27, 45, 0.05);
+  }
+  .app-a-root.dark {
+    --app-a-shadow: 0 2px 12px rgba(0, 0, 0, 0.30);
+    --app-a-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.45);
+  }
+}
+
 /* Canvas-Integrated Flow Header with Real Watercolor Art */
 .app-a-flow-header {
   position: relative;
-  min-height: 315px;
-  padding-top: 8px;
-  padding-bottom: 8px;
-  margin-bottom: 12px;
+  min-height: 140px;
+  padding-top: 12px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
 }
 
 @media (max-width: 380px) {
   .app-a-flow-header {
-    min-height: 285px;
-    padding-top: 4px;
-    padding-bottom: 4px;
-    margin-bottom: 8px;
+    min-height: 120px;
+    padding-top: 6px;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
   }
 }
 
 .app-a-flow-header-inner {
   position: relative;
   z-index: 10;
-  max-width: 220px;
+  max-width: 460px;
 }
 
 @media (min-width: 640px) {
   .app-a-flow-header-inner {
-    max-width: 340px;
+    max-width: 540px;
   }
 }
 
@@ -168,12 +181,12 @@
 }
 
 .app-a-flow-title {
-  font-size: clamp(24px, 5.5vw, 32px);
+  font-size: clamp(24px, 5vw, 32px);
   font-weight: 700;
-  line-height: 1.12;
+  line-height: 1.15;
   letter-spacing: -0.025em;
   color: var(--app-a-text);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .app-a-flow-intro {
@@ -182,34 +195,87 @@
   color: var(--app-a-text-secondary);
 }
 
+/* Desktop: bigger headings and more breathing room */
+@media (min-width: 768px) {
+  .app-a-flow-header {
+    min-height: 168px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    margin-bottom: 24px;
+  }
+  .app-a-flow-header-inner {
+    max-width: 600px;
+  }
+  .app-a-flow-title {
+    font-size: clamp(30px, 3.5vw, 42px);
+    margin-bottom: 10px;
+  }
+  .app-a-flow-eyebrow {
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+  .app-a-flow-intro {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  .app-a-growth-header-art {
+    width: 260px;
+    max-width: 38%;
+    top: -10px;
+    right: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-a-flow-header {
+    min-height: 188px;
+    padding-top: 24px;
+    margin-bottom: 32px;
+  }
+  .app-a-flow-title {
+    font-size: clamp(34px, 3vw, 48px);
+  }
+  .app-a-growth-header-art {
+    width: 290px;
+    max-width: 36%;
+  }
+}
+
 /* Watercolor Art Container */
 .app-a-growth-header-art {
   position: absolute;
-  top: -8px;
-  right: -10px;
-  width: 345px;
-  max-width: 95%;
+  top: -6px;
+  right: -2px;
+  width: 210px;
+  max-width: 40%;
   pointer-events: none;
   user-select: none;
   z-index: 1;
+  opacity: 0.92;
 }
 
-@media (max-width: 380px) {
+@media (max-width: 480px) {
+  .app-a-flow-header-inner {
+    max-width: calc(100% - 100px);
+  }
   .app-a-growth-header-art {
     top: -4px;
-    right: -14px;
-    width: 290px;
+    right: -6px;
+    width: 140px;
+    max-width: 35%;
+    opacity: 0.85;
   }
 }
 
 @media (max-width: 360px) {
   .app-a-flow-header-inner {
-    max-width: 175px;
+    max-width: calc(100% - 80px);
   }
   .app-a-growth-header-art {
-    top: -4px;
-    right: -22px;
-    width: 265px;
+    top: -2px;
+    right: -8px;
+    width: 120px;
+    opacity: 0.8;
   }
 }
 
@@ -305,6 +371,208 @@ html.reduce-motion .app-a-growth-loading-glow {
   opacity: 0.95 !important;
   filter: none !important;
 }
+
+/* ==========================================================================
+   Rest & Breathing Experience Animations (Authentic Watercolor Visualizers)
+   ========================================================================== */
+
+/* 1. Box Breathing Pulse */
+@keyframes app-a-box-glow {
+  0%, 100% {
+    box-shadow: inset 0 0 24px rgba(170, 165, 195, 0.18), 0 0 16px rgba(170, 165, 195, 0.12);
+  }
+  50% {
+    box-shadow: inset 0 0 36px rgba(170, 165, 195, 0.32), 0 0 28px rgba(130, 175, 201, 0.25);
+  }
+}
+
+.app-a-box-frame {
+  animation: app-a-box-glow 8s ease-in-out infinite;
+}
+
+/* 2. Longer Exhale Organic Watercolor Blob */
+@keyframes app-a-exhale-morph {
+  0%, 100% {
+    border-radius: 48% 52% 55% 45% / 52% 46% 54% 48%;
+  }
+  33% {
+    border-radius: 54% 46% 48% 52% / 46% 54% 46% 54%;
+  }
+  66% {
+    border-radius: 46% 54% 52% 48% / 54% 48% 52% 46%;
+  }
+}
+
+.app-a-watercolor-bubble {
+  animation: app-a-exhale-morph 10s ease-in-out infinite;
+  will-change: border-radius;
+}
+
+/* 3. Double Inhale Apricot Sigh Bubble */
+@keyframes app-a-sigh-morph {
+  0%, 100% {
+    border-radius: 50% 45% 52% 48% / 46% 52% 48% 54%;
+  }
+  50% {
+    border-radius: 46% 54% 47% 53% / 53% 47% 53% 47%;
+  }
+}
+
+.app-a-sigh-bubble {
+  animation: app-a-sigh-morph 7s ease-in-out infinite;
+  will-change: border-radius;
+}
+
+/* 4. Guided Deep Rest: Ring and Orb */
+@keyframes app-a-rest-ring-pulse {
+  0%, 100% {
+    transform: scale(0.98) rotate(0deg);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.05) rotate(180deg);
+    opacity: 0.9;
+  }
+}
+
+@keyframes app-a-rest-orb-float {
+  0%, 100% {
+    transform: scale(0.85) rotate(-3deg);
+    border-radius: 44% 56% 52% 48% / 47% 43% 57% 53%;
+    filter: blur(0px);
+  }
+  33% {
+    transform: scale(0.96) rotate(4deg);
+    border-radius: 52% 48% 44% 56% / 43% 56% 44% 57%;
+    filter: blur(0.5px);
+  }
+  66% {
+    transform: scale(0.90) rotate(-2deg);
+    border-radius: 47% 53% 56% 44% / 55% 45% 48% 52%;
+    filter: blur(0px);
+  }
+}
+
+.app-a-rest-ring {
+  animation: app-a-rest-ring-pulse 12s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.app-a-rest-orb {
+  animation: app-a-rest-orb-float 8s ease-in-out infinite;
+  will-change: transform, border-radius;
+}
+
+/* Water Wave ripples for Guided Rest */
+@keyframes app-a-wave-drift {
+  0% {
+    transform: translateX(-12px);
+  }
+  50% {
+    transform: translateX(12px);
+  }
+  100% {
+    transform: translateX(-12px);
+  }
+}
+
+.app-a-rest-wave-1 {
+  animation: app-a-wave-drift 5s ease-in-out infinite;
+}
+
+.app-a-rest-wave-2 {
+  animation: app-a-wave-drift 7s ease-in-out infinite reverse;
+}
+
+/* Approved Guided Rest Waves matching Remotion Composition with enhanced organic motion */
+@keyframes app-a-rest-approved-wave0 {
+  0%, 100% {
+    transform: translate3d(-26px, 2px, 0) scaleY(0.96);
+  }
+  50% {
+    transform: translate3d(26px, -4px, 0) scaleY(1.08);
+  }
+}
+
+@keyframes app-a-rest-approved-wave1 {
+  0%, 100% {
+    transform: translate3d(-20px, -3px, 0) scaleY(1.06);
+  }
+  50% {
+    transform: translate3d(20px, 3px, 0) scaleY(0.95);
+  }
+}
+
+@keyframes app-a-rest-approved-wave2 {
+  0%, 100% {
+    transform: translate3d(-30px, 3px, 0) scaleY(0.94);
+  }
+  50% {
+    transform: translate3d(30px, -3px, 0) scaleY(1.06);
+  }
+}
+
+.app-a-rest-approved-wave-0 {
+  animation: app-a-rest-approved-wave0 4.2s ease-in-out infinite;
+  will-change: transform;
+}
+.app-a-rest-approved-wave-1 {
+  animation: app-a-rest-approved-wave1 5.4s ease-in-out infinite;
+  will-change: transform;
+}
+.app-a-rest-approved-wave-2 {
+  animation: app-a-rest-approved-wave2 6.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes app-a-rest-scenery-pulse {
+  0%, 100% {
+    transform: scale(1.0) translateY(0);
+  }
+  50% {
+    transform: scale(1.03) translateY(-2px);
+  }
+}
+
+.app-a-rest-scenery-animated {
+  animation: app-a-rest-scenery-pulse 8s ease-in-out infinite;
+  transform-origin: center 45%;
+  will-change: transform;
+}
+
+/* Reduced Motion overrides */
+@media (prefers-reduced-motion: reduce) {
+  .app-a-box-frame,
+  .app-a-watercolor-bubble,
+  .app-a-sigh-bubble,
+  .app-a-rest-ring,
+  .app-a-rest-orb,
+  .app-a-rest-wave-1,
+  .app-a-rest-wave-2,
+  .app-a-rest-approved-wave-0,
+  .app-a-rest-approved-wave-1,
+  .app-a-rest-approved-wave-2,
+  .app-a-rest-scenery-animated {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+html.reduce-motion .app-a-box-frame,
+html.reduce-motion .app-a-watercolor-bubble,
+html.reduce-motion .app-a-sigh-bubble,
+html.reduce-motion .app-a-rest-ring,
+html.reduce-motion .app-a-rest-orb,
+html.reduce-motion .app-a-rest-wave-1,
+html.reduce-motion .app-a-rest-wave-2,
+html.reduce-motion .app-a-rest-approved-wave-0,
+html.reduce-motion .app-a-rest-approved-wave-1,
+html.reduce-motion .app-a-rest-approved-wave-2,
+html.reduce-motion .app-a-rest-scenery-animated {
+  animation: none !important;
+  transform: none !important;
+}
+
 
 /* Apple HIG Translucent Materials */
 .app-a-tabbar {
@@ -482,6 +750,45 @@ select,
   color: var(--app-a-text-secondary);
   font-size: 16px;
   line-height: 1.55;
+}
+
+/* Desktop: larger page titles, auto-width buttons, richer surfaces */
+@media (min-width: 768px) {
+  .app-a-page-title {
+    font-size: clamp(2.125rem, 3.5vw, 2.875rem);
+    margin-bottom: 1rem;
+  }
+  .app-a-page-intro {
+    font-size: 17px;
+    line-height: 1.6;
+  }
+  /* Primary button: auto-width on desktop (not forced full-width) */
+  .app-a-btn-primary,
+  .app-a-primary-button {
+    width: auto;
+    min-width: 180px;
+  }
+  /* Allow explicit full-width override when needed */
+  .app-a-btn-primary.w-full,
+  .app-a-primary-button.w-full {
+    width: 100%;
+  }
+  /* Richer surface depth on desktop */
+  .app-a-surface {
+    box-shadow:
+      0 2px 12px rgba(16, 27, 45, 0.055),
+      0 1px 3px rgba(16, 27, 45, 0.04);
+  }
+  .app-a-root.dark .app-a-surface {
+    box-shadow:
+      0 2px 12px rgba(0, 0, 0, 0.30),
+      0 1px 4px rgba(0, 0, 0, 0.20);
+  }
+  .app-a-surface-elevated {
+    box-shadow:
+      0 16px 48px rgba(16, 27, 45, 0.10),
+      0 4px 12px rgba(16, 27, 45, 0.05);
+  }
 }
 
 /* Notice & Message Panels */

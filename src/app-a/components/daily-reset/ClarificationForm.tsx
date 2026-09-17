@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ClarificationQuestion, SupportedLanguage } from "../../domain/daily-reset/contracts";
 import type { ClarificationHistoryEntry } from "../../screens/todayFlow";
+import type { AppALanguage } from "../../types";
 import VoiceInputButton from "../voice/VoiceInputButton";
+import InputCopyButton from "../common/InputCopyButton";
 import FlowHeader from "./FlowHeader";
-import { Sparkles, CheckCircle2, Bookmark, ArrowRight, RotateCcw } from "lucide-react";
+import { Compass, CheckCircle2, Bookmark, ArrowRight, RotateCcw } from "lucide-react";
 
 interface Props {
   questions: ClarificationQuestion[];
@@ -166,7 +168,7 @@ export default function ClarificationForm({
           style={{ background: "var(--app-a-surface-secondary)" }}
         >
           <div className="flex items-center gap-2.5">
-            <Sparkles className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            <Compass className="h-5 w-5 text-purple-600 dark:text-purple-400" />
             <h2 className="text-[17px] sm:text-[18px] font-semibold text-black dark:text-white">
               {t.summaryTitle}
             </h2>
@@ -269,19 +271,26 @@ export default function ClarificationForm({
                   }`}
                 />
                 {!isUnknown && (
-                  <div
-                    className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full shadow-sm"
-                    style={{ background: "var(--app-a-surface-secondary)" }}
-                  >
-                    <VoiceInputButton
-                      language={language}
-                      value={currentAnswer}
-                      onChange={(value) => {
-                        onAnswerChange(q.id, value);
-                        setValidationError(null);
-                      }}
-                      maxLength={4000}
+                  <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
+                    <InputCopyButton
+                      text={currentAnswer}
+                      language={language as AppALanguage}
+                      size="sm"
                     />
+                    <div
+                      className="flex h-11 w-11 items-center justify-center rounded-full shadow-sm"
+                      style={{ background: "var(--app-a-surface-secondary)" }}
+                    >
+                      <VoiceInputButton
+                        language={language}
+                        value={currentAnswer}
+                        onChange={(value) => {
+                          onAnswerChange(q.id, value);
+                          setValidationError(null);
+                        }}
+                        maxLength={4000}
+                      />
+                    </div>
                   </div>
                 )}
               </div>

@@ -317,7 +317,7 @@ export default function SettingsScreen({
   const activeZoneText = `${t.activeZone}: ${effectiveZone}`;
 
   return (
-    <div className="mx-auto w-full max-w-[680px] px-5 sm:px-6">
+    <div className="mx-auto w-full max-w-[760px] px-5 sm:px-6 md:px-0 pb-28 sm:pb-32">
       <header className="mb-7">
         <p className="app-a-eyebrow">{t.eyebrow}</p>
         <h1 className="app-a-page-title">{t.title}</h1>

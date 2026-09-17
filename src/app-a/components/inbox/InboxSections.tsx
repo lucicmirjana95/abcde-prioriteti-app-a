@@ -129,7 +129,12 @@ export default function InboxSections({
           className="app-a-surface flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-[20px] border p-8 text-center"
           style={{ borderColor: "var(--app-a-border)" }}
         >
-          <GrowthPathArt variant="medallion" medallionType="plant" size={48} />
+          <img
+            src="/app-a/illustrations/inbox.png"
+            alt=""
+            className="mb-1 h-24 w-24 object-contain select-none pointer-events-none opacity-85"
+            draggable={false}
+          />
           <h2 className="text-[17px] font-semibold text-black dark:text-white">{t.emptyTitle}</h2>
           <p
             className="max-w-[420px] text-[13px] leading-relaxed"
@@ -149,7 +154,7 @@ export default function InboxSections({
               >
                 {t.sectionNeedsDecision} ({groupedSections.notes.length})
               </h2>
-              <div className="space-y-2.5">{groupedSections.notes.map(renderItemCard)}</div>
+              <div className="grid gap-2.5 md:grid-cols-2">{groupedSections.notes.map(renderItemCard)}</div>
             </section>
           ) : null}
 
@@ -163,7 +168,7 @@ export default function InboxSections({
               >
                 {t.sectionWaiting} ({groupedSections.waiting.length})
               </h2>
-              <div className="space-y-2.5">{groupedSections.waiting.map(renderItemCard)}</div>
+              <div className="grid gap-2.5 md:grid-cols-2">{groupedSections.waiting.map(renderItemCard)}</div>
             </section>
           ) : null}
 
@@ -177,7 +182,7 @@ export default function InboxSections({
               >
                 {t.sectionScheduled} ({groupedSections.scheduled.length})
               </h2>
-              <div className="space-y-2.5">{groupedSections.scheduled.map(renderItemCard)}</div>
+              <div className="grid gap-2.5 md:grid-cols-2">{groupedSections.scheduled.map(renderItemCard)}</div>
             </section>
           ) : null}
 
@@ -190,7 +195,7 @@ export default function InboxSections({
               >
                 {t.sectionThisWeek} ({groupedSections.thisWeek.length})
               </h2>
-              <div className="space-y-2.5">{groupedSections.thisWeek.map(renderItemCard)}</div>
+              <div className="grid gap-2.5 md:grid-cols-2">{groupedSections.thisWeek.map(renderItemCard)}</div>
             </section>
           ) : null}
 
@@ -204,12 +209,12 @@ export default function InboxSections({
               >
                 {t.sectionLater} ({groupedSections.later.length})
               </h2>
-              <div className="space-y-2.5">{groupedSections.later.map(renderItemCard)}</div>
+              <div className="grid gap-2.5 md:grid-cols-2">{groupedSections.later.map(renderItemCard)}</div>
             </section>
           ) : null}
         </div>
       ) : (
-        <div className="space-y-2.5">{visibleItems.map(renderItemCard)}</div>
+        <div className="grid gap-2.5 md:grid-cols-2">{visibleItems.map(renderItemCard)}</div>
       )}
     </div>
   );

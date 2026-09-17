@@ -97,8 +97,8 @@ export default function GlobalNsdrFloat({ language, isScrolledDown }: GlobalNsdr
                 </span>
                 <span className="text-[13px] font-bold text-black dark:text-white leading-none block">
                   {sessionType === "theta"
-                    ? (isEn ? "Theta Focus (4Hz)" : isTr ? "Theta Odak (4Hz)" : "Teta Fokus (4Hz)")
-                    : (isEn ? "Delta Rest (2Hz)" : isTr ? "Delta Uyku (2Hz)" : "Delta Rest (2Hz)")}
+                    ? (isEn ? "Deep Restful Waves" : isTr ? "Derin Dinlenme Dalgası" : "Duboki NSDR Odmor")
+                    : (isEn ? "Restorative Sleep" : isTr ? "Yenileyici Uyku" : "Noćni Oporavak")}
                 </span>
               </div>
             </div>

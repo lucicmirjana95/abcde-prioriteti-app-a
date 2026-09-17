@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { AppADestination, AppALanguage, APP_A_TRANSLATIONS, type AppATheme, type AppAReducedMotion } from "../types";
-import { Home, FileText, Sprout, BarChart3, Sparkles, Settings } from "lucide-react";
+import { Home, FileText, Sprout, BarChart3, Settings } from "lucide-react";
 import AccountStatus from "./AccountStatus";
 
 interface Props {
@@ -60,7 +60,7 @@ export default function AppAShell({ currentDestination, onNavigate, language, th
     <div className={`app-a-root flex min-h-[100dvh] flex-col md:flex-row ${isDark ? "dark" : "light"}`} style={{ colorScheme: isDark ? "dark" : "light" }}>
       {/* Mobile Top Bar (Apple HIG UINavigationBar) */}
       <header
-        className="app-a-header-bar sticky top-0 z-40 flex h-[44px] box-content pt-[env(safe-area-inset-top,0px)] items-center justify-between px-4 select-none md:hidden"
+        className="app-a-header-bar sticky top-0 z-40 flex h-[54px] box-content pt-[env(safe-area-inset-top,0px)] items-center justify-between px-4 sm:px-5 select-none md:hidden"
         style={{ color: "var(--app-a-text)" }}
       >
         <h1 className="text-[17px] font-semibold tracking-[-0.4px] truncate flex-1">
@@ -84,26 +84,38 @@ export default function AppAShell({ currentDestination, onNavigate, language, th
 
       {/* Desktop/Tablet Sidebar */}
       <nav
-        className="sticky top-0 hidden h-[100dvh] w-[224px] shrink-0 flex-col border-r p-4 backdrop-blur-xl md:flex lg:w-[252px]"
+        className="sticky top-0 hidden h-[100dvh] w-[260px] shrink-0 flex-col border-r p-5 backdrop-blur-xl md:flex lg:w-[300px]"
         style={{
           backgroundColor: "var(--app-a-sidebar)",
           borderColor: "var(--app-a-border)",
           color: "var(--app-a-text)",
         }}
       >
-        <div className="mb-8 flex items-center gap-3 px-3 pt-2">
+        {/* App logo / identity */}
+        <div className="mb-8 flex items-center gap-3 px-2 pt-1">
           <span
-            className="flex h-9 w-9 items-center justify-center rounded-[11px] text-white shadow-sm"
+            className="flex h-10 w-10 items-center justify-center rounded-[13px] shadow-md shrink-0 overflow-hidden"
             style={{ backgroundColor: "var(--app-a-accent)" }}
           >
-            <Sparkles className="h-[18px] w-[18px]" aria-hidden="true" />
+            <img
+              src="/app-a/growth-path-medallion-sun.png"
+              alt="Daily Reset"
+              className="h-full w-full object-cover select-none pointer-events-none"
+            />
           </span>
           <div>
-            <div className="text-[15px] font-semibold tracking-[-0.01em]">Daily Reset</div>
-            <div className="text-[12px]" style={{ color: "var(--app-a-text-tertiary)" }}>App A</div>
+            <div className="text-[16px] font-bold tracking-[-0.02em] leading-tight">Daily Reset</div>
+            <div className="text-[12px] mt-0.5" style={{ color: "var(--app-a-text-tertiary)" }}>Studio</div>
           </div>
         </div>
-        <div className="flex flex-col gap-1 mb-auto">
+
+        {/* Nav section */}
+        <div className="mb-2 px-3">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.10em]" style={{ color: "var(--app-a-text-tertiary)" }}>
+            Navigacija
+          </span>
+        </div>
+        <div className="flex flex-col gap-0.5 mb-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isCurrent = currentDestination === item.id;
@@ -112,7 +124,7 @@ export default function AppAShell({ currentDestination, onNavigate, language, th
                 key={item.id}
                 onClick={() => onNavigate(item.id)}
                 aria-current={isCurrent ? "page" : undefined}
-                className="app-a-focus-ring flex min-h-[46px] items-center gap-3 rounded-xl px-3 text-[15px] font-medium transition-colors"
+                className="app-a-focus-ring flex min-h-[50px] items-center gap-3 rounded-xl px-3 text-[15px] font-medium transition-colors relative overflow-hidden"
                 style={{
                   backgroundColor: isCurrent ? "var(--app-a-accent-soft)" : "transparent",
                   color: isCurrent ? "var(--app-a-accent)" : "var(--app-a-text-secondary)",
@@ -131,21 +143,34 @@ export default function AppAShell({ currentDestination, onNavigate, language, th
                   }
                 }}
               >
-                <Icon className="w-5 h-5 shrink-0" />
-                <span>{item.label}</span>
+                {/* Active accent bar */}
+                {isCurrent && (
+                  <span
+                    className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full"
+                    style={{ backgroundColor: "var(--app-a-accent)" }}
+                    aria-hidden="true"
+                  />
+                )}
+                <Icon className="w-[18px] h-[18px] shrink-0" />
+                <span className="text-[15px]">{item.label}</span>
               </button>
             );
           })}
         </div>
-        <AccountStatus language={language} />
+
+        {/* Bottom account */}
+        <div className="pt-4 border-t" style={{ borderColor: "var(--app-a-border)" }}>
+          <AccountStatus language={language} />
+        </div>
       </nav>
 
       {/* Main Content Area */}
       <main className="flex min-w-0 flex-1 flex-col pb-[calc(54px+env(safe-area-inset-bottom,0px)+24px)] md:pb-0">
-        <div className="mx-auto w-full max-w-[880px] py-6 sm:py-8 md:px-8 lg:py-12">
+        <div className="mx-auto w-full max-w-[880px] py-6 sm:py-8 md:px-8 lg:py-8 lg:max-w-[1240px] xl:max-w-[1360px] lg:px-10">
           {children}
         </div>
       </main>
+
 
       {/* Mobile Bottom Navigation Bar (Apple HIG UITabBar) */}
       <nav

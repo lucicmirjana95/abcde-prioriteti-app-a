@@ -13,7 +13,7 @@ import {
   CalendarDays,
   Bell,
   AlertTriangle,
-  Sparkles,
+  RotateCcw,
 } from "lucide-react";
 import type { AppALanguage } from "../../types";
 import {
@@ -371,7 +371,7 @@ export default function UnfinishedTasksSection({
                 disabled={Boolean(processingId) || (!hasConfirmedPlanToday && mode === "execution")}
                 className="app-a-focus-ring flex items-center gap-1.5 rounded-lg bg-[#0071E3]/10 px-2.5 py-1 text-[12px] font-semibold text-[#0071E3] hover:bg-[#0071E3]/20 dark:bg-[#0A84FF]/20 dark:text-[#0A84FF] disabled:opacity-50"
               >
-                <Sparkles className="h-3.5 w-3.5" />
+                <RotateCcw className="h-3.5 w-3.5" />
                 {t.considerAllForToday}
               </button>
             )}
@@ -845,7 +845,7 @@ export default function UnfinishedTasksSection({
                       }}
                       className="app-a-primary-button flex items-center gap-1.5 px-3 py-1.5 text-[13px]"
                     >
-                      <Sparkles className="h-4 w-4" />
+                      <RotateCcw className="h-4 w-4" />
                       {t.reevaluateWithSelected} ({selectedForResetIds.length})
                     </button>
                   </div>

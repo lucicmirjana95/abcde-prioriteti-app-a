@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 import { DailyPlanItem, PlanBlock, RequiredEnergy } from "../../domain/daily-reset/contracts";
 import { AppALanguage, APP_A_TRANSLATIONS } from "../../types";
+import InputCopyButton from "../common/InputCopyButton";
 
 interface Props {
   item: DailyPlanItem;
@@ -12,6 +13,7 @@ interface Props {
   onMoveOutside: (itemId: string, targetHorizon: "this_week" | "later" | "long_term_idea" | "no_action") => void;
   onReorder?: (itemId: string, direction: "up" | "down") => void;
   onEditSave: (itemId: string, updates: { title: string; description?: string; estimatedMinutes: number }) => { success: boolean; error?: string };
+  onDeleteItem?: (itemId: string) => void;
 }
 
 export default function DailyPlanItemRow({
@@ -23,6 +25,7 @@ export default function DailyPlanItemRow({
   onMoveOutside,
   onReorder,
   onEditSave,
+  onDeleteItem,
 }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
 
@@ -34,6 +37,17 @@ export default function DailyPlanItemRow({
 
   const [showWhy, setShowWhy] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+
+  React.useEffect(() => {
+    if (!showMenu) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showMenu]);
 
   const getEnergyLabel = (energy?: RequiredEnergy): string => {
     switch (energy) {
@@ -102,12 +116,17 @@ export default function DailyPlanItemRow({
             >
               {t.itemTitleLabel} <span style={{ color: "var(--app-a-danger)" }}>*</span>
             </label>
-            <input
-              type="text"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="app-a-field w-full p-2.5 text-[16px]"
-            />
+            <div className="relative flex items-center">
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="app-a-field w-full p-2.5 pr-10 text-[16px]"
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
+                <InputCopyButton text={editTitle} language={language} size="sm" />
+              </div>
+            </div>
           </div>
 
           <div>
@@ -117,12 +136,17 @@ export default function DailyPlanItemRow({
             >
               {t.itemDescLabel}
             </label>
-            <textarea
-              value={editDesc}
-              onChange={(e) => setEditDesc(e.target.value)}
-              rows={2}
-              className="app-a-field w-full p-2.5 text-[16px]"
-            />
+            <div className="relative">
+              <textarea
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+                rows={2}
+                className="app-a-field w-full p-2.5 pb-9 text-[16px]"
+              />
+              <div className="absolute right-2 bottom-2 flex items-center">
+                <InputCopyButton text={editDesc} language={language} size="sm" />
+              </div>
+            </div>
           </div>
 
           <div>
@@ -281,7 +305,7 @@ export default function DailyPlanItemRow({
         {/* Actions Row */}
         <div className="flex shrink-0 items-center gap-2">
           {onReorder && item.capacityType !== "fixed" && (
-            <div className="flex flex-col gap-0.5 mr-1">
+            <div className="hidden sm:flex flex-col gap-0.5 mr-1">
               <button
                 type="button"
                 disabled={isFirst}
@@ -320,168 +344,403 @@ export default function DailyPlanItemRow({
           </button>
 
           {showMenu && (
-            <div
-              className="absolute right-0 z-20 mt-2 w-56 rounded-2xl border py-2 shadow-lg"
-              style={{
-                backgroundColor: "var(--app-a-surface-elevated)",
-                borderColor: "var(--app-a-border-strong)",
-                boxShadow: "var(--app-a-shadow-lg)",
-              }}
-            >
-              
-              {onReorder && item.capacityType !== "fixed" && (
-                <>
+            <>
+              {/* Mobile Action Sheet Modal (z-50) */}
+              <div className="fixed inset-0 z-50 flex flex-col justify-end sm:hidden">
+                {/* Backdrop overlay */}
+                <div
+                  className="fixed inset-0 bg-black/45 backdrop-blur-xs transition-opacity"
+                  onClick={() => setShowMenu(false)}
+                  aria-hidden="true"
+                />
+
+                {/* Sheet panel */}
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label={item.title}
+                  className="relative z-10 max-h-[85vh] overflow-y-auto rounded-t-[28px] border-t p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl animate-in slide-in-from-bottom duration-200"
+                  style={{
+                    backgroundColor: "var(--app-a-surface-elevated)",
+                    borderColor: "var(--app-a-border-strong)",
+                    boxShadow: "var(--app-a-shadow-lg)",
+                  }}
+                >
+                  {/* Drag handle pill */}
+                  <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-black/20 dark:bg-white/20" />
+
+                  {/* Task info header */}
+                  <div className="mb-3 px-2 text-left">
+                    <h4
+                      className="text-[16px] font-semibold leading-snug tracking-[-0.01em]"
+                      style={{ color: "var(--app-a-text)" }}
+                    >
+                      {item.title}
+                    </h4>
+                    <div
+                      className="mt-1 flex items-center gap-2 text-[12px]"
+                      style={{ color: "var(--app-a-text-secondary)" }}
+                    >
+                      <span>{item.estimatedMinutes} min</span>
+                      <span>•</span>
+                      <span>{getEnergyLabel(item.requiredEnergy)}</span>
+                      {goalOrProjectTitle && (
+                        <>
+                          <span>•</span>
+                          <span style={{ color: "var(--app-a-accent)" }}>{goalOrProjectTitle}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions list */}
+                  <div
+                    className="overflow-hidden rounded-2xl border divide-y"
+                    style={{
+                      backgroundColor: "var(--app-a-surface)",
+                      borderColor: "var(--app-a-border)",
+                    }}
+                  >
+                    {/* Schedule block reordering & moving */}
+                    {onReorder && item.capacityType !== "fixed" && (
+                      <div className="p-1">
+                        <button
+                          type="button"
+                          disabled={isFirst}
+                          onClick={() => {
+                            setShowMenu(false);
+                            onReorder(item.id, "up");
+                          }}
+                          className="flex w-full min-h-[44px] items-center justify-between rounded-xl px-4 py-2.5 text-left text-[14px] font-medium transition-colors disabled:opacity-30"
+                          style={{ color: "var(--app-a-text)" }}
+                        >
+                          <span>{language === "sr" ? "Premesti ranije" : language === "tr" ? "Daha erkene taşı" : "Move earlier"}</span>
+                          <ChevronUp className="h-4 w-4 text-[#8E8E93]" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isLast}
+                          onClick={() => {
+                            setShowMenu(false);
+                            onReorder(item.id, "down");
+                          }}
+                          className="flex w-full min-h-[44px] items-center justify-between rounded-xl px-4 py-2.5 text-left text-[14px] font-medium transition-colors disabled:opacity-30"
+                          style={{ color: "var(--app-a-text)" }}
+                        >
+                          <span>{language === "sr" ? "Premesti kasnije" : language === "tr" ? "Daha sonraya taşı" : "Move later"}</span>
+                          <ChevronDown className="h-4 w-4 text-[#8E8E93]" />
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="p-1">
+                      {item.block !== "first_focus" && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowMenu(false);
+                            onMoveToBlock(item.id, "first_focus");
+                          }}
+                          className="w-full text-left min-h-[44px] rounded-xl px-4 py-2.5 text-[14px] font-medium transition-colors"
+                          style={{ color: "var(--app-a-text)" }}
+                        >
+                          {language === "sr" ? "Postavi kao sledeće" : t.moveToFirstFocus}
+                        </button>
+                      )}
+
+                      {item.block !== "later_today" && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowMenu(false);
+                            onMoveToBlock(item.id, "later_today");
+                          }}
+                          className="w-full text-left min-h-[44px] rounded-xl px-4 py-2.5 text-[14px] font-medium transition-colors"
+                          style={{ color: "var(--app-a-text)" }}
+                        >
+                          {t.moveToLaterToday}
+                        </button>
+                      )}
+
+                      {item.block !== "if_capacity_remains" && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowMenu(false);
+                            onMoveToBlock(item.id, "if_capacity_remains");
+                          }}
+                          className="w-full text-left min-h-[44px] rounded-xl px-4 py-2.5 text-[14px] font-medium transition-colors"
+                          style={{ color: "var(--app-a-text)" }}
+                        >
+                          {language === "sr" ? "Ako ostane kapaciteta" : t.moveToIfCapacityRemains}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="p-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowMenu(false);
+                          onMoveOutside(item.id, "this_week");
+                        }}
+                        className="w-full text-left min-h-[44px] rounded-xl px-4 py-2.5 text-[14px] font-medium transition-colors"
+                        style={{ color: "var(--app-a-text)" }}
+                      >
+                        {t.moveToThisWeek}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowMenu(false);
+                          onMoveOutside(item.id, "later");
+                        }}
+                        className="w-full text-left min-h-[44px] rounded-xl px-4 py-2.5 text-[14px] font-medium transition-colors"
+                        style={{ color: "var(--app-a-text)" }}
+                      >
+                        {t.removeFromToday}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowMenu(false);
+                          onMoveOutside(item.id, "long_term_idea");
+                        }}
+                        className="w-full text-left min-h-[44px] rounded-xl px-4 py-2.5 text-[14px] font-medium transition-colors"
+                        style={{ color: "var(--app-a-text)" }}
+                      >
+                        {t.saveAsLongTermIdea}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowMenu(false);
+                          onMoveOutside(item.id, "no_action");
+                        }}
+                        className="w-full text-left min-h-[44px] rounded-xl px-4 py-2.5 text-[14px] font-medium transition-colors"
+                        style={{ color: "var(--app-a-text)" }}
+                      >
+                        {t.markAsNotAnAction}
+                      </button>
+                    </div>
+
+                    <div className="p-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowMenu(false);
+                          setIsEditing(true);
+                        }}
+                        className="w-full text-left min-h-[44px] rounded-xl px-4 py-2.5 text-[14px] font-semibold transition-colors"
+                        style={{ color: "var(--app-a-accent)" }}
+                      >
+                        {t.editItem}
+                      </button>
+
+                      {onDeleteItem && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowMenu(false);
+                            onDeleteItem(item.id);
+                          }}
+                          className="flex w-full min-h-[44px] items-center gap-2 rounded-xl px-4 py-2.5 text-left text-[14px] font-semibold text-rose-600 transition-colors dark:text-rose-400"
+                        >
+                          <Trash2 className="h-4 w-4 shrink-0" />
+                          {language === "sr" ? "Izbriši zadatak" : language === "tr" ? "Görevi sil" : "Delete task"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Close button */}
                   <button
                     type="button"
-                    disabled={isFirst}
-                    onClick={() => {
-                      setShowMenu(false);
-                      onReorder(item.id, "up");
+                    onClick={() => setShowMenu(false)}
+                    className="mt-3 flex min-h-[48px] w-full items-center justify-center rounded-2xl text-[15px] font-semibold transition-colors active:scale-[0.99]"
+                    style={{
+                      backgroundColor: "var(--app-a-disabled-bg)",
+                      color: "var(--app-a-text)",
                     }}
-                    className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors disabled:opacity-50"
-                    style={{ color: "var(--app-a-text)" }}
                   >
-                    {language === "sr" ? "Premesti ranije" : language === "tr" ? "Daha erkene taşı" : "Move earlier"}
+                    {language === "sr" ? "Zatvori" : language === "tr" ? "Kapat" : "Close"}
                   </button>
-                  <button
-                    type="button"
-                    disabled={isLast}
-                    onClick={() => {
-                      setShowMenu(false);
-                      onReorder(item.id, "down");
-                    }}
-                    className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors disabled:opacity-50"
-                    style={{ color: "var(--app-a-text)" }}
-                  >
-                    {language === "sr" ? "Premesti kasnije" : language === "tr" ? "Daha sonraya taşı" : "Move later"}
-                  </button>
+                </div>
+              </div>
+
+              {/* Desktop Floating Menu (hidden sm:block, z-50) */}
+              <div className="hidden sm:block">
+                {/* Backdrop click-away overlay */}
+                <div
+                  className="fixed inset-0 z-40 bg-transparent"
+                  onClick={() => setShowMenu(false)}
+                  aria-hidden="true"
+                />
+
+                <div
+                  role="menu"
+                  className="absolute right-0 z-50 mt-2 w-60 rounded-2xl border py-2 shadow-2xl"
+                  style={{
+                    backgroundColor: "var(--app-a-surface-elevated)",
+                    borderColor: "var(--app-a-border-strong)",
+                    boxShadow: "var(--app-a-shadow-lg)",
+                  }}
+                >
+                  {onReorder && item.capacityType !== "fixed" && (
+                    <>
+                      <button
+                        type="button"
+                        disabled={isFirst}
+                        onClick={() => {
+                          setShowMenu(false);
+                          onReorder(item.id, "up");
+                        }}
+                        className="w-full text-left min-h-[40px] px-4 py-2 text-[13px] font-medium transition-colors disabled:opacity-50 hover:bg-black/5 dark:hover:bg-white/5"
+                        style={{ color: "var(--app-a-text)" }}
+                      >
+                        {language === "sr" ? "Premesti ranije" : language === "tr" ? "Daha erkene taşı" : "Move earlier"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isLast}
+                        onClick={() => {
+                          setShowMenu(false);
+                          onReorder(item.id, "down");
+                        }}
+                        className="w-full text-left min-h-[40px] px-4 py-2 text-[13px] font-medium transition-colors disabled:opacity-50 hover:bg-black/5 dark:hover:bg-white/5"
+                        style={{ color: "var(--app-a-text)" }}
+                      >
+                        {language === "sr" ? "Premesti kasnije" : language === "tr" ? "Daha sonraya taşı" : "Move later"}
+                      </button>
+                      <hr className="my-1 border-t border-black/5 dark:border-white/5" />
+                    </>
+                  )}
+
+                  {item.block !== "first_focus" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMenu(false);
+                        onMoveToBlock(item.id, "first_focus");
+                      }}
+                      className="w-full text-left min-h-[40px] px-4 py-2 text-[13px] font-medium transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                      style={{ color: "var(--app-a-text)" }}
+                    >
+                      {language === "sr" ? "Postavi kao sledeće" : t.moveToFirstFocus}
+                    </button>
+                  )}
+
+                  {item.block !== "later_today" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMenu(false);
+                        onMoveToBlock(item.id, "later_today");
+                      }}
+                      className="w-full text-left min-h-[40px] px-4 py-2 text-[13px] font-medium transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                      style={{ color: "var(--app-a-text)" }}
+                    >
+                      {t.moveToLaterToday}
+                    </button>
+                  )}
+
+                  {item.block !== "if_capacity_remains" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMenu(false);
+                        onMoveToBlock(item.id, "if_capacity_remains");
+                      }}
+                      className="w-full text-left min-h-[40px] px-4 py-2 text-[13px] font-medium transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                      style={{ color: "var(--app-a-text)" }}
+                    >
+                      {language === "sr" ? "Ako ostane kapaciteta" : t.moveToIfCapacityRemains}
+                    </button>
+                  )}
+
                   <hr className="my-1 border-t border-black/5 dark:border-white/5" />
-                </>
-              )}
 
-              {item.block !== "first_focus" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowMenu(false);
-                    onMoveToBlock(item.id, "first_focus");
-                  }}
-                  className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
-                  style={{ color: "var(--app-a-text)" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-                >
-                  {language === "sr" ? "Postavi kao sledeće" : t.moveToFirstFocus}
-                </button>
-              )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMenu(false);
+                      onMoveOutside(item.id, "this_week");
+                    }}
+                    className="w-full text-left min-h-[40px] px-4 py-2 text-[13px] font-medium transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                    style={{ color: "var(--app-a-text)" }}
+                  >
+                    {t.moveToThisWeek}
+                  </button>
 
-              {item.block !== "later_today" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowMenu(false);
-                    onMoveToBlock(item.id, "later_today");
-                  }}
-                  className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
-                  style={{ color: "var(--app-a-text)" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-                >
-                  {t.moveToLaterToday}
-                </button>
-              )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMenu(false);
+                      onMoveOutside(item.id, "later");
+                    }}
+                    className="w-full text-left min-h-[40px] px-4 py-2 text-[13px] font-medium transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                    style={{ color: "var(--app-a-text)" }}
+                  >
+                    {t.removeFromToday}
+                  </button>
 
-              {item.block !== "if_capacity_remains" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowMenu(false);
-                    onMoveToBlock(item.id, "if_capacity_remains");
-                  }}
-                  className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
-                  style={{ color: "var(--app-a-text)" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-                >
-                  {language === "sr" ? "Ako ostane kapaciteta" : t.moveToIfCapacityRemains}
-                </button>
-              )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMenu(false);
+                      onMoveOutside(item.id, "long_term_idea");
+                    }}
+                    className="w-full text-left min-h-[40px] px-4 py-2 text-[13px] font-medium transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                    style={{ color: "var(--app-a-text)" }}
+                  >
+                    {t.saveAsLongTermIdea}
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setShowMenu(false);
-                  onMoveOutside(item.id, "this_week");
-                }}
-                className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
-                style={{ color: "var(--app-a-text)" }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-              >
-                {t.moveToThisWeek}
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMenu(false);
+                      onMoveOutside(item.id, "no_action");
+                    }}
+                    className="w-full text-left min-h-[40px] px-4 py-2 text-[13px] font-medium transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                    style={{ color: "var(--app-a-text)" }}
+                  >
+                    {t.markAsNotAnAction}
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setShowMenu(false);
-                  onMoveOutside(item.id, "later");
-                }}
-                className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
-                style={{ color: "var(--app-a-text)" }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-              >
-                {t.removeFromToday}
-              </button>
+                  <hr className="my-1 border-t border-black/5 dark:border-white/5" />
 
-              <button
-                type="button"
-                onClick={() => {
-                  setShowMenu(false);
-                  onMoveOutside(item.id, "long_term_idea");
-                }}
-                className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
-                style={{ color: "var(--app-a-text)" }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-              >
-                {t.saveAsLongTermIdea}
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMenu(false);
+                      setIsEditing(true);
+                    }}
+                    className="w-full text-left min-h-[40px] px-4 py-2 text-[13px] font-semibold transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                    style={{ color: "var(--app-a-accent)" }}
+                  >
+                    {t.editItem}
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setShowMenu(false);
-                  onMoveOutside(item.id, "no_action");
-                }}
-                className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] transition-colors"
-                style={{ color: "var(--app-a-text)" }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-              >
-                {t.markAsNotAnAction}
-              </button>
-
-              <hr
-                className="my-1 border-t"
-                style={{ borderColor: "var(--app-a-border)" }}
-              />
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowMenu(false);
-                  setIsEditing(true);
-                }}
-                className="w-full text-left min-h-[44px] px-4 py-2.5 text-[14px] font-semibold transition-colors"
-                style={{ color: "var(--app-a-accent)" }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--app-a-disabled-bg)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-              >
-                {t.editItem}
-              </button>
-            </div>
+                  {onDeleteItem && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMenu(false);
+                        onDeleteItem(item.id);
+                      }}
+                      className="flex w-full min-h-[40px] items-center gap-2 px-4 py-2 text-left text-[13px] font-semibold text-rose-600 transition-colors hover:bg-rose-500/10 dark:text-rose-400"
+                    >
+                      <Trash2 className="h-4 w-4 shrink-0" />
+                      {language === "sr" ? "Izbriši zadatak" : language === "tr" ? "Görevi sil" : "Delete task"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </>
           )}
           </div>
         </div>

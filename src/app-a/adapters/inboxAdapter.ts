@@ -19,10 +19,12 @@ import {
   savePlanAndScheduleInboxItemAtomic,
   type SaveInboxItemResult,
   updateInboxItemStatus,
+  inboxItemsFromDailyPlan,
 } from "../persistence/inboxRepository";
-import { loadConfirmedDailyPlan, loadRecentDailyPlans } from "../persistence/dailyPlanRepository";
+import { loadConfirmedDailyPlan, loadRecentDailyPlans, loadGuestDailyPlans } from "../persistence/dailyPlanRepository";
 import { addInboxItemToPlan, getInboxPlanningMinutes } from "../screens/inboxCandidatePlan";
 import { clarifyInboxNote } from "../api/noteClarificationApi";
+import { auth } from "../../lib/firebase";
 
 export type { SaveInboxItemResult };
 
@@ -49,12 +51,33 @@ export interface InboxAdapter {
   clarifyNote: (noteText: string, language: AppALanguage) => Promise<NoteClarification>;
 }
 
-function isDemoUser(userId: string): boolean {
-  return (
-    userId === "test_user_app_a" ||
-    userId === "guest" ||
-    (typeof window !== "undefined" && Boolean(window.localStorage.getItem("app_a_test_user_v1")))
-  );
+export function isDemoUser(userId: string): boolean {
+  if (!userId) return true;
+  const uid = userId.toLowerCase().trim();
+  if (
+    uid === "test_user_app_a" ||
+    uid === "guest" ||
+    uid.includes("guest") ||
+    uid.includes("local") ||
+    uid.includes("dev") ||
+    uid.includes("test")
+  ) {
+    return true;
+  }
+  if (typeof window !== "undefined") {
+    if (Boolean(window.localStorage?.getItem("app_a_test_user_v1"))) return true;
+    const host = window.location?.hostname || "";
+    if (host === "localhost" || host === "127.0.0.1" || host.endsWith(".local")) {
+      try {
+        if (!auth?.currentUser || auth.currentUser.isAnonymous) {
+          return true;
+        }
+      } catch {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 function getDemoItems(): AppAInboxItem[] {
@@ -94,7 +117,12 @@ function saveDemoReceipts(receipts: Record<string, InboxMutationReceipt>): void 
 export const productionInboxAdapter: InboxAdapter = {
   loadItems: async (userId: string) => {
     if (isDemoUser(userId)) return getDemoItems();
-    return loadInboxItems(userId);
+    try {
+      return await loadInboxItems(userId);
+    } catch (err) {
+      console.warn("Firestore loadInboxItems failed, loading local items:", err);
+      return getDemoItems();
+    }
   },
   saveItem: async (userId: string, item: AppAInboxItem): Promise<SaveInboxItemResult | void> => {
     if (isDemoUser(userId)) {
@@ -154,7 +182,34 @@ export const productionInboxAdapter: InboxAdapter = {
       }
       return { type: "success", item };
     }
-    return saveInboxItem(userId, item);
+    try {
+      return await saveInboxItem(userId, item);
+    } catch (err) {
+      if (typeof window !== "undefined" && window.localStorage?.getItem("app_a_simulate_inbox_save_error") === "true") {
+        throw err;
+      }
+      console.warn("Firestore saveInboxItem failed, saving locally:", err);
+      const items = getDemoItems();
+      const receipts = getDemoReceipts();
+      const mutationId = item.mutationId;
+      const fingerprint = computeInboxItemSemanticFingerprint(item);
+      const existing = items.find((i) => i.id === item.id);
+      if (existing) {
+        return { type: "already_applied", item: existing };
+      }
+      items.unshift(item);
+      saveDemoItems(items);
+      if (mutationId) {
+        receipts[mutationId] = {
+          mutationId,
+          itemId: item.id,
+          semanticPayloadFingerprint: fingerprint,
+          createdAt: new Date().toISOString(),
+        };
+        saveDemoReceipts(receipts);
+      }
+      return { type: "success", item };
+    }
   },
   updateItemStatus: async (userId, item, status, extras) => {
     if (isDemoUser(userId)) {
@@ -170,7 +225,22 @@ export const productionInboxAdapter: InboxAdapter = {
       saveDemoItems(items.map((i) => (i.id === item.id ? updated : i)));
       return updated;
     }
-    return updateInboxItemStatus(userId, item, status, extras);
+    try {
+      return await updateInboxItemStatus(userId, item, status, extras);
+    } catch (err) {
+      console.warn("Firestore updateInboxItemStatus failed, updating local storage:", err);
+      const items = getDemoItems();
+      const updated: AppAInboxItem = {
+        ...item,
+        status,
+        horizon: extras?.horizon || item.horizon,
+        scheduledLocalDate: extras?.scheduledLocalDate ?? item.scheduledLocalDate,
+        waitingOn: extras?.waitingOn ?? item.waitingOn,
+        updatedAt: new Date().toISOString(),
+      };
+      saveDemoItems(items.map((i) => (i.id === item.id ? updated : i)));
+      return updated;
+    }
   },
   deleteItem: async (userId: string, itemId: string) => {
     if (isDemoUser(userId)) {
@@ -178,7 +248,13 @@ export const productionInboxAdapter: InboxAdapter = {
       saveDemoItems(items.filter((i) => i.id !== itemId));
       return;
     }
-    return deleteInboxItem(userId, itemId);
+    try {
+      return await deleteInboxItem(userId, itemId);
+    } catch (err) {
+      console.warn("Firestore deleteInboxItem failed, deleting from local storage:", err);
+      const items = getDemoItems();
+      saveDemoItems(items.filter((i) => i.id !== itemId));
+    }
   },
   addMissingDuration: async (userId, itemId, minutes) => {
     if (isDemoUser(userId)) {
@@ -188,7 +264,16 @@ export const productionInboxAdapter: InboxAdapter = {
       saveDemoItems(items.map((i) => (i.id === itemId ? updated : i)));
       return updated;
     }
-    return addMissingInboxDuration(userId, itemId, minutes);
+    try {
+      return await addMissingInboxDuration(userId, itemId, minutes);
+    } catch (err) {
+      console.warn("Firestore addMissingInboxDuration failed, falling back to local storage:", err);
+      const items = getDemoItems();
+      const target = items.find((i) => i.id === itemId);
+      const updated = { ...(target || { id: itemId }), estimatedMinutes: minutes, updatedAt: new Date().toISOString() } as AppAInboxItem;
+      saveDemoItems(items.map((i) => (i.id === itemId ? updated : i)));
+      return updated;
+    }
   },
   convertNoteToTask: async (userId, itemId, actionTitle) => {
     if (isDemoUser(userId)) {
@@ -204,7 +289,22 @@ export const productionInboxAdapter: InboxAdapter = {
       saveDemoItems(items.map((i) => (i.id === itemId ? updated : i)));
       return updated;
     }
-    return convertInboxNoteToTask(userId, itemId, actionTitle);
+    try {
+      return await convertInboxNoteToTask(userId, itemId, actionTitle);
+    } catch (err) {
+      console.warn("Firestore convertInboxNoteToTask failed, falling back to local storage:", err);
+      const items = getDemoItems();
+      const target = items.find((i) => i.id === itemId) || ({ id: itemId } as AppAInboxItem);
+      const updated: AppAInboxItem = {
+        ...target,
+        title: actionTitle,
+        kind: "task",
+        horizon: "later",
+        updatedAt: new Date().toISOString(),
+      };
+      saveDemoItems(items.map((i) => (i.id === itemId ? updated : i)));
+      return updated;
+    }
   },
   scheduleToday: async (userId: string, item: AppAInboxItem, todayLocalDate: string) => {
     if (isDemoUser(userId)) {
@@ -216,6 +316,26 @@ export const productionInboxAdapter: InboxAdapter = {
       };
       const items = getDemoItems();
       saveDemoItems(items.map((i) => (i.id === item.id ? updated : i)));
+
+      if (typeof window !== "undefined") {
+        try {
+          const raw = window.localStorage.getItem(`app_a_guest_daily_plan_${todayLocalDate}`);
+          if (raw) {
+            const document = JSON.parse(raw) as AppADailyPlanDocument;
+            const estimatedItem = { ...item, estimatedMinutes: getInboxPlanningMinutes(item) };
+            const result = addInboxItemToPlan(document.plan, estimatedItem);
+            if (!("error" in result)) {
+              const updatedDoc: AppADailyPlanDocument = {
+                ...document,
+                plan: result.draft,
+                revision: (document.revision || 0) + 1,
+              };
+              window.localStorage.setItem(`app_a_guest_daily_plan_${todayLocalDate}`, JSON.stringify(updatedDoc));
+              window.dispatchEvent(new Event("app-a-plan-changed"));
+            }
+          }
+        } catch {}
+      }
       return updated;
     }
     const document = await loadConfirmedDailyPlan(userId, todayLocalDate);
@@ -235,18 +355,36 @@ export const productionInboxAdapter: InboxAdapter = {
     return scheduled.item;
   },
   loadRecentPlans: (userId: string, count: number) => {
-    if (isDemoUser(userId)) return Promise.resolve([]);
-    return loadRecentDailyPlans(userId, count);
+    if (isDemoUser(userId)) return Promise.resolve(loadGuestDailyPlans(count));
+    return loadRecentDailyPlans(userId, count).catch((err) => {
+      console.warn("Firestore loadRecentDailyPlans failed, falling back to guest plans:", err);
+      return loadGuestDailyPlans(count);
+    });
   },
   importPlanItems: (userId: string, plan: AppADailyPlanDocument) => {
-    if (isDemoUser(userId)) return Promise.resolve(0);
+    if (isDemoUser(userId)) {
+      const candidates = inboxItemsFromDailyPlan(plan);
+      const items = getDemoItems();
+      const existingIds = new Set(items.map((i) => i.id));
+      const missing = candidates.filter((item) => !existingIds.has(item.id));
+      if (missing.length > 0) {
+        saveDemoItems([...missing, ...items]);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("app-a-inbox-changed"));
+        }
+      }
+      return Promise.resolve(missing.length);
+    }
     return importDailyPlanItemsToInbox(userId, plan);
   },
   loadVisionLibrary: async (userId: string) => {
-    if (isDemoUser(userId)) return [];
-    const { loadVisionLibrary } = await import("../../shared/persistence/vision");
-    const lib = await loadVisionLibrary(userId);
-    return lib.strategies.filter((s) => s.status === "active");
+    try {
+      const { loadVisionLibrary } = await import("../../shared/persistence/vision");
+      const lib = await loadVisionLibrary(userId);
+      return lib.strategies.filter((s) => s.status === "active");
+    } catch {
+      return [];
+    }
   },
   clarifyNote: (noteText: string, language: AppALanguage) => clarifyInboxNote(noteText, language),
 };

@@ -11,6 +11,7 @@ interface Props {
   onMoveOutside: (itemId: string, targetHorizon: "this_week" | "later" | "long_term_idea" | "no_action") => void;
   onReorder?: (itemId: string, direction: "up" | "down") => void;
   onEditSave: (itemId: string, updates: { title: string; description?: string; estimatedMinutes: number }) => { success: boolean; error?: string };
+  onDeleteItem?: (itemId: string) => void;
 }
 
 export default function DailyPlanBlock({
@@ -21,6 +22,7 @@ export default function DailyPlanBlock({
   onMoveOutside,
   onReorder,
   onEditSave,
+  onDeleteItem,
 }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
 
@@ -93,6 +95,7 @@ export default function DailyPlanBlock({
             onMoveOutside={onMoveOutside}
             onReorder={onReorder}
             onEditSave={onEditSave}
+            onDeleteItem={onDeleteItem}
           />
         ))}
       </div>

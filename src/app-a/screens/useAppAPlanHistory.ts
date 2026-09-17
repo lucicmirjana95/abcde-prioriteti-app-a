@@ -15,24 +15,21 @@ export function useAppAPlanHistory(maximum = 30) {
 
   useEffect(() => {
     if (!authReady) return;
-    if (!user) {
-      loadedUser.current = null;
-      setPlans([]);
-      setLoading(false);
-      setError(false);
-      return;
-    }
+    const targetUserId = user?.uid || "guest";
 
     let cancelled = false;
-    if (loadedUser.current !== user.uid) setLoading(true);
+    if (loadedUser.current !== targetUserId) setLoading(true);
     setError(false);
-    void loadRecentDailyPlans(user.uid, maximum)
+    void loadRecentDailyPlans(targetUserId, maximum)
       .then((nextPlans) => {
-        if (!cancelled) { loadedUser.current = user.uid; setPlans(nextPlans); }
+        if (!cancelled) {
+          loadedUser.current = targetUserId;
+          setPlans(nextPlans);
+        }
       })
       .catch(() => {
         // Keep already loaded history usable when only a background refresh fails.
-        if (!cancelled && loadedUser.current !== user.uid) setError(true);
+        if (!cancelled && loadedUser.current !== targetUserId) setError(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

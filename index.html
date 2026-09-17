@@ -19,6 +19,13 @@
     <meta name="description" content="Turn what is on your mind into a realistic daily plan shaped around your priorities, energy, and fixed commitments." />
     <meta property="og:title" content="Daily Reset" />
     <meta property="og:description" content="A calm, realistic daily plan shaped around your priorities, energy, and fixed commitments." />
+    <script type="module">
+      import RefreshRuntime from "/@react-refresh";
+      RefreshRuntime.injectIntoGlobalHook(window);
+      window.$RefreshReg$ = () => {};
+      window.$RefreshSig$ = () => (type) => type;
+      window.__vite_plugin_react_preamble_installed__ = true;
+    </script>
   </head>
   <body>
     <div id="root"></div>

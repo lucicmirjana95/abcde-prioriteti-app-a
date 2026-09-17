@@ -43,3 +43,7 @@ update_*.js
 app/
 bg
 bun.lock
+
+# Standalone binaries
+firebase
+

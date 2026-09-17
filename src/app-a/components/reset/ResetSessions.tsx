@@ -8,7 +8,6 @@ import {
   VolumeX,
   Wind,
   Moon,
-  Sparkles,
   Info,
   CheckCircle2,
   ArrowLeft,
@@ -250,16 +249,14 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
     setShowExplanation(false);
     setSoundStatus("idle");
 
-    // Breathing exercises have sound enabled by default; guided rest requires explicit opting in.
+    // All reset experiences start with audio enabled by default for an immersive experience
+    setSoundEnabled(true);
     if (id !== "guided_rest") {
-      setSoundEnabled(true);
       void lightChimeSynth.init().then((ready) => {
         if (!ready && lightChimeSynth.isSupported()) {
           setSoundStatus("blocked");
         }
       });
-    } else {
-      setSoundEnabled(false);
     }
 
     if (id === "balanced_box") setBoxTargetCycles(12);
@@ -362,7 +359,11 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
     setSoundEnabled(next);
     if (next) {
       if (selectedExperience === "guided_rest") {
-        await startGuidedRestSound();
+        if (sessionStatus === "running") {
+          await startGuidedRestSound();
+        } else {
+          setSoundStatus("idle");
+        }
       } else {
         const ready = await lightChimeSynth.init();
         if (!ready) {
@@ -551,7 +552,7 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
               >
                 <div>
                   <div className="flex items-center gap-2 text-[#1a7f37] dark:text-[#34c759]">
-                    <Sparkles className="h-4 w-4" />
+                    <Wind className="h-4 w-4" />
                     <span className="text-[15px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
                       {loc.doubleInhale.name}
                     </span>
@@ -804,7 +805,17 @@ export default function ResetSessions({ language, embedded = false }: ResetSessi
                     prefersReducedMotion={prefersReducedMotion}
                   />
                   <p className="mx-auto mt-3 max-w-md text-[12px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
-                    {language === "sr" ? "Opcioni 4 Hz stereo zvuk radi samo kada ga uključite. Za stereo efekat koristite slušalice; prekinite ako vam ne prija." : language === "tr" ? "İsteğe bağlı 4 Hz stereo ses yalnızca siz açtığınızda çalışır. Stereo etki için kulaklık kullanın; rahatsız ederse kapatın." : "Optional 4 Hz stereo sound plays only when you turn it on. Use headphones for the stereo effect; stop if it feels uncomfortable."}
+                    {soundEnabled
+                      ? (language === "sr"
+                          ? "Opuštajući ambijentalni NSDR zvuk prati sesiju. Za puni stereo efekat koristite slušalice; u svakom trenutku ga možete isključiti."
+                          : language === "tr"
+                          ? "Rahatlatıcı ortam NSDR sesi seansa eşlik eder. Stereo etki için kulaklık önerilir; dilediğiniz zaman kapatabilirsiniz."
+                          : "Relaxing ambient NSDR audio accompanies the session. Headphones recommended for full stereo effect; mute anytime.")
+                      : (language === "sr"
+                          ? "Ambijentalni zvuk je isključen. Možete ga uključiti na ikonicu zvučnika u gornjem desnom uglu."
+                          : language === "tr"
+                          ? "Ortam sesi kapalı. Sağ üstteki hoparlör simgesinden açabilirsiniz."
+                          : "Ambient sound is muted. You can enable it via the speaker icon above.")}
                   </p>
                 </>
               )}
