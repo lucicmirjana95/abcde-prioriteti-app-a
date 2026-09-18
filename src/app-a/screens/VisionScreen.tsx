@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Archive,
+  ArrowLeft,
   Check,
   ChevronDown,
   ChevronRight,
@@ -54,6 +55,9 @@ const COPY = {
     guideFocus: "Choose one current focus. It guides Today; other visions may occasionally offer one optional step, but nothing enters your plan without your confirmation.",
     guideDismiss: "Hide guide",
     placeholder: "Describe a direction or goal…",
+    visionLabel: "Vision or long-term direction",
+    timeframeLabel: "Desired timeframe (optional)",
+    timeframePlaceholder: "e.g. 6 months, by end of year, 12 weeks…",
     add: "New vision",
     active: "Active",
     archived: "Archived",
@@ -85,6 +89,12 @@ const COPY = {
     selectedBadge: "Selected",
     archiveFocusConfirmTitle: "Archive current focus?",
     archiveFocusConfirmText: "This vision is your current focus for Today. Archiving it will remove it as the current focus until you choose another vision.",
+    backToAll: "Back to all visions",
+    viewMilestones: "View milestones & steps",
+    noVisionsActive: "No active visions yet. Capture your first long-term direction above.",
+    noVisionsArchived: "No archived visions.",
+    developAndSave: "Develop and save",
+    milestonesCount: (m: number, s: number) => `${m} ${m === 1 ? "milestone" : "milestones"} • ${s} ${s === 1 ? "step" : "steps"}`,
   },
   sr: {
     eyebrow: "Dugoročni pravac",
@@ -104,6 +114,9 @@ const COPY = {
     guideFocus: "Izaberite jedan trenutni fokus. On vodi Danas; druge vizije mogu povremeno ponuditi jedan opcioni korak, ali ništa ne ulazi u plan bez vaše potvrde.",
     guideDismiss: "Sakrij vodič",
     placeholder: "Opišite pravac ili cilj…",
+    visionLabel: "Vizija ili dugoročni pravac",
+    timeframeLabel: "Željeni rok (opciono)",
+    timeframePlaceholder: "npr. 6 meseci, do kraja godine, 12 nedelja…",
     add: "Nova vizija",
     active: "Aktivne",
     archived: "Arhivirane",
@@ -135,6 +148,12 @@ const COPY = {
     selectedBadge: "Izabrano",
     archiveFocusConfirmTitle: "Arhivirati trenutni fokus?",
     archiveFocusConfirmText: "Ova vizija je trenutni fokus za Danas. Arhiviranjem se uklanja trenutni fokus dok eksplicitno ne izaberete drugu viziju.",
+    backToAll: "Nazad na sve vizije",
+    viewMilestones: "Pogledaj etape i korake",
+    noVisionsActive: "Još nemate aktivnih vizija. Unesite svoj prvi dugoročni pravac iznad.",
+    noVisionsArchived: "Nema arhiviranih vizija.",
+    developAndSave: "Razradi i sačuvaj",
+    milestonesCount: (m: number, s: number) => `${m} ${m === 1 ? "etapa" : m < 5 ? "etape" : "etapa"} • ${s} ${s === 1 ? "korak" : s < 5 ? "koraka" : "koraka"}`,
   },
   tr: {
     eyebrow: "Uzun vadeli yön",
@@ -154,6 +173,9 @@ const COPY = {
     guideFocus: "Bir mevcut odak seçin. Bugün'ü o yönlendirir; diğer vizyonlar bazen isteğe bağlı tek bir adım sunabilir, ancak onayınız olmadan hiçbir şey planınıza girmez.",
     guideDismiss: "Rehberi gizle",
     placeholder: "Bir yön veya hedef açıklayın…",
+    visionLabel: "Vizyon veya uzun vadeli yön",
+    timeframeLabel: "İstenen süre (isteğe bağlı)",
+    timeframePlaceholder: "örn. 6 ay, yıl sonuna kadar, 12 hafta…",
     add: "Yeni vizyon",
     active: "Aktif",
     archived: "Arşiv",
@@ -185,6 +207,12 @@ const COPY = {
     selectedBadge: "Seçildi",
     archiveFocusConfirmTitle: "Mevcut odak arşivlendi mi?",
     archiveFocusConfirmText: "Bu vizyon Bugün için mevcut odağınızdır. Arşivlendiğinde başka bir vizyon seçene kadar odak kaldırılır.",
+    backToAll: "Tüm vizyonlara dön",
+    viewMilestones: "Aşamaları ve adımları gör",
+    noVisionsActive: "Henüz aktif vizyon yok. Yukarıdan ilk uzun vadeli yönünüzü ekleyin.",
+    noVisionsArchived: "Arşivlenmiş vizyon yok.",
+    developAndSave: "Geliştir ve kaydet",
+    milestonesCount: (m: number, s: number) => `${m} aşama • ${s} adım`,
   },
 } as const;
 
@@ -293,6 +321,8 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
   };
 
   const [draftIdea, setDraftIdea] = useState(() => getInitialIdea(initial));
+  const [draftTimeframe, setDraftTimeframe] = useState("");
+  const [draftTimeframes, setDraftTimeframes] = useState<Record<string, string>>({});
   const [manualIdeas, setManualIdeas] = useState(() => getInitialManualIdeas(initial));
   const [saved, setSaved] = useState<SavedVisionStrategy[]>([]);
   const [view, setView] = useState<"active" | "archived">("active");
@@ -324,12 +354,14 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
   const [guideOpen, setGuideOpen] = useState(shouldOpenVisionGuide);
   const [isMobileLibraryOpen, setIsMobileLibraryOpen] = useState(false);
   const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
+  const [cardMenuId, setCardMenuId] = useState<string | null>(null);
 
   // Close menus and modals on Escape or outside click
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setIsHeaderMenuOpen(false);
+        setCardMenuId(null);
         setConfirm(null);
         setArchiveConfirmItem(null);
       }
@@ -338,6 +370,9 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
       const target = e.target as HTMLElement | null;
       if (isHeaderMenuOpen && !target?.closest("[data-vision-overflow-menu]")) {
         setIsHeaderMenuOpen(false);
+      }
+      if (cardMenuId && !target?.closest("[data-card-menu]")) {
+        setCardMenuId(null);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -376,7 +411,7 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
         const valid = active.some((x) => x.id === current) ? current : null;
         setFocusId(valid);
 
-        let initialSelection: string | null = getInitialIdea(initial) ? `draft:${getInitialIdea(initial)}` : (active[0]?.id || lib.strategies[0]?.id || null);
+        let initialSelection: string | null = getInitialIdea(initial) ? `draft:${getInitialIdea(initial)}` : null;
         
         if (targetVisionId) {
           const target = lib.strategies.find((x) => x.id === targetVisionId);
@@ -426,6 +461,20 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
   );
 
   useEffect(() => setManualIdeas((current) => [...new Set([...current, ...imported])]), [imported]);
+
+  if (!history.user) {
+    return (
+      <div className="pt-8">
+        <PlanHistoryState
+          language={language}
+          state="sign_in"
+          onSignIn={() => void history.signIn()}
+          signInTitle={language === 'sr' ? "Kreirajte strategiju iz vaše vizije" : language === 'tr' ? "Vizyonunuzdan bir strateji oluşturun" : "Create strategy from your vision"}
+          signInText={language === 'sr' ? "Prijavite se pomoću Google naloga da biste kreirali vizije, razradili ih u etape i pratili svoj napredak." : language === 'tr' ? "Vizyonlar oluşturmak, bunları aşamalara ayırmak ve ilerlemenizi takip etmek için Google hesabı ile giriş yapın." : "Sign in with your Google account to create visions, break them down into milestones, and track your progress."}
+        />
+      </div>
+    );
+  }
 
   if (history.loading && !saved.length && !manualIdeas.length) return <PlanHistoryState language={language} state="loading" />;
 
@@ -515,176 +564,259 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
   const add = () => {
     const idea = draftIdea.trim();
     if (idea.length < 3) return;
+    const tf = draftTimeframe.trim();
+    if (tf) {
+      setDraftTimeframes((prev) => ({ ...prev, [idea]: tf }));
+    }
     setManualIdeas((all) => [idea, ...all.filter((x) => x !== idea)]);
     setSelected(`draft:${idea}`);
     setView("active");
     setDraftIdea("");
+    setDraftTimeframe("");
   };
 
-  // Render items in list
-  const renderLibraryItems = () => {
-    if (shown.length + drafts.length === 0) {
-      return (
-        <div className="flex min-h-[140px] flex-col items-center justify-center gap-2 p-6 text-center">
-          <Lightbulb className="h-5 w-5 text-[#0071E3] dark:text-[#0A84FF]" />
-          <p className="text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]">{t.empty}</p>
+  // Render individual vision card for the grid
+  const renderVisionCard = (item: SavedVisionStrategy, index: number) => {
+    const isFocus = focusId === item.id;
+    const isArchived = item.status === "archived";
+    const milestonesCount = item.strategy?.milestones?.length || 0;
+    const stepsCount = item.strategy?.milestones?.reduce((acc, m) => acc + (m.steps?.length || 0), 0) || 0;
+    const title = compactVisionTitle(item.planningContext?.acceptedGoal || item.idea);
+    const medallionTypes = ["plant", "stones", "waves", "sun"] as const;
+    const medallionType = medallionTypes[index % medallionTypes.length];
+
+    return (
+      <article
+        key={item.id}
+        onClick={() => setSelected(item.id)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setSelected(item.id);
+          }
+        }}
+        className={`app-a-surface group relative flex flex-col justify-between rounded-2xl border p-5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md cursor-pointer ${
+          isFocus
+            ? "border-[#34C759]/40 bg-[#34C759]/[0.015] dark:border-[#30D158]/40 dark:bg-[#30D158]/[0.02]"
+            : "border-black/10 hover:border-[#0071E3]/40 dark:border-white/15 dark:hover:border-[#0A84FF]/40"
+        }`}
+      >
+        <div>
+          {/* Top Badges & Medallion Row */}
+          <div className="flex items-start justify-between gap-3">
+            <GrowthPathArt
+              variant="medallion"
+              medallionType={medallionType}
+              size={42}
+              className="shrink-0 shadow-xs"
+            />
+
+            <div className="flex flex-wrap items-center justify-end gap-1.5">
+              {isFocus ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#34C759]/10 px-2.5 py-0.5 text-[11px] font-semibold text-[#248A3D] dark:text-[#30D158]">
+                  <Check className="h-3 w-3" />
+                  {t.current}
+                </span>
+              ) : null}
+
+              {isArchived ? (
+                <span className="rounded-full bg-black/5 px-2.5 py-0.5 text-[11px] font-medium text-[#8E8E93] dark:bg-white/10">
+                  {t.archived}
+                </span>
+              ) : item.planningContext?.timeframe ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-black/5 px-2.5 py-0.5 text-[11px] font-medium text-[#6E6E73] dark:bg-white/10 dark:text-[#AEAEB2]">
+                  <Target className="h-3 w-3 text-[#0071E3] dark:text-[#0A84FF]" />
+                  {item.planningContext.timeframe}
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Vision Title */}
+          <h3 className="mt-3.5 text-[17px] font-bold text-black dark:text-white leading-snug group-hover:text-[#0071E3] dark:group-hover:text-[#0A84FF] transition-colors break-words">
+            {title}
+          </h3>
+
+          {/* Milestones & Steps Pill */}
+          <div className="mt-2 flex items-center gap-2 text-[12px] font-medium text-[#6E6E73] dark:text-[#AEAEB2]">
+            <span>{t.milestonesCount(milestonesCount, stepsCount)}</span>
+          </div>
+
+          {/* Next Step Preview */}
+          {item.strategy?.nextStep ? (
+            <p className="mt-2.5 line-clamp-2 text-[13px] text-[#48484A] dark:text-[#AEAEB2] leading-relaxed">
+              <strong className="font-semibold text-black dark:text-white mr-1">{t.nextStepLabel}</strong>
+              {item.strategy.nextStep}
+            </p>
+          ) : null}
         </div>
-      );
-    }
 
-    // Special treatment if only 1 active vision exists and view is active
-    if (view === "active" && activeSaved.length === 1 && drafts.length === 0) {
-      const item = activeSaved[0];
-      const isSelected = selected === item.id;
-      const isFocus = focusId === item.id;
+        {/* Card Footer Link */}
+        <div className="mt-4 flex items-center justify-between pt-3 border-t border-black/[0.06] dark:border-white/10">
+          <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#0071E3] dark:text-[#0A84FF] group-hover:translate-x-0.5 transition-transform">
+            {t.viewMilestones}
+            <ChevronRight className="h-4 w-4" />
+          </span>
 
-      return (
-        <div className="p-3">
+          {/* Quick Overflow Button */}
+          <div className="relative" data-card-menu onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              aria-label={t.moreOptions}
+              onClick={(e) => {
+                e.stopPropagation();
+                setCardMenuId((prev) => (prev === item.id ? null : item.id));
+              }}
+              className="app-a-secondary-button app-a-focus-ring h-8 w-8 p-0 justify-center rounded-lg"
+            >
+              <MoreHorizontal className="h-4 w-4 text-[#8E8E93]" />
+            </button>
+
+            {cardMenuId === item.id ? (
+              <div
+                role="menu"
+                className="app-a-surface-elevated absolute right-0 bottom-full mb-1 z-30 min-w-[170px] rounded-xl border border-black/10 bg-white p-1.5 shadow-xl dark:border-white/15 dark:bg-[#2C2C2E]"
+              >
+                {!isArchived && !isFocus ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setCardMenuId(null);
+                      void focus(item.id);
+                    }}
+                    className="flex w-full min-h-9 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[12px] font-medium text-black hover:bg-black/5 dark:text-white dark:hover:bg-white/5"
+                  >
+                    <Check className="h-3.5 w-3.5 text-[#248A3D] dark:text-[#30D158]" />
+                    {t.makeCurrent}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setCardMenuId(null);
+                    requestArchive(item);
+                  }}
+                  className="flex w-full min-h-9 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[12px] font-medium text-black hover:bg-black/5 dark:text-white dark:hover:bg-white/5"
+                >
+                  {isArchived ? (
+                    <>
+                      <RotateCcw className="h-3.5 w-3.5 text-[#0071E3] dark:text-[#0A84FF]" />
+                      {t.restore}
+                    </>
+                  ) : (
+                    <>
+                      <Archive className="h-3.5 w-3.5 text-[#8E8E93]" />
+                      {t.archive}
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setCardMenuId(null);
+                    setConfirm(item.id);
+                  }}
+                  className="flex w-full min-h-9 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[12px] font-medium text-[#FF3B30] hover:bg-[#FF3B30]/10 dark:text-[#FF453A]"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {t.remove}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </article>
+    );
+  };
+
+  // Render individual draft card for the grid
+  const renderDraftCard = (idea: string) => {
+    const tf = draftTimeframes[idea];
+    return (
+      <article
+        key={idea}
+        onClick={() => setSelected(`draft:${idea}`)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setSelected(`draft:${idea}`);
+          }
+        }}
+        className="app-a-surface group relative flex flex-col justify-between rounded-2xl border border-dashed border-[#0071E3]/40 bg-[#0071E3]/[0.02] p-5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md cursor-pointer dark:border-[#0A84FF]/40 dark:bg-[#0A84FF]/[0.03]"
+      >
+        <div>
+          <div className="flex items-start justify-between gap-3">
+            <GrowthPathArt variant="medallion" medallionType="plant" size={42} className="shrink-0" />
+            <span className="inline-block rounded-md bg-[#0071E3]/10 px-2 py-0.5 text-[11px] font-semibold text-[#0071E3] dark:bg-[#0A84FF]/20 dark:text-[#0A84FF]">
+              {t.draft}
+            </span>
+          </div>
+
+          <h3 className="mt-3.5 text-[17px] font-bold text-black dark:text-white leading-snug group-hover:text-[#0071E3] dark:group-hover:text-[#0A84FF] transition-colors break-words">
+            {compactVisionTitle(idea)}
+          </h3>
+
+          {tf ? (
+            <div className="mt-2 flex items-center gap-1 text-[12px] text-[#6E6E73] dark:text-[#AEAEB2]">
+              <Target className="h-3 w-3 text-[#0071E3] dark:text-[#0A84FF]" />
+              <span>{tf}</span>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-4 flex items-center justify-between pt-3 border-t border-black/[0.06] dark:border-white/10">
+          <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#0071E3] dark:text-[#0A84FF] group-hover:translate-x-0.5 transition-transform">
+            {t.developAndSave}
+            <ChevronRight className="h-4 w-4" />
+          </span>
           <button
             type="button"
-            onClick={() => {
-              setSelected(item.id);
-              setIsMobileLibraryOpen(false);
+            aria-label={t.cancel}
+            onClick={(e) => {
+              e.stopPropagation();
+              setManualIdeas((all) => all.filter((x) => x !== idea));
             }}
-            className={`app-a-focus-ring flex w-full items-start justify-between gap-3 rounded-xl p-3 text-left transition-colors ${
-              isSelected
-                ? "bg-black/[0.04] dark:bg-white/[0.08]"
-                : "hover:bg-black/[0.02] dark:hover:bg-white/[0.04]"
-            }`}
+            className="app-a-secondary-button app-a-focus-ring h-8 w-8 p-0 justify-center rounded-lg text-[#8E8E93] hover:text-[#FF3B30]"
           >
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-1.5 mb-1 text-[11px]">
-                {isFocus ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[#34C759]/10 px-2 py-0.5 font-semibold text-[#248A3D] dark:text-[#30D158]">
-                    <Check className="h-3 w-3" />
-                    {t.current}
-                  </span>
-                ) : null}
-                {isSelected ? (
-                  <span className="inline-flex items-center rounded-full bg-[#0071E3]/10 px-2 py-0.5 font-semibold text-[#0071E3] dark:bg-[#0A84FF]/10 dark:text-[#0A84FF]">
-                    {t.selectedBadge}
-                  </span>
-                ) : null}
-              </div>
-              <span className="block break-words text-[14px] font-semibold text-black dark:text-white leading-snug">
-                {compactVisionTitle(item.planningContext?.acceptedGoal || item.idea)}
-              </span>
-              <p className="mt-1 text-[12px] text-[#6E6E73] dark:text-[#AEAEB2]">
-                {t.onlyActiveVision}
-              </p>
-            </div>
-            <ChevronRight
-              className={`mt-1 h-4 w-4 shrink-0 transition-opacity ${
-                isSelected ? "text-[#0071E3] dark:text-[#0A84FF] opacity-100" : "text-[#8E8E93] opacity-50"
-              }`}
-            />
+            <X className="h-4 w-4" />
           </button>
+        </div>
+      </article>
+    );
+  };
+
+  // Render vision cards grid
+  const renderVisionGrid = () => {
+    const list = view === "active" ? activeSaved : archivedSaved;
+    const activeDrafts = view === "active" ? drafts : [];
+
+    if (list.length === 0 && activeDrafts.length === 0) {
+      return (
+        <div className="app-a-surface rounded-2xl border border-black/10 flex min-h-[220px] flex-col items-center justify-center p-8 text-center dark:border-white/15">
+          <img
+            src="/app-a/illustrations/vision.png"
+            alt=""
+            className="mb-3 h-24 w-24 object-contain select-none pointer-events-none opacity-85"
+            draggable={false}
+          />
+          <p className="text-[14px] text-[#6E6E73] dark:text-[#AEAEB2]">
+            {view === "active" ? t.noVisionsActive : t.noVisionsArchived}
+          </p>
         </div>
       );
     }
 
     return (
-      <div className="divide-y divide-black/[0.06] dark:divide-white/10">
-        {shown.map((item) => {
-          const isSelected = selected === item.id;
-          const isFocus = focusId === item.id;
-          const isArchived = item.status === "archived";
-
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => {
-                setSelected(item.id);
-                setIsMobileLibraryOpen(false);
-              }}
-              className={`app-a-focus-ring flex w-full items-start gap-3 p-3.5 text-left transition-colors ${
-                isSelected
-                  ? "bg-black/[0.04] dark:bg-white/[0.08]"
-                  : "hover:bg-black/[0.02] dark:hover:bg-white/[0.04]"
-              }`}
-            >
-              <span className="min-w-0 flex-1">
-                <span className="block break-words text-[14px] font-semibold text-black dark:text-white leading-snug">
-                  {compactVisionTitle(item.planningContext?.acceptedGoal || item.idea)}
-                </span>
-                <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
-                  {isFocus ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[#34C759]/10 px-2 py-0.5 font-semibold text-[#248A3D] dark:text-[#30D158]">
-                      <Check className="h-3 w-3" />
-                      {t.current}
-                    </span>
-                  ) : null}
-                  {isSelected ? (
-                    <span className="inline-flex items-center rounded-full bg-[#0071E3]/10 px-2 py-0.5 font-semibold text-[#0071E3] dark:bg-[#0A84FF]/10 dark:text-[#0A84FF]">
-                      {t.selectedBadge}
-                    </span>
-                  ) : null}
-                  {isArchived ? (
-                    <span className="rounded-md bg-black/5 px-1.5 py-0.5 font-medium text-[#8E8E93] dark:bg-white/10">
-                      {t.archived}
-                    </span>
-                  ) : !isFocus && !isSelected && item.planningContext?.timeframe ? (
-                    <span className="text-[#6E6E73] dark:text-[#AEAEB2]">
-                      {item.planningContext.timeframe}
-                    </span>
-                  ) : !isFocus && !isSelected ? (
-                    <span className="text-[#8E8E93] dark:text-[#8E8E93]">
-                      {t.active}
-                    </span>
-                  ) : null}
-                </span>
-              </span>
-              <ChevronRight
-                className={`mt-1 h-4 w-4 shrink-0 transition-opacity ${
-                  isSelected ? "text-[#0071E3] dark:text-[#0A84FF] opacity-100" : "text-[#8E8E93] opacity-50"
-                }`}
-              />
-            </button>
-          );
-        })}
-
-        {drafts.map((idea) => {
-          const draftKey = `draft:${idea}`;
-          const isSelected = selected === draftKey;
-
-          return (
-            <button
-              key={idea}
-              type="button"
-              onClick={() => {
-                setSelected(draftKey);
-                setIsMobileLibraryOpen(false);
-              }}
-              className={`app-a-focus-ring flex w-full items-start gap-3 p-3.5 text-left transition-colors ${
-                isSelected
-                  ? "bg-black/[0.04] dark:bg-white/[0.08]"
-                  : "hover:bg-black/[0.02] dark:hover:bg-white/[0.04]"
-              }`}
-            >
-              <span className="min-w-0 flex-1">
-                <span className="block break-words text-[14px] font-semibold text-black dark:text-white leading-snug">
-                  {compactVisionTitle(idea)}
-                </span>
-                <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
-                  <span className="rounded-md bg-black/5 px-1.5 py-0.5 font-medium text-[#8E8E93] dark:bg-white/10">
-                    {t.draft}
-                  </span>
-                  {isSelected ? (
-                    <span className="inline-flex items-center rounded-full bg-[#0071E3]/10 px-2 py-0.5 font-semibold text-[#0071E3] dark:bg-[#0A84FF]/10 dark:text-[#0A84FF]">
-                      {t.selectedBadge}
-                    </span>
-                  ) : null}
-                </span>
-              </span>
-              <ChevronRight
-                className={`mt-1 h-4 w-4 shrink-0 transition-opacity ${
-                  isSelected ? "text-[#0071E3] dark:text-[#0A84FF] opacity-100" : "text-[#8E8E93] opacity-50"
-                }`}
-              />
-            </button>
-          );
-        })}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+        {activeDrafts.map((idea) => renderDraftCard(idea))}
+        {list.map((item, index) => renderVisionCard(item, index))}
       </div>
     );
   };
@@ -801,318 +933,151 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
         </div>
       )}
 
-      {/* 3. NEW VISION INPUT FORM */}
-      <form
-        className="app-a-surface mb-4 p-4 rounded-[20px]"
-        onSubmit={(e) => {
-          e.preventDefault();
-          add();
-        }}
-      >
-        <div className="relative">
-          <textarea
-            value={draftIdea}
-            onChange={(e) => setDraftIdea(e.target.value)}
-            maxLength={4000}
-            rows={2}
-            placeholder={t.placeholder}
-            className="app-a-field app-a-focus-ring w-full resize-y p-3 pr-24 text-[16px]"
-          />
-          <div className="absolute right-2 top-2 flex items-center gap-1.5">
-            <InputCopyButton text={draftIdea} language={language} size="sm" />
-            <VoiceInputButton language={language} value={draftIdea} onChange={setDraftIdea} maxLength={4000} />
-          </div>
-        </div>
-        <button
-          type="submit"
-          disabled={draftIdea.trim().length < 3}
-          className="app-a-primary-button mt-3 gap-2 px-4 text-[14px]"
-        >
-          <Plus className="h-4 w-4" />
-          {t.add}
-        </button>
-      </form>
-
-      {/* 4. CURRENT FOCUS SUMMARY CARD */}
-      {view === "active" && currentVision ? (
-        <section
-          className="app-a-surface mb-4 rounded-2xl border border-black/10 p-4 dark:border-white/15 sm:p-5"
-          aria-labelledby="current-vision-heading"
-        >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0 flex-1">
-              <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#248A3D] dark:text-[#30D158]">
-                <span className="h-2 w-2 rounded-full bg-[#34C759]" />
-                {t.current}
-              </span>
-              <h2 id="current-vision-heading" className="mt-1 line-clamp-2 break-words text-[16px] sm:text-[17px] font-semibold text-black dark:text-white leading-snug">
-                {compactVisionTitle(currentVision.planningContext?.acceptedGoal || currentVision.idea)}
-              </h2>
-              {currentVision.strategy?.nextStep ? (
-                <p className="mt-1.5 line-clamp-1 break-words text-[13px] text-[#6E6E73] dark:text-[#AEAEB2] leading-relaxed">
-                  <strong className="font-semibold text-black dark:text-white">{t.nextStepLabel}</strong>{" "}
-                  {currentVision.strategy.nextStep}
-                </p>
-              ) : (
-                <p className="mt-1 text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]">{t.currentHelp}</p>
-              )}
-            </div>
-            <div className="shrink-0 pt-1 sm:pt-0">
-              {selected === currentVision.id ? (
-                <span className="inline-flex items-center gap-1.5 rounded-xl bg-black/5 px-3 py-2 text-[12px] font-medium text-[#6E6E73] dark:bg-white/10 dark:text-[#AEAEB2]">
-                  <Check className="h-3.5 w-3.5 text-[#248A3D] dark:text-[#30D158]" />
-                  {t.openedFocus}
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setSelected(currentVision.id)}
-                  className="app-a-secondary-button app-a-focus-ring px-3.5 py-2 text-[13px] font-semibold"
-                >
-                  {t.openCurrent}
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      {/* Warning when active visions exist but none is marked focus */}
-      {view === "active" && !currentVision && activeSaved.length > 1 ? (
-        <section className="app-a-panel-warning mb-4">
-          <h2 className="text-[15px] font-semibold">{t.noCurrent}</h2>
-          <p className="mt-1 text-[13px] leading-relaxed">{t.noCurrentHelp}</p>
-        </section>
-      ) : null}
-
       {error ? (
-        <p role="alert" className="app-a-panel-danger mb-3 text-[13px]">
+        <p role="alert" className="app-a-panel-danger mb-4 text-[13px]">
           {t.error}
         </p>
       ) : null}
 
-      {/* 5. ALL VISIONS (MOBILE COLLAPSIBLE ACCORDION) */}
-      <div className="mb-4 block lg:hidden">
-        <div className="app-a-surface overflow-hidden rounded-2xl border border-black/10 dark:border-white/15">
-          <button
-            type="button"
-            onClick={() => setIsMobileLibraryOpen((prev) => !prev)}
-            aria-expanded={isMobileLibraryOpen}
-            className="app-a-focus-ring flex min-h-12 w-full items-center justify-between gap-3 px-4 py-3 text-left"
-          >
-            <span className="flex items-center gap-2 text-[14px] font-semibold text-black dark:text-white">
-              <Layers className="h-4 w-4 text-[#0071E3] dark:text-[#0A84FF]" />
-              {t.library} ({totalVisionsCount})
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-[12px] text-[#8E8E93]">
-                {isMobileLibraryOpen ? t.hideVisions : t.showVisions}
-              </span>
-              <ChevronDown
-                className={`h-4 w-4 text-[#8E8E93] transition-transform ${
-                  isMobileLibraryOpen ? "rotate-180" : ""
-                }`}
-              />
-            </div>
-          </button>
-
-          {isMobileLibraryOpen ? (
-            <div className="border-t border-black/[0.06] p-3 dark:border-white/10">
-              <div className="mb-3 flex rounded-[12px] p-1 bg-black/[0.06] dark:bg-white/[0.08]" role="tablist">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={view === "active"}
-                  onClick={() => setView("active")}
-                  className={`app-a-focus-ring flex-1 min-h-[36px] rounded-[9px] text-[13px] font-semibold transition-all ${
-                    view === "active"
-                      ? "bg-white text-black shadow-sm dark:bg-[#3A3A3C] dark:text-white"
-                      : "text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white"
-                  }`}
-                >
-                  {t.active} ({activeSaved.length + drafts.length})
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={view === "archived"}
-                  onClick={() => setView("archived")}
-                  className={`app-a-focus-ring flex-1 min-h-[36px] rounded-[9px] text-[13px] font-semibold transition-all ${
-                    view === "archived"
-                      ? "bg-white text-black shadow-sm dark:bg-[#3A3A3C] dark:text-white"
-                      : "text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white"
-                  }`}
-                >
-                  {t.archived} ({archivedSaved.length})
-                </button>
-              </div>
-
-              {renderLibraryItems()}
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      {/* 6. MAIN CONTENT GRID (DESKTOP 2-COLUMN, MOBILE SINGLE COLUMN) */}
-      <div className="grid items-start gap-5 lg:gap-7 lg:grid-cols-[340px_minmax(0,1fr)]">
-        {/* DESKTOP SIDEBAR LIBRARY */}
-        <section className="app-a-surface hidden overflow-hidden rounded-2xl border border-black/10 dark:border-white/15 lg:block">
-          <div className="border-b border-black/[0.06] p-3 dark:border-white/10">
-            <h2 className="mb-2 px-1 text-[14px] font-semibold text-black dark:text-white">
-              {t.library}
-            </h2>
-            <div className="flex rounded-[12px] p-1 bg-black/[0.06] dark:bg-white/[0.08]" role="tablist">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={view === "active"}
-                onClick={() => setView("active")}
-                className={`app-a-focus-ring flex-1 min-h-[34px] rounded-[9px] text-[12px] font-semibold transition-all ${
-                  view === "active"
-                    ? "bg-white text-black shadow-sm dark:bg-[#3A3A3C] dark:text-white"
-                    : "text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white"
-                }`}
-              >
-                {t.active} ({activeSaved.length + drafts.length})
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={view === "archived"}
-                onClick={() => setView("archived")}
-                className={`app-a-focus-ring flex-1 min-h-[34px] rounded-[9px] text-[12px] font-semibold transition-all ${
-                  view === "archived"
-                    ? "bg-white text-black shadow-sm dark:bg-[#3A3A3C] dark:text-white"
-                    : "text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white"
-                }`}
-              >
-                {t.archived} ({archivedSaved.length})
-              </button>
-            </div>
+      {/* 3. CONDITIONAL: EITHER DEDICATED DETAIL PAGE OR MAIN VISION CARDS LIBRARY */}
+      {selectedSaved || selectedDraft ? (
+        <div className="space-y-4">
+          {/* BACK TO ALL VISIONS BUTTON */}
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setSelected(null)}
+              className="app-a-secondary-button app-a-focus-ring inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-semibold"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {t.backToAll}
+            </button>
           </div>
-          {renderLibraryItems()}
-        </section>
 
-        {/* DETAILS SECTION */}
-        <section className="min-w-0">
           {selectedSaved ? (
-            <article className="app-a-surface rounded-2xl border border-black/10 p-4 dark:border-white/15 sm:p-6">
-              {/* SELECTED VISION HEADER */}
-              <div className="pb-3">
-                {/* Status chip & Action buttons row */}
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[12px] font-semibold text-[#8E8E93] uppercase tracking-[0.06em]">
-                      {t.strategyTitle}
-                    </span>
-                    {focusId === selectedSaved.id ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#34C759]/10 px-2.5 py-0.5 text-[11px] font-semibold text-[#248A3D] dark:text-[#30D158]">
-                        <Check className="h-3 w-3" />
-                        {t.current}
-                      </span>
-                    ) : selectedSaved.status === "archived" ? (
-                      <span className="rounded-full bg-black/5 px-2.5 py-0.5 text-[11px] font-semibold text-[#8E8E93] dark:bg-white/10">
-                        {t.archived}
-                      </span>
-                    ) : selectedSaved.planningContext?.timeframe ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-black/5 px-2.5 py-0.5 text-[11px] font-medium text-[#6E6E73] dark:bg-white/10 dark:text-[#AEAEB2]">
-                        <Target className="h-3 w-3 text-[#0071E3] dark:text-[#0A84FF]" />
-                        {selectedSaved.planningContext.timeframe}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {/* Make Current Button */}
-                    {selectedSaved.status !== "archived" && focusId !== selectedSaved.id ? (
-                      <button
-                        type="button"
-                        disabled={Boolean(busy)}
-                        onClick={() => void focus(selectedSaved.id)}
-                        className="app-a-primary-button app-a-focus-ring px-3.5 py-2 text-[13px] font-semibold"
-                      >
-                        {t.makeCurrent}
-                      </button>
-                    ) : null}
-
-                    {/* Overflow Menu (Archive, Restore, Delete) */}
-                    <div className="relative" data-vision-overflow-menu>
-                      <button
-                        type="button"
-                        aria-label={t.moreOptions}
-                        aria-expanded={isHeaderMenuOpen}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsHeaderMenuOpen((prev) => !prev);
-                        }}
-                        className="app-a-secondary-button app-a-focus-ring h-10 w-10 p-0 justify-center rounded-xl"
-                      >
-                        <MoreHorizontal className="h-4 w-4 text-[#8E8E93]" />
-                      </button>
-
-                      {isHeaderMenuOpen ? (
-                        <div
-                          role="menu"
-                          className="app-a-surface-elevated absolute right-0 top-full z-30 mt-1 min-w-[180px] rounded-xl border border-black/10 bg-white p-1.5 shadow-xl dark:border-white/15 dark:bg-[#2C2C2E]"
-                        >
-                          <button
-                            type="button"
-                            role="menuitem"
-                            disabled={Boolean(busy)}
-                            onClick={() => requestArchive(selectedSaved)}
-                            className="flex w-full min-h-10 items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-black hover:bg-black/5 dark:text-white dark:hover:bg-white/5 disabled:opacity-50"
-                          >
-                            {selectedSaved.status === "archived" ? (
-                              <>
-                                <RotateCcw className="h-4 w-4 text-[#0071E3] dark:text-[#0A84FF]" />
-                                {t.restore}
-                              </>
-                            ) : (
-                              <>
-                                <Archive className="h-4 w-4 text-[#8E8E93]" />
-                                {t.archive}
-                              </>
-                            )}
-                          </button>
-
-                          <button
-                            type="button"
-                            role="menuitem"
-                            onClick={() => {
-                              setIsHeaderMenuOpen(false);
-                              setConfirm(selectedSaved.id);
-                            }}
-                            className="flex w-full min-h-10 items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-[#FF3B30] hover:bg-[#FF3B30]/10 dark:text-[#FF453A]"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            {t.remove}
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
+            <div className="space-y-6">
+              {/* VISION HEADER CARD */}
+              <article className="app-a-surface rounded-2xl border border-black/10 overflow-hidden dark:border-white/15 shadow-xs">
+                {/* HERO BANNER ARTWORK */}
+                <div className="relative border-b border-black/[0.06] bg-black/[0.02] dark:border-white/10 dark:bg-white/[0.02]">
+                  <GrowthPathArt variant="banner" size={90} className="w-full" />
                 </div>
 
-                {/* FULL-WIDTH CLEAN TITLE */}
-                <h2 className="mt-2.5 w-full break-words text-[18px] sm:text-[20px] font-bold text-black dark:text-white leading-snug">
-                  {compactVisionTitle(selectedSaved.planningContext?.acceptedGoal || selectedSaved.idea)}
-                </h2>
+                <div className="p-4 sm:p-6">
+                  {/* Status chip & Action buttons row */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[12px] font-semibold text-[#8E8E93] uppercase tracking-[0.06em]">
+                        {t.strategyTitle}
+                      </span>
+                      {focusId === selectedSaved.id ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[#34C759]/10 px-2.5 py-0.5 text-[11px] font-semibold text-[#248A3D] dark:text-[#30D158]">
+                          <Check className="h-3 w-3" />
+                          {t.current}
+                        </span>
+                      ) : selectedSaved.status === "archived" ? (
+                        <span className="rounded-full bg-black/5 px-2.5 py-0.5 text-[11px] font-semibold text-[#8E8E93] dark:bg-white/10">
+                          {t.archived}
+                        </span>
+                      ) : selectedSaved.planningContext?.timeframe ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-black/5 px-2.5 py-0.5 text-[11px] font-medium text-[#6E6E73] dark:bg-white/10 dark:text-[#AEAEB2]">
+                          <Target className="h-3 w-3 text-[#0071E3] dark:text-[#0A84FF]" />
+                          {selectedSaved.planningContext.timeframe}
+                        </span>
+                      ) : null}
+                    </div>
 
-                {/* Collapsible Original Entry if different */}
-                {selectedSaved.idea !== compactVisionTitle(selectedSaved.idea) ? (
-                  <details className="mt-2 text-[12px] text-[#6E6E73] dark:text-[#AEAEB2]">
-                    <summary className="cursor-pointer font-medium hover:text-black dark:hover:text-white">
-                      {t.original}
-                    </summary>
-                    <p className="mt-1.5 whitespace-pre-wrap break-words rounded-lg bg-black/[0.03] p-2.5 leading-relaxed dark:bg-white/[0.05]">
-                      {selectedSaved.idea}
-                    </p>
-                  </details>
-                ) : null}
-              </div>
+                    <div className="flex items-center gap-2">
+                      {/* Make Current Button */}
+                      {selectedSaved.status !== "archived" && focusId !== selectedSaved.id ? (
+                        <button
+                          type="button"
+                          disabled={Boolean(busy)}
+                          onClick={() => void focus(selectedSaved.id)}
+                          className="app-a-primary-button app-a-focus-ring px-3.5 py-2 text-[13px] font-semibold"
+                        >
+                          {t.makeCurrent}
+                        </button>
+                      ) : null}
 
-              {/* STRATEGY BUILDER / VIEWER */}
+                      {/* Overflow Menu (Archive, Restore, Delete) */}
+                      <div className="relative" data-vision-overflow-menu>
+                        <button
+                          type="button"
+                          aria-label={t.moreOptions}
+                          aria-expanded={isHeaderMenuOpen}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsHeaderMenuOpen((prev) => !prev);
+                          }}
+                          className="app-a-secondary-button app-a-focus-ring h-10 w-10 p-0 justify-center rounded-xl"
+                        >
+                          <MoreHorizontal className="h-4 w-4 text-[#8E8E93]" />
+                        </button>
+
+                        {isHeaderMenuOpen ? (
+                          <div
+                            role="menu"
+                            className="app-a-surface-elevated absolute right-0 top-full z-30 mt-1 min-w-[180px] rounded-xl border border-black/10 bg-white p-1.5 shadow-xl dark:border-white/15 dark:bg-[#2C2C2E]"
+                          >
+                            <button
+                              type="button"
+                              role="menuitem"
+                              disabled={Boolean(busy)}
+                              onClick={() => requestArchive(selectedSaved)}
+                              className="flex w-full min-h-10 items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-black hover:bg-black/5 dark:text-white dark:hover:bg-white/5 disabled:opacity-50"
+                            >
+                              {selectedSaved.status === "archived" ? (
+                                <>
+                                  <RotateCcw className="h-4 w-4 text-[#0071E3] dark:text-[#0A84FF]" />
+                                  {t.restore}
+                                </>
+                              ) : (
+                                <>
+                                  <Archive className="h-4 w-4 text-[#8E8E93]" />
+                                  {t.archive}
+                                </>
+                              )}
+                            </button>
+
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                setIsHeaderMenuOpen(false);
+                                setConfirm(selectedSaved.id);
+                              }}
+                              className="flex w-full min-h-10 items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-[#FF3B30] hover:bg-[#FF3B30]/10 dark:text-[#FF453A]"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              {t.remove}
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* FULL-WIDTH CLEAN TITLE */}
+                  <h2 className="mt-3 w-full break-words text-[20px] sm:text-[24px] font-bold text-black dark:text-white leading-snug">
+                    {compactVisionTitle(selectedSaved.planningContext?.acceptedGoal || selectedSaved.idea)}
+                  </h2>
+
+                  {/* Collapsible Original Entry if different */}
+                  {selectedSaved.idea !== compactVisionTitle(selectedSaved.idea) ? (
+                    <details className="mt-2 text-[12px] text-[#6E6E73] dark:text-[#AEAEB2]">
+                      <summary className="cursor-pointer font-medium hover:text-black dark:hover:text-white">
+                        {t.original}
+                      </summary>
+                      <p className="mt-1.5 whitespace-pre-wrap break-words rounded-lg bg-black/[0.03] p-2.5 leading-relaxed dark:bg-white/[0.05]">
+                        {selectedSaved.idea}
+                      </p>
+                    </details>
+                  ) : null}
+                </div>
+              </article>
+
+              {/* STRATEGY BUILDER / VIEWER - Placed directly on page without nested box */}
               {selectedSaved.status !== "archived" ? (
                 <VisionStrategyBuilder
                   key={selectedSaved.id}
@@ -1123,19 +1088,19 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
                   onSaved={(doc) => setSaved((all) => [doc, ...all.filter((x) => x.id !== doc.id)])}
                 />
               ) : (
-                <div className="py-8 text-center text-[13px] text-[#8E8E93]">
+                <div className="app-a-surface rounded-2xl border border-black/10 p-8 text-center text-[13px] text-[#8E8E93] dark:border-white/15">
                   <p>{t.archived}</p>
                 </div>
               )}
-            </article>
+            </div>
           ) : selectedDraft ? (
             <article className="app-a-surface rounded-2xl border border-black/10 p-4 dark:border-white/15 sm:p-6">
-              <div className="flex items-start justify-between gap-3 pb-3">
+              <div className="flex items-start justify-between gap-3 pb-3 border-b border-black/[0.06] dark:border-white/10 mb-6">
                 <div className="min-w-0 flex-1">
-                  <span className="inline-block rounded-md bg-black/5 px-2 py-0.5 text-[11px] font-medium text-[#8E8E93] dark:bg-white/10">
+                  <span className="inline-block rounded-md bg-[#0071E3]/10 px-2 py-0.5 text-[11px] font-semibold text-[#0071E3] dark:bg-[#0A84FF]/20 dark:text-[#0A84FF]">
                     {t.draft}
                   </span>
-                  <h2 className="mt-1 w-full break-words text-[18px] sm:text-[20px] font-bold text-black dark:text-white leading-snug">
+                  <h2 className="mt-1 w-full break-words text-[20px] sm:text-[22px] font-bold text-black dark:text-white leading-snug">
                     {compactVisionTitle(selectedDraft)}
                   </h2>
                 </div>
@@ -1157,6 +1122,7 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
                 idea={selectedDraft}
                 language={language}
                 userId={effectiveUserId}
+                initialTimeframe={draftTimeframes[selectedDraft]}
                 autoStart={true}
                 provenanceItemIds={
                   initial.kind === "structured" && selectedDraft === getInitialIdea(initial)
@@ -1176,19 +1142,161 @@ export default function VisionScreen({ language, targetVisionId }: { language: A
                 }}
               />
             </article>
-          ) : (
-            <div className="app-a-surface rounded-2xl border border-black/10 flex min-h-[240px] flex-col items-center justify-center p-8 text-center dark:border-white/15">
-              <img
-                src="/app-a/illustrations/vision.png"
-                alt=""
-                className="mb-3 h-24 w-24 object-contain select-none pointer-events-none opacity-85"
-                draggable={false}
-              />
-              <p className="text-[14px] text-[#6E6E73] dark:text-[#AEAEB2]">{t.choose}</p>
+          ) : null}
+        </div>
+      ) : (
+        /* MAIN VISION CARDS LIBRARY */
+        <div className="space-y-6">
+          {/* 3. NEW VISION INPUT FORM */}
+          <form
+            className="app-a-surface rounded-2xl border border-black/10 p-4 shadow-sm dark:border-white/15 sm:p-5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              add();
+            }}
+          >
+            <div className="space-y-3.5">
+              <div>
+                <label className="block text-[13px] font-semibold text-black dark:text-white mb-1.5">
+                  {t.visionLabel}
+                </label>
+                <div className="relative">
+                  <textarea
+                    value={draftIdea}
+                    onChange={(e) => setDraftIdea(e.target.value)}
+                    maxLength={4000}
+                    rows={2}
+                    placeholder={t.placeholder}
+                    className="app-a-field app-a-focus-ring w-full resize-y rounded-xl p-3 pr-24 text-[15px] leading-relaxed"
+                  />
+                  <div className="absolute right-2 top-2 flex items-center gap-1.5">
+                    <InputCopyButton text={draftIdea} language={language} size="sm" />
+                    <VoiceInputButton language={language} value={draftIdea} onChange={setDraftIdea} maxLength={4000} />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[13px] font-semibold text-black dark:text-white mb-1.5">
+                  {t.timeframeLabel}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={draftTimeframe}
+                    onChange={(e) => setDraftTimeframe(e.target.value)}
+                    maxLength={200}
+                    placeholder={t.timeframePlaceholder}
+                    className="app-a-field app-a-focus-ring w-full rounded-xl p-3 pr-10 text-[14px]"
+                  />
+                  <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8E8E93]">
+                    <Target className="h-4 w-4 text-[#0071E3] dark:text-[#0A84FF]" />
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
-        </section>
-      </div>
+
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-[12px] text-[#8E8E93]">
+                {language === "sr"
+                  ? "AI procenjuje izvodljivost i razlaže viziju na etape i konkretne korake."
+                  : language === "tr"
+                  ? "Yapay zeka uygulanabilirliği değerlendirir ve aşamalara böler."
+                  : "AI assesses feasibility and breaks down the vision into milestones."}
+              </p>
+              <button
+                type="submit"
+                disabled={draftIdea.trim().length < 3}
+                className="app-a-primary-button gap-2 px-4 py-2.5 text-[14px] font-semibold shrink-0 self-end sm:self-auto"
+              >
+                <Plus className="h-4 w-4" />
+                {t.add}
+              </button>
+            </div>
+          </form>
+
+          {/* 4. CURRENT FOCUS SUMMARY CARD */}
+          {view === "active" && currentVision ? (
+            <section
+              className="app-a-surface rounded-2xl border border-black/10 p-4 dark:border-white/15 sm:p-5"
+              aria-labelledby="current-vision-heading"
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 flex-1">
+                  <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#248A3D] dark:text-[#30D158]">
+                    <span className="h-2 w-2 rounded-full bg-[#34C759]" />
+                    {t.current}
+                  </span>
+                  <h2 id="current-vision-heading" className="mt-1 line-clamp-2 break-words text-[16px] sm:text-[17px] font-semibold text-black dark:text-white leading-snug">
+                    {compactVisionTitle(currentVision.planningContext?.acceptedGoal || currentVision.idea)}
+                  </h2>
+                  {currentVision.strategy?.nextStep ? (
+                    <p className="mt-1.5 line-clamp-1 break-words text-[13px] text-[#6E6E73] dark:text-[#AEAEB2] leading-relaxed">
+                      <strong className="font-semibold text-black dark:text-white">{t.nextStepLabel}</strong>{" "}
+                      {currentVision.strategy.nextStep}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]">{t.currentHelp}</p>
+                  )}
+                </div>
+                <div className="shrink-0 pt-1 sm:pt-0">
+                  <button
+                    type="button"
+                    onClick={() => setSelected(currentVision.id)}
+                    className="app-a-secondary-button app-a-focus-ring px-3.5 py-2 text-[13px] font-semibold"
+                  >
+                    {t.openCurrent}
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          {/* Warning when active visions exist but none is marked focus */}
+          {view === "active" && !currentVision && activeSaved.length > 1 ? (
+            <section className="app-a-panel-warning">
+              <h2 className="text-[15px] font-semibold">{t.noCurrent}</h2>
+              <p className="mt-1 text-[13px] leading-relaxed">{t.noCurrentHelp}</p>
+            </section>
+          ) : null}
+
+          {/* 5. TABS: ACTIVE vs ARCHIVED */}
+          <div className="flex items-center justify-between gap-3 border-b border-black/[0.08] pb-3 dark:border-white/[0.08]">
+            <div className="flex rounded-[12px] p-1 bg-black/[0.06] dark:bg-white/[0.08]" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={view === "active"}
+                onClick={() => setView("active")}
+                className={`app-a-focus-ring min-h-[36px] px-4 rounded-[9px] text-[13px] font-semibold transition-all ${
+                  view === "active"
+                    ? "bg-white text-black shadow-xs dark:bg-[#3A3A3C] dark:text-white"
+                    : "text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white"
+                }`}
+              >
+                {t.active} ({activeSaved.length + drafts.length})
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={view === "archived"}
+                onClick={() => setView("archived")}
+                className={`app-a-focus-ring min-h-[36px] px-4 rounded-[9px] text-[13px] font-semibold transition-all ${
+                  view === "archived"
+                    ? "bg-white text-black shadow-xs dark:bg-[#3A3A3C] dark:text-white"
+                    : "text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white"
+                }`}
+              >
+                {t.archived} ({archivedSaved.length})
+              </button>
+            </div>
+          </div>
+
+          {/* 6. GRID OF VISION CARDS */}
+          {renderVisionGrid()}
+        </div>
+      )}
 
       {/* 7. ARCHIVE FOCUS CONFIRMATION DIALOG */}
       {archiveConfirmItem ? (

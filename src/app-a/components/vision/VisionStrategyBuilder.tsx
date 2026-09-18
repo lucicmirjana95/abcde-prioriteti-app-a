@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { readSessionDraft, writeSessionDraft } from "../../persistence/sessionDraft";
 import {
   createSequencedVisionCandidate,
+  createTodayCandidateId,
   visionStepKey,
 } from "../../../shared/domain/today-candidates";
 import {
@@ -16,21 +17,28 @@ import { loadAppAPreferences, getEffectiveTimeZone } from "../../settings/prefer
 import { isVisionStrategyResult, isVisionFeasibilityResult } from "../../../shared/domain/vision";
 import {
   AlertTriangle,
+  CalendarCheck,
   Check,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
   ChevronUp,
+  Circle,
+  Compass,
+  Filter,
   Loader2,
   MoreHorizontal,
   Pencil,
   Plus,
-  Compass,
   RotateCcw,
   Route,
   Save,
   ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
   Split,
   Target,
+  Trash2,
   X,
 } from "lucide-react";
 import type { VisionFeasibilityResult, VisionStrategyResult } from "../../../shared/domain/vision";
@@ -58,6 +66,7 @@ interface VisionWorkingDraft {
   feasibility: VisionFeasibilityResult | null;
   feasibilityDetails: string;
   questionAnswers: Record<string, string>;
+  assumptionAnswers?: Record<string, string>;
   saved: boolean;
   provenanceItemIds?: string[];
 }
@@ -77,6 +86,11 @@ function validWorkingDraft(value: unknown): boolean {
     draft.feasibilityDetails.length <= 4000 &&
     !!draft.questionAnswers &&
     Object.values(draft.questionAnswers).every((answer) => typeof answer === "string" && answer.length <= 500) &&
+    (draft.assumptionAnswers === undefined || (
+      typeof draft.assumptionAnswers === "object" &&
+      draft.assumptionAnswers !== null &&
+      Object.values(draft.assumptionAnswers).every((ans) => typeof ans === "string" && ans.length <= 1000)
+    )) &&
     !!draft.breakdowns &&
     Object.values(draft.breakdowns).every((steps) => Array.isArray(steps) && steps.every((step) => typeof step === "string")) &&
     (draft.provenanceItemIds === undefined || (Array.isArray(draft.provenanceItemIds) && draft.provenanceItemIds.every((id) => typeof id === "string")))
@@ -120,7 +134,7 @@ const COPY = {
     breakDownAction: "Break into smaller steps",
     refineWithAi: "Refine with AI",
     checking: "Checking usefulness…",
-    alreadyActionable: "This step is already concrete enough to begin.",
+    alreadyActionable: "This step is already concrete and atomic — further breakdown is not needed.",
     maxDepthReached: "Maximum breakdown depth reached.",
     stepOptions: "Step options",
     editStep: "Edit step",
@@ -132,6 +146,40 @@ const COPY = {
     rejectBreakdown: "Cancel",
     substepsCount: (count: number) => `${count} step${count === 1 ? "" : "s"}`,
     milestoneStepsCount: (count: number) => `${count} step${count === 1 ? "" : "s"}`,
+    progressTitle: "Vision Progress & Tracking",
+    progressSub: "Track your milestones and concrete steps to completion",
+    filterAll: "All steps",
+    filterActive: "In progress",
+    filterCompleted: "Completed",
+    stepCompletedBadge: "Completed",
+    substepsTitle: "Smaller steps for easy tracking",
+    breakDownQuick: "Break into smaller steps",
+    addToTodayQuick: "Do today",
+    inTodayPlanQuick: "In today's plan",
+    deleteSubstep: "Remove smaller step",
+    emptyActiveFilter: "All steps in this stage are completed! Great job.",
+    emptyCompletedFilter: "No completed steps in this stage yet.",
+    overallStats: (done: number, total: number, pct: number) => `${done} of ${total} steps completed (${pct}%)`,
+    stageProgress: (done: number, total: number) => `${done}/${total} done`,
+    nextFocusBadge: "Next focus",
+    showSubsteps: (count: number) => `Show smaller steps (${count})`,
+    hideSubsteps: (count: number) => `Hide smaller steps (${count})`,
+    verifyAssumptionsTitle: "Assumptions to verify & calibrate",
+    verifyAssumptionsSubtitle: "The AI made these assumptions when generating the plan. Enter your actual reality so the AI can analyze your responses and produce a tailored, realistic plan.",
+    assumptionLabel: "Assumption",
+    realityPlaceholder: "Describe your actual reality (e.g., 'I only have 20 min in the morning', 'I lack this tool', 'I have a collaborator')...",
+    answeredBadge: "Answered",
+    recalibrateAction: "Re-calibrate plan with your answers",
+    recalibratingAction: "AI is analyzing answers & customizing plan...",
+    recalibrateSuccess: "Plan successfully customized based on your verified reality.",
+    recalibrateHint: "Once submitted, the AI will adapt milestones and steps to match your verified constraints.",
+    quickPickLabel: "Quick presets:",
+    quickPresets: [
+      "Confirmed / Feasible",
+      "Less time available",
+      "No budget or tools yet",
+      "Starting from scratch",
+    ],
   },
   sr: {
     saveVision: "Sačuvaj viziju",
@@ -169,7 +217,7 @@ const COPY = {
     breakDownAction: "Podeli na manje korake",
     refineWithAi: "Razradi uz AI",
     checking: "Proveravam korisnost…",
-    alreadyActionable: "Ovaj korak je već dovoljno konkretan za početak.",
+    alreadyActionable: "Ovaj korak je već dovoljno konkretan i spreman za rad — nije ga potrebno dalje raščlanjivati.",
     maxDepthReached: "Maksimalan nivo raščlanjivanja je dostignut.",
     stepOptions: "Opcije koraka",
     editStep: "Izmeni korak",
@@ -181,6 +229,40 @@ const COPY = {
     rejectBreakdown: "Otkaži",
     substepsCount: (count: number) => `${count} korak${count === 1 ? "" : count < 5 ? "a" : "a"}`,
     milestoneStepsCount: (count: number) => `${count} korak${count === 1 ? "" : count < 5 ? "a" : "a"}`,
+    progressTitle: "Praćenje napretka vizije",
+    progressSub: "Pratite realizaciju etapa i koraka do cilja",
+    filterAll: "Svi koraci",
+    filterActive: "Preostali",
+    filterCompleted: "Završeni",
+    stepCompletedBadge: "Završeno",
+    substepsTitle: "Manji koraci za lakše praćenje",
+    breakDownQuick: "Podeli na manje korake",
+    addToTodayQuick: "Uradi danas",
+    inTodayPlanQuick: "U planu za danas",
+    deleteSubstep: "Ukloni manji korak",
+    emptyActiveFilter: "Svi koraci u ovoj etapi su završeni! Svaka čast.",
+    emptyCompletedFilter: "Još nema završenih koraka u ovoj etapi.",
+    overallStats: (done: number, total: number, pct: number) => `${done} od ${total} koraka završeno (${pct}%)`,
+    stageProgress: (done: number, total: number) => `${done}/${total} završeno`,
+    nextFocusBadge: "Sledeći fokus",
+    showSubsteps: (count: number) => `Prikaži manje korake (${count})`,
+    hideSubsteps: (count: number) => `Sakrij manje korake (${count})`,
+    verifyAssumptionsTitle: "Pretpostavke koje treba proveriti",
+    verifyAssumptionsSubtitle: "AI je postavio ove pretpostavke pri kreiranju plana. Unesite vaše stvarno stanje kako bi AI analizirao odgovore i prilagodio plan vašim realnim mogućnostima.",
+    assumptionLabel: "Pretpostavka",
+    realityPlaceholder: "Kakvo je vaše stvarno stanje? (npr. 'Mogu samo 20 min ujutru', 'Nemam taj alat', 'Počinjem od nule')...",
+    answeredBadge: "Odgovoreno",
+    recalibrateAction: "Prilagodi plan na osnovu odgovora",
+    recalibratingAction: "AI analizira odgovore i prilagođava plan...",
+    recalibrateSuccess: "Plan je uspešno prilagođen vašim odgovorima i realnim mogućnostima.",
+    recalibrateHint: "Nakon unosa odgovora, AI će preraditi etape i definisati realniji prvi korak.",
+    quickPickLabel: "Brzi izbor:",
+    quickPresets: [
+      "Tačno / Mogu ovoliko",
+      "Nemam ovoliko vremena",
+      "Nemam budžet / alate",
+      "Počinjem od nule",
+    ],
   },
   tr: {
     saveVision: "Vizyonu kaydet",
@@ -218,7 +300,7 @@ const COPY = {
     breakDownAction: "Daha küçük adımlara böl",
     refineWithAi: "Yapay zeka ile geliştir",
     checking: "Yararlılık kontrol ediliyor…",
-    alreadyActionable: "Bu adım başlamak için zaten yeterince somut.",
+    alreadyActionable: "Bu adım zaten başlanabilir ve somut durumda — daha fazla bölmeye gerek yok.",
     maxDepthReached: "Maksimum ayrıştırma derinliğine ulaşıldı.",
     stepOptions: "Adım seçenekleri",
     editStep: "Adımı düzenle",
@@ -230,48 +312,82 @@ const COPY = {
     rejectBreakdown: "İptal",
     substepsCount: (count: number) => `${count} adım`,
     milestoneStepsCount: (count: number) => `${count} adım`,
+    progressTitle: "Vizyon İlerleme Takibi",
+    progressSub: "Aşamaları ve somut adımları hedefe kadar takip edin",
+    filterAll: "Tüm adımlar",
+    filterActive: "Kalanlar",
+    filterCompleted: "Tamamlananlar",
+    stepCompletedBadge: "Tamamlandı",
+    substepsTitle: "Kolay takip için küçük adımlar",
+    breakDownQuick: "Daha küçük adımlara böl",
+    addToTodayQuick: "Bugün yap",
+    inTodayPlanQuick: "Bugünün planında",
+    deleteSubstep: "Küçük adımı kaldır",
+    emptyActiveFilter: "Bu aşamadaki tüm adımlar tamamlandı! Harika.",
+    emptyCompletedFilter: "Bu aşamada henüz tamamlanan adım yok.",
+    overallStats: (done: number, total: number, pct: number) => `${done} / ${total} adım tamamlandı (%${pct})`,
+    stageProgress: (done: number, total: number) => `${done}/${total} bitti`,
+    nextFocusBadge: "Sonraki odak",
+    showSubsteps: (count: number) => `Küçük adımları göster (${count})`,
+    hideSubsteps: (count: number) => `Küçük adımları gizle (${count})`,
+    verifyAssumptionsTitle: "Doğrulanacak ve uyarlanacak varsayımlar",
+    verifyAssumptionsSubtitle: "Yapay zeka bu planı oluştururken bu varsayımlara dayandı. Adımları ve aşamaları gerçek durumunuza göre uyarlaması için gerçek durumunuzu belirtin.",
+    assumptionLabel: "Varsayım",
+    realityPlaceholder: "Gerçek durumunuz nedir? (örn. 'Günde sadece 20 dk ayırabilirim', 'Bu araca sahip değilim', 'Sıfırdan başlıyorum')...",
+    answeredBadge: "Yanıtlandı",
+    recalibrateAction: "Cevaplarıma göre planı özelleştir",
+    recalibratingAction: "Yapay zeka yanıtları analiz ediyor ve planı uyarlıyor...",
+    recalibrateSuccess: "Plan yanıtlarınıza ve gerçek durumunuza göre başarıyla uyarlandı.",
+    recalibrateHint: "Yanıtlarınız gönderildiğinde yapay zeka aşamaları ve adımları gerçek kapasitenize göre günceller.",
+    quickPickLabel: "Hızlı seçim:",
+    quickPresets: [
+      "Doğru / Karşılanabilir",
+      "Daha az zamanım var",
+      "Bütçe / araç yok",
+      "Sıfırdan başlıyorum",
+    ],
   },
 } as const;
 
 const FEASIBILITY_COPY = {
   en: {
     timeframe: "Desired timeframe (optional)",
-    timeframePlaceholder: "e.g. 12 months",
+    timeframePlaceholder: "e.g. 12 months, 6 weeks…",
     check: "Check feasibility and develop",
     assessment: "Feasibility check",
     useAdjusted: "Use realistic version",
     keepOriginal: "Keep original goal",
     useTimeframe: "Suggested timeframe",
-    needsInfo: "Answer the questions below. Your answers will be added to this Vision direction and checked again.",
+    needsInfo: "To make the plan accurate and actionable, please answer these questions:",
     detailsLabel: "Your missing details",
-    detailsPlaceholder: "Answer briefly in the same order…",
-    recheck: "Add details and check again",
+    detailsPlaceholder: "Answer briefly…",
+    recheck: "Submit details and develop strategy",
   },
   sr: {
     timeframe: "Željeni rok (opciono)",
-    timeframePlaceholder: "npr. 12 meseci",
+    timeframePlaceholder: "npr. 12 meseci, 6 nedelja…",
     check: "Proveri izvodljivost i razradi",
     assessment: "Provera izvodljivosti",
     useAdjusted: "Koristi realniju verziju",
     keepOriginal: "Zadrži originalni cilj",
     useTimeframe: "Predloženi rok",
-    needsInfo: "Odgovorite na pitanja ispod. Odgovori će biti dodati ovom pravcu Vizije i ponovo provereni.",
+    needsInfo: "Da bi plan bio precizan i koristan, odgovorite na ova kratka pitanja:",
     detailsLabel: "Podaci koji nedostaju",
-    detailsPlaceholder: "Odgovorite kratko, istim redosledom…",
-    recheck: "Dodaj odgovore i proveri ponovo",
+    detailsPlaceholder: "Odgovorite kratko…",
+    recheck: "Pošalji odgovore i razradi strategiju",
   },
   tr: {
     timeframe: "İstenen süre (isteğe bağlı)",
-    timeframePlaceholder: "örn. 12 ay",
+    timeframePlaceholder: "örn. 12 ay, 6 hafta…",
     check: "Uygulanabilirliği kontrol et ve geliştir",
     assessment: "Uygulanabilirlik kontrolü",
     useAdjusted: "Gerçekçi sürümü kullan",
     keepOriginal: "Orijinal hedefi koru",
     useTimeframe: "Önerilen süre",
-    needsInfo: "Aşağıdaki soruları yanıtlayın. Yanıtlar bu Vizyon yönüne eklenip yeniden kontrol edilir.",
+    needsInfo: "Planın net ve uygulanabilir olması için lütfen bu soruları yanıtlayın:",
     detailsLabel: "Eksik bilgileriniz",
-    detailsPlaceholder: "Aynı sırayla kısaca yanıtlayın…",
-    recheck: "Bilgileri ekle ve tekrar kontrol et",
+    detailsPlaceholder: "Kısaca yanıtlayın…",
+    recheck: "Bilgileri gönder ve stratejiyi geliştir",
   },
 } as const;
 
@@ -354,13 +470,86 @@ export default function VisionStrategyBuilder({
     };
   }, [openMenuKey]);
 
-  // Independent milestone expand states - Milestone 1 is open by default for immediate clarity
-  const [openMilestones, setOpenMilestones] = useState<Record<number, boolean>>({ 0: true });
+  // Milestone expand states - all milestones open by default for full visibility
+  const [openMilestones, setOpenMilestones] = useState<Record<number, boolean>>(() => {
+    const initialOpen: Record<number, boolean> = { 0: true };
+    if (initialDocument?.strategy?.milestones) {
+      initialDocument.strategy.milestones.forEach((_, idx) => {
+        initialOpen[idx] = true;
+      });
+    }
+    return initialOpen;
+  });
   const [isRisksOpen, setIsRisksOpen] = useState(false);
+
+  // Vision step execution tracking state
+  const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>(() => {
+    try {
+      const storageKey = `app_a_vision_completed_${documentId || idea}`;
+      const raw = localStorage.getItem(storageKey);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "completed">("all");
+  const [todayPlanItems, setTodayPlanItems] = useState<string[]>([]);
+  const [addingStepKey, setAddingStepKey] = useState<string | null>(null);
+  const [addedStepKeys, setAddedStepKeys] = useState<Record<string, boolean>>({});
+
+  const toggleStepCompleted = (stepKey: string) => {
+    setCompletedSteps((prev) => {
+      const nextVal = !prev[stepKey];
+      const next = { ...prev, [stepKey]: nextVal };
+
+      // If this is a parent step being toggled, sync all its substeps
+      if (breakdowns[stepKey]) {
+        breakdowns[stepKey].forEach((_, subIdx) => {
+          next[`${stepKey}-d${subIdx}`] = nextVal;
+        });
+      }
+
+      // If this is a child step being toggled, check if all siblings are completed
+      const childMatch = stepKey.match(/^(.*)-d(\d+)$/);
+      if (childMatch) {
+        const parentKey = childMatch[1];
+        const siblings = breakdowns[parentKey];
+        if (siblings) {
+          const allSiblingsDone = siblings.every((_, sIdx) => {
+            const sKey = `${parentKey}-d${sIdx}`;
+            return sKey === stepKey ? nextVal : Boolean(next[sKey]);
+          });
+          if (allSiblingsDone) {
+            next[parentKey] = true;
+          }
+        }
+      }
+
+      try {
+        const storageKey = `app_a_vision_completed_${documentId || idea}`;
+        localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch {
+        // non-blocking
+      }
+      return next;
+    });
+  };
+
+  const handleRemoveSubstep = async (parentKey: string, subIdx: number) => {
+    if (!strategy || !breakdowns[parentKey]) return;
+    const currentSubsteps = breakdowns[parentKey];
+    const nextSubsteps = currentSubsteps.filter((_, idx) => idx !== subIdx);
+    const nextBreakdowns = { ...breakdowns, [parentKey]: nextSubsteps };
+    setBreakdowns(nextBreakdowns);
+    await persistStrategy(strategy, nextBreakdowns);
+  };
 
   const [timeframe, setTimeframe] = useState(working?.timeframe || initialDocument?.planningContext?.timeframe || initialTimeframe || "");
   const [feasibility, setFeasibility] = useState<VisionFeasibilityResult | null>(working?.feasibility || null);
   const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>(working?.questionAnswers || {});
+  const [assumptionAnswers, setAssumptionAnswers] = useState<Record<string, string>>(working?.assumptionAnswers || {});
+  const [isRecalibrating, setIsRecalibrating] = useState(false);
+  const [recalibrateFeedback, setRecalibrateFeedback] = useState(false);
   const [feasibilityDetails, setFeasibilityDetails] = useState(working?.feasibilityDetails || initialDocument?.planningContext?.clarificationDetails || "");
   const { controller, isMounted } = useVisionBuilderAdapter();
   const [saveDiagnostic, setSaveDiagnostic] = useState<string | null>(null);
@@ -374,7 +563,7 @@ export default function VisionStrategyBuilder({
   useEffect(() => {
     let active = true;
     const checkTodayPlan = async () => {
-      if (!userId || !strategy?.nextStep) return;
+      if (!userId) return;
       try {
         const localDate = getLocalDateKeyInTimeZone(getEffectiveTimeZone(loadAppAPreferences()));
         const [planDoc, pendingCtx] = await Promise.all([
@@ -382,19 +571,34 @@ export default function VisionStrategyBuilder({
           loadPendingTodayCandidatesContext(userId),
         ]);
         if (!active) return;
+        
+        const titles: string[] = [];
+        if (planDoc?.plan) {
+          [...planDoc.plan.firstFocus, ...planDoc.plan.laterToday, ...planDoc.plan.ifCapacityRemains].forEach((item) => {
+            titles.push(item.title.trim().toLowerCase());
+          });
+        }
+        pendingCtx.items.forEach((c) => {
+          if (c.sourceId === documentId && (c.status === "scheduled" || c.status === "pending" || c.status === "completed")) {
+            titles.push(c.title.trim().toLowerCase());
+          }
+        });
+        setTodayPlanItems(titles);
+
         const inPlan = Boolean(
-          planDoc?.plan &&
-            [...planDoc.plan.firstFocus, ...planDoc.plan.laterToday, ...planDoc.plan.ifCapacityRemains].some(
-              (item) =>
-                item.title.trim().toLowerCase() === strategy.nextStep.trim().toLowerCase() ||
-                item.goalRelationship?.goalId === documentId ||
-                item.id.includes(documentId)
-            )
+          strategy?.nextStep &&
+            ((planDoc?.plan &&
+              [...planDoc.plan.firstFocus, ...planDoc.plan.laterToday, ...planDoc.plan.ifCapacityRemains].some(
+                (item) =>
+                  item.title.trim().toLowerCase() === strategy.nextStep.trim().toLowerCase() ||
+                  item.goalRelationship?.goalId === documentId ||
+                  item.id.includes(documentId)
+              )) ||
+              pendingCtx.items.some(
+                (c) => c.sourceId === documentId && (c.status === "scheduled" || c.status === "completed")
+              ))
         );
-        const isScheduled = pendingCtx.items.some(
-          (c) => c.sourceId === documentId && (c.status === "scheduled" || c.status === "completed")
-        );
-        setIsInTodayPlan(inPlan || isScheduled);
+        setIsInTodayPlan(inPlan);
       } catch {
         // non-blocking check
       }
@@ -419,10 +623,11 @@ export default function VisionStrategyBuilder({
       feasibility,
       feasibilityDetails,
       questionAnswers,
+      assumptionAnswers,
       saved,
       provenanceItemIds: initialProvenanceItemIds,
     });
-  }, [workingKey, documentId, strategy, breakdowns, timeframe, acceptedGoal, feasibility, feasibilityDetails, questionAnswers, saved, initialProvenanceItemIds]);
+  }, [workingKey, documentId, strategy, breakdowns, timeframe, acceptedGoal, feasibility, feasibilityDetails, questionAnswers, assumptionAnswers, saved, initialProvenanceItemIds]);
 
   // Auto-trigger feasibility check when a new vision is entered
   useEffect(() => {
@@ -544,6 +749,61 @@ export default function VisionStrategyBuilder({
     }
   }
 
+  async function handleRecalibrateWithAssumptions() {
+    if (!strategy || isRecalibrating || loading) return;
+    const answeredEntries = Object.entries(assumptionAnswers).filter(
+      ([_, answer]) => typeof answer === "string" && answer.trim().length > 0
+    );
+    if (answeredEntries.length === 0) return;
+
+    setIsRecalibrating(true);
+    setError(false);
+    setAuthRequired(false);
+
+    try {
+      const verifiedBlock = answeredEntries
+        .map(([assumption, answer]) => `- Assumption: "${assumption.trim()}" -> User Reality: "${answer.trim()}"`)
+        .join("\n");
+
+      const fullDetails = [
+        feasibilityDetails.trim() ? `Clarifications: ${feasibilityDetails.trim()}` : "",
+        `[USER VERIFIED ASSUMPTIONS & REALITY]:\n${verifiedBlock}`,
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
+      const contextStr = `Target: ${timeframe}\nDetails: ${fullDetails}`;
+      const result = await controller.generatePreview(acceptedGoal, language, contextStr);
+
+      if (!isMounted.current) return;
+
+      if (result.status === "locked") return;
+      if (result.status === "error") {
+        if (result.error?.message === "authentication_required") setAuthRequired(true);
+        else setError(true);
+        return;
+      }
+
+      if (result.status === "success" && result.strategy) {
+        setBreakdowns({});
+        setStrategy(result.strategy);
+        setFeasibilityDetails(fullDetails);
+        setRecalibrateFeedback(true);
+        setTimeout(() => {
+          if (isMounted.current) setRecalibrateFeedback(false);
+        }, 4000);
+
+        if (saved || initialDocument) {
+          await persistStrategy(result.strategy, {}, acceptedGoal, timeframe, fullDetails);
+        }
+      }
+    } catch {
+      setError(true);
+    } finally {
+      setIsRecalibrating(false);
+    }
+  }
+
   async function generate(additionalDetails = feasibilityDetails) {
     setSaved(false);
     const controller = new AbortController();
@@ -557,7 +817,7 @@ export default function VisionStrategyBuilder({
         ? `${idea}\n\nUser-provided clarifying details:\n${additionalDetails.trim()}`
         : idea;
       const result = await assessVisionFeasibility(enrichedIdea, timeframe, language, controller.signal);
-      if (result.status === "feasible") {
+      if (result.status === "feasible" || result.status === "feasible_with_assumptions") {
         window.clearTimeout(timeout);
         setLoading(false);
         await generateStrategy(result.normalizedGoal, timeframe, additionalDetails || feasibilityDetails);
@@ -837,6 +1097,50 @@ export default function VisionStrategyBuilder({
     }
   }
 
+  async function handleAddStepToToday(stepText: string, stepKey: string) {
+    if (addingStepKey) return;
+    setAddingStepKey(stepKey);
+    try {
+      const now = new Date().toISOString();
+      const candidateId = createTodayCandidateId(documentId ? `${documentId}_${stepKey}` : undefined);
+      const candidate = {
+        id: `today_${candidateId}`,
+        source: "vision" as const,
+        sourceId: documentId,
+        sourceTitle: (acceptedGoal || idea).trim(),
+        title: stepText,
+        estimatedMinutes: 20,
+        status: "pending" as const,
+        createdAt: now,
+        updatedAt: now,
+        stepKey: visionStepKey(stepText),
+      };
+      const localDate = getLocalDateKeyInTimeZone(getEffectiveTimeZone(loadAppAPreferences()));
+      const confirmedPlan = await loadConfirmedDailyPlan(userId, localDate);
+
+      if (confirmedPlan) {
+        const addResult = addVisionCandidateToPlan(confirmedPlan.plan, candidate);
+        if (!("error" in addResult)) {
+          await savePlanAndScheduleVisionAtomic(userId, { ...confirmedPlan, plan: addResult.draft }, candidate);
+          setAddedStepKeys((prev) => ({ ...prev, [stepKey]: true }));
+          setTodayPlanItems((prev) => [...prev, stepText.trim().toLowerCase()]);
+          window.dispatchEvent(new Event("app-a-plan-changed"));
+          window.dispatchEvent(new Event("app-a-vision-candidates-changed"));
+          return;
+        }
+      }
+
+      await saveTodayCandidate(userId, candidate);
+      setAddedStepKeys((prev) => ({ ...prev, [stepKey]: true }));
+      setTodayPlanItems((prev) => [...prev, stepText.trim().toLowerCase()]);
+      window.dispatchEvent(new Event("app-a-vision-candidates-changed"));
+    } catch (e) {
+      console.error("Failed to add step to today plan:", e);
+    } finally {
+      setAddingStepKey(null);
+    }
+  }
+
   if (!strategy) {
     return (
       <div className="mt-4">
@@ -941,13 +1245,14 @@ export default function VisionStrategyBuilder({
                 ))}
                 <button
                   type="button"
-                  disabled={!feasibility.questions.every((question) => questionAnswers[question]?.trim()) || loading}
+                  disabled={!feasibility.questions.some((question) => questionAnswers[question]?.trim()) || loading}
                   onClick={() => {
+                    const answered = feasibility.questions
+                      .filter((q) => questionAnswers[q]?.trim())
+                      .map((q) => `Question: ${q}\nAnswer: ${questionAnswers[q].trim()}`);
                     const details = [
                       feasibilityDetails,
-                      ...feasibility.questions.map(
-                        (question) => `Question: ${question}\nAnswer: ${questionAnswers[question].trim()}`
-                      ),
+                      ...answered,
                     ]
                       .filter(Boolean)
                       .join("\n\n");
@@ -960,7 +1265,7 @@ export default function VisionStrategyBuilder({
                   }}
                   className="app-a-primary-button app-a-focus-ring mt-2 w-full justify-center gap-2 py-3 text-[14px] font-semibold disabled:opacity-50"
                 >
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Route className="h-4 w-4" />}
                   {ft.recheck}
                 </button>
               </div>
@@ -1009,6 +1314,20 @@ export default function VisionStrategyBuilder({
                   {ft.keepOriginal}
                 </button>
               ) : null}
+              {feasibility.status === "insufficient_information" ? (
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => void generateStrategy(feasibility.normalizedGoal)}
+                  className="app-a-secondary-button app-a-focus-ring w-full justify-center px-4 min-h-[40px] py-2 text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]"
+                >
+                  {language === "sr"
+                    ? "Ili nastavi i razradi sa postojećim opisom"
+                    : language === "tr"
+                    ? "Veya mevcut açıklamayla devam et"
+                    : "Or proceed and develop with current description"}
+                </button>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -1038,50 +1357,145 @@ export default function VisionStrategyBuilder({
     const isChecking = checkingStep === key;
     const isConcrete = concreteStep === key;
     const isEditing = editingStep === key;
+    const isDone = Boolean(completedSteps[key]);
+    const isStepInToday = addedStepKeys[key] || todayPlanItems.includes(stepText.trim().toLowerCase());
 
-    // 1. Featured Next Step Card (Spotlight)
-    if (isFeatured) {
+    // Substep rendering (if called recursively as child)
+    if (depth > 0) {
       return (
-        <div
-          id="featured-next-step-heading"
-          className="rounded-2xl border-2 border-[var(--app-a-accent)] bg-[var(--app-a-accent-soft)]/50 p-4 sm:p-5 dark:border-[var(--app-a-accent)] dark:bg-[var(--app-a-accent-soft)]/30 shadow-sm mb-3.5"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--app-a-wash-sage-badge)] px-3 py-1 text-[12px] font-bold text-[var(--app-a-wash-sage-text)]">
-                <GrowthPathArt variant="medallion" medallionType="plant" size={18} className="shrink-0" />
-                {t.activeNextStep}
-              </span>
-              <span className="rounded-md bg-black/5 px-2 py-0.5 text-[11px] font-semibold text-[#6E6E73] dark:bg-white/10 dark:text-[#AEAEB2]">
-                {t.stage} 1 • {t.step} 1
-              </span>
-            </div>
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border p-3 transition-all ${
+          isDone
+            ? "border-[#34C759]/25 bg-white/60 dark:border-[#30D158]/25 dark:bg-[#1E1E20]/60"
+            : "border-black/[0.06] bg-white shadow-2xs dark:border-white/[0.08] dark:bg-[#252528]"
+        }`}>
+          <div className="flex items-start gap-2.5 min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={() => toggleStepCompleted(key)}
+              aria-label={isDone ? t.stepCompletedBadge : t.activeNextStep}
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border mt-0.5 transition-all ${
+                isDone
+                  ? "border-[#34C759] bg-[#34C759] text-white"
+                  : "border-black/20 bg-transparent hover:border-[#34C759] hover:bg-[#34C759]/10 dark:border-white/20"
+              }`}
+            >
+              <Check className={`h-3 w-3 ${isDone ? "opacity-100" : "opacity-0"}`} />
+            </button>
+            <span className="rounded bg-black/5 px-1.5 py-0.5 text-[10px] font-bold text-[#6E6E73] dark:bg-white/10 dark:text-[#AEAEB2] shrink-0 mt-0.5">
+              {stepNumber}
+            </span>
+            <span className={`text-[13px] font-medium leading-snug break-words ${isDone ? "line-through text-[#8E8E93] dark:text-[#636366]" : "text-black dark:text-white"}`}>
+              {stepText}
+            </span>
+          </div>
 
-            {/* Menu */}
+          <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+            {isStepInToday ? (
+              <span className="inline-flex items-center gap-1 rounded-lg bg-[#34C759]/15 px-2.5 py-1 text-[11px] font-semibold text-[#248A3D] dark:text-[#30D158]">
+                <Check className="h-3 w-3" />
+                {t.inTodayPlanQuick}
+              </span>
+            ) : (
+              <button
+                type="button"
+                disabled={addingStepKey === key}
+                onClick={() => void handleAddStepToToday(stepText, key)}
+                className="inline-flex items-center gap-1 rounded-lg border border-black/10 bg-black/[0.02] hover:bg-black/[0.06] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] px-2.5 py-1 text-[11px] font-semibold text-black dark:text-white transition-colors"
+              >
+                {addingStepKey === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                <span>{t.addToTodayQuick}</span>
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Standard primary step card (Depth 0) - Clean, standalone card
+    return (
+      <div
+        className={`app-a-surface group relative rounded-2xl border p-4 sm:p-5 transition-all shadow-xs hover:shadow-sm ${
+          isDone
+            ? "border-[#34C759]/35 bg-[#34C759]/[0.02] dark:border-[#30D158]/35 dark:bg-[#30D158]/[0.02]"
+            : isFeatured
+            ? "border-[var(--app-a-accent)]/45 bg-[var(--app-a-accent-soft)]/10 dark:border-[var(--app-a-accent)]/50 dark:bg-[var(--app-a-accent-soft)]/10"
+            : "border-black/10 dark:border-white/15 hover:border-black/20 dark:hover:border-white/25"
+        }`}
+      >
+        {/* Top Header Row */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Interactive Circular Checkbox */}
+            <button
+              type="button"
+              onClick={() => toggleStepCompleted(key)}
+              aria-label={isDone ? t.stepCompletedBadge : t.activeNextStep}
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-all ${
+                isDone
+                  ? "border-[#34C759] bg-[#34C759] text-white shadow-xs"
+                  : "border-black/25 bg-transparent text-transparent hover:border-[#34C759] hover:bg-[#34C759]/10 dark:border-white/25"
+              }`}
+            >
+              <Check className={`h-3.5 w-3.5 ${isDone ? "opacity-100 scale-100" : "opacity-0 scale-75"} transition-all`} />
+            </button>
+
+            {/* Step Number Badge */}
+            {stepNumber ? (
+              <span className="rounded-md bg-black/5 px-2 py-0.5 text-[11px] font-bold text-[#6E6E73] dark:bg-white/10 dark:text-[#AEAEB2]">
+                {t.step} {stepNumber}
+              </span>
+            ) : null}
+
+            {/* Highlight Badges */}
+            {isFeatured && !isDone ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--app-a-wash-sage-badge)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--app-a-wash-sage-text)]">
+                <GrowthPathArt variant="medallion" medallionType="plant" size={14} className="shrink-0" />
+                {t.nextFocusBadge}
+              </span>
+            ) : null}
+
+            {isDone ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#34C759]/15 px-2.5 py-0.5 text-[11px] font-semibold text-[#248A3D] dark:text-[#30D158]">
+                <Check className="h-3 w-3" />
+                {t.stepCompletedBadge}
+              </span>
+            ) : null}
+
+            {hasSubsteps ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#0071E3]/10 px-2.5 py-0.5 text-[11px] font-semibold text-[#0071E3] dark:bg-[#0A84FF]/20 dark:text-[#0A84FF]">
+                <Split className="h-3 w-3" />
+                {t.substepsCount(breakdowns[key].length)}
+              </span>
+            ) : null}
+          </div>
+
+          {/* Secondary Actions Overflow Menu */}
+          {!isEditing ? (
             <div className="relative" data-step-menu>
               <button
                 type="button"
-                aria-label={t.stepOptions}
-                aria-expanded={openMenuKey === "featured-next-step"}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setOpenMenuKey((prev) => (prev === "featured-next-step" ? null : "featured-next-step"));
+                  setOpenMenuKey((prev) => (prev === key ? null : key));
                 }}
                 className="app-a-focus-ring rounded-lg p-1.5 text-[#8E8E93] hover:bg-black/5 hover:text-black dark:hover:bg-white/10 dark:hover:text-white"
+                aria-label={t.stepOptions}
+                aria-expanded={isMenuOpen}
               >
                 <MoreHorizontal className="h-4 w-4" />
               </button>
-              {openMenuKey === "featured-next-step" ? (
+
+              {isMenuOpen && (
                 <div
                   role="menu"
-                  className="app-a-surface-elevated absolute right-0 top-full z-20 mt-1 min-w-[200px] rounded-xl border border-black/10 bg-white p-1 shadow-lg dark:border-white/15 dark:bg-[#2C2C2E]"
+                  className="app-a-surface-elevated absolute right-0 top-full z-20 mt-1 min-w-[190px] rounded-xl border border-black/10 bg-white p-1 shadow-lg dark:border-white/15 dark:bg-[#2C2C2E]"
                 >
                   <button
                     type="button"
                     role="menuitem"
                     onClick={() => {
-                      setEditingStep("featured-next-step");
-                      setEditingStepText(strategy?.nextStep || stepText);
+                      setEditingStep(key);
+                      setEditingStepText(stepText);
                       setStepEditError(false);
                       setOpenMenuKey(null);
                     }}
@@ -1093,392 +1507,174 @@ export default function VisionStrategyBuilder({
                   <button
                     type="button"
                     role="menuitem"
-                    disabled={checkingStep === "featured-next-step"}
                     onClick={() => {
+                      setRefiningStep({ key, text: stepText });
                       setOpenMenuKey(null);
-                      void breakDown(strategy?.nextStep || stepText, "m0-s0", 0);
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-black hover:bg-black/5 dark:text-white dark:hover:bg-white/5 disabled:opacity-50"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-black hover:bg-black/5 dark:text-white dark:hover:bg-white/5"
                   >
-                    <Split className="h-4 w-4 text-[#0071E3] dark:text-[#0A84FF]" />
-                    {t.breakDownAction}
+                    <Compass className="h-4 w-4 text-[#0071E3] dark:text-[#0A84FF]" />
+                    {t.refineWithAi}
                   </button>
                 </div>
-              ) : null}
+              )}
+            </div>
+          ) : null}
+        </div>
+
+        {/* Step Body: Title or Inline Edit */}
+        {isEditing ? (
+          <div className="mt-3">
+            <div className="relative flex items-center">
+              <input
+                autoFocus
+                value={editingStepText}
+                maxLength={240}
+                onChange={(event) => {
+                  setEditingStepText(event.target.value);
+                  setStepEditError(false);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") setEditingStep(null);
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void saveStepEdit(stepText, key);
+                  }
+                }}
+                className="app-a-field app-a-focus-ring w-full px-3 pr-10 py-2 text-[15px]"
+                aria-label={t.editStep}
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
+                <InputCopyButton text={editingStepText} language={language} size="sm" />
+              </div>
+            </div>
+            {stepEditError ? (
+              <p role="alert" className="mt-1 text-[12px] text-[#FF3B30]">
+                {t.stepRequired}
+              </p>
+            ) : null}
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void saveStepEdit(stepText, key)}
+                className="app-a-primary-button min-h-9 px-3 text-[12px] font-semibold"
+              >
+                <Save className="h-3.5 w-3.5" />
+                {t.saveStep}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingStep(null);
+                  setStepEditError(false);
+                }}
+                className="app-a-secondary-button min-h-9 px-3 text-[12px]"
+              >
+                <X className="h-3.5 w-3.5" />
+                {t.cancelStep}
+              </button>
             </div>
           </div>
-
-          {/* Next step text or editing input */}
-          {editingStep === "featured-next-step" ? (
-            <div className="mt-3">
-              <div className="relative flex items-center">
-                <input
-                  autoFocus
-                  value={editingStepText}
-                  maxLength={240}
-                  onChange={(event) => {
-                    setEditingStepText(event.target.value);
-                    setStepEditError(false);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Escape") setEditingStep(null);
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      void saveFeaturedStepEdit();
-                    }
-                  }}
-                  className="app-a-field app-a-focus-ring w-full px-3 pr-10 py-2 text-[15px]"
-                  aria-label={t.editStep}
-                />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
-                  <InputCopyButton text={editingStepText} language={language} size="sm" />
-                </div>
-              </div>
-              {stepEditError ? (
-                <p role="alert" className="mt-1 text-[12px] text-[#FF3B30]">
-                  {t.stepRequired}
-                </p>
-              ) : null}
-              <div className="mt-2.5 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => void saveFeaturedStepEdit()}
-                  className="app-a-primary-button min-h-9 px-3 text-[12px] font-semibold"
-                >
-                  <Save className="h-3.5 w-3.5" />
-                  {t.saveStep}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingStep(null);
-                    setStepEditError(false);
-                  }}
-                  className="app-a-secondary-button min-h-9 px-3 text-[12px]"
-                >
-                  <X className="h-3.5 w-3.5" />
-                  {t.cancelStep}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <p className="mt-2.5 break-words text-[16px] sm:text-[17px] font-bold text-black dark:text-white leading-relaxed">
-              {strategy?.nextStep || stepText}
-            </p>
-          )}
-
-          {/* Breakdown proposal confirmation card for featured step */}
-          {breakdownProposal && (breakdownProposal.key === "m0-s0" || breakdownProposal.key === "featured-next-step") && (
-            <div className="mt-3 rounded-xl border border-[#0071E3]/20 bg-[#0071E3]/5 p-3 dark:border-[#0A84FF]/25 dark:bg-[#0A84FF]/10">
-              <p className="text-[12px] font-semibold text-[#0071E3] dark:text-[#0A84FF]">
-                {t.breakdownProposalTitle}
-              </p>
-              <ul className="mt-1.5 space-y-1 pl-4 list-disc text-[13px] text-black dark:text-white">
-                {breakdownProposal.substeps.map((sub, sIdx) => (
-                  <li key={sIdx} className="leading-snug">
-                    {sub}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-2.5 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => void handleAcceptBreakdown(breakdownProposal.key, breakdownProposal.substeps)}
-                  className="app-a-primary-button min-h-8 px-3 text-[12px] font-semibold"
-                >
-                  <Check className="h-3.5 w-3.5" />
-                  {t.acceptBreakdown}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRejectBreakdown}
-                  className="app-a-secondary-button min-h-8 px-3 text-[12px]"
-                >
-                  <X className="h-3.5 w-3.5" />
-                  {t.rejectBreakdown}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Helper note */}
-          <p className="mt-2 text-[12.5px] text-[#6E6E73] dark:text-[#AEAEB2] leading-relaxed">
-            {t.nextHelper}
+        ) : (
+          <p className={`mt-2.5 text-[15px] sm:text-[16px] font-semibold leading-relaxed break-words transition-colors ${
+            isDone ? "line-through text-[#8E8E93] dark:text-[#636366]" : "text-black dark:text-white"
+          }`}>
+            {stepText}
           </p>
+        )}
 
-          {/* DIRECT ACTIONS ROW */}
+        {/* Primary Action Buttons directly on the card */}
+        {!isEditing ? (
           <div className="mt-3.5 flex flex-wrap items-center gap-2 pt-3 border-t border-black/[0.06] dark:border-white/10">
-            {isInTodayPlan ? (
-              <span className="inline-flex items-center gap-1.5 rounded-xl bg-[#34C759]/15 px-3.5 py-2 text-[13px] font-semibold text-[#248A3D] dark:text-[#30D158] whitespace-nowrap">
-                <Check className="h-4 w-4" />
-                {t.inTodayPlan}
+            {/* Break into smaller steps button */}
+            {!hasSubsteps ? (
+              <button
+                type="button"
+                disabled={isChecking}
+                onClick={() => void breakDown(stepText, key, 0)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--app-a-accent)]/30 bg-[var(--app-a-accent-soft)]/25 px-3 py-1.5 text-[12px] font-semibold text-[var(--app-a-accent)] hover:bg-[var(--app-a-accent-soft)]/50 transition-colors disabled:opacity-50"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>{t.breakDownQuick}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setCollapsedKeys((prev) => ({ ...prev, [key]: !prev[key] }))}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[#0071E3]/25 bg-[#0071E3]/10 px-3 py-1.5 text-[12px] font-semibold text-[#0071E3] dark:border-[#0A84FF]/30 dark:bg-[#0A84FF]/20 dark:text-[#0A84FF] transition-colors"
+              >
+                <Split className="h-3.5 w-3.5" />
+                <span>{isCollapsed ? t.showSubsteps(breakdowns[key].length) : t.hideSubsteps(breakdowns[key].length)}</span>
+              </button>
+            )}
+
+            {/* Quick Add to Today Button */}
+            {isStepInToday ? (
+              <span className="inline-flex items-center gap-1 rounded-xl bg-[#34C759]/15 px-3 py-1.5 text-[12px] font-semibold text-[#248A3D] dark:text-[#30D158]">
+                <Check className="h-3.5 w-3.5" />
+                {t.inTodayPlanQuick}
               </span>
             ) : (
               <button
                 type="button"
-                disabled={isAddingToPlan}
-                onClick={() => void handleAddToTodayPlan()}
-                className="app-a-primary-button app-a-focus-ring min-h-[40px] px-4 py-2 text-[13px] sm:text-[14px] font-semibold gap-1.5 whitespace-nowrap"
+                disabled={addingStepKey === key}
+                onClick={() => void handleAddStepToToday(stepText, key)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-black/[0.03] hover:bg-black/[0.06] dark:border-white/10 dark:bg-white/[0.05] dark:hover:bg-white/[0.08] px-3 py-1.5 text-[12px] font-semibold text-black dark:text-white transition-colors"
               >
-                {isAddingToPlan ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                {addingStepKey === key ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3.5 w-3.5" />
                 )}
-                {t.addToTodayPlan}
+                <span>{t.addToTodayQuick}</span>
               </button>
             )}
 
+            {/* Refine with AI chip */}
             <button
               type="button"
-              onClick={() => setRefiningStep({ key: "featured-next-step", text: strategy?.nextStep || stepText })}
-              className="app-a-secondary-button app-a-focus-ring min-h-[40px] px-3.5 py-2 text-[13px] font-semibold gap-1.5 text-[var(--app-a-accent)] whitespace-nowrap"
+              onClick={() => setRefiningStep({ key, text: stepText })}
+              className="hidden sm:inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[12px] font-medium text-[#6E6E73] hover:bg-black/5 hover:text-black dark:text-[#AEAEB2] dark:hover:bg-white/10 dark:hover:text-white transition-colors"
             >
-              <Compass className="h-4 w-4" />
+              <Compass className="h-3.5 w-3.5 text-[#0071E3] dark:text-[#0A84FF]" />
               <span>{t.refineWithAi}</span>
             </button>
-
-            <button
-              type="button"
-              disabled={checkingStep === "featured-next-step"}
-              onClick={() => void breakDown(strategy?.nextStep || stepText, "m0-s0", 0)}
-              className="app-a-secondary-button app-a-focus-ring min-h-[40px] px-3 py-2 text-[13px] font-medium gap-1.5 whitespace-nowrap text-[#0071E3] dark:text-[#0A84FF]"
-            >
-              <Split className="h-3.5 w-3.5" />
-              <span>{t.breakDownAction}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setEditingStep("featured-next-step");
-                setEditingStepText(strategy?.nextStep || stepText);
-                setStepEditError(false);
-              }}
-              className="app-a-secondary-button app-a-focus-ring min-h-[40px] px-3 py-2 text-[13px] font-medium gap-1.5 text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white whitespace-nowrap"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              <span>{t.editStep}</span>
-            </button>
           </div>
-
-          {/* Substeps container for featured step */}
-          {(breakdowns["m0-s0"]?.length || breakdowns["featured-next-step"]?.length) ? (
-            <div className="mt-3 border-l-2 border-[#0071E3]/30 pl-3 dark:border-[#0A84FF]/30 space-y-1.5">
-              {(breakdowns["m0-s0"] || breakdowns["featured-next-step"] || []).map((substep, subIdx) => {
-                const childKey = `m0-s0-d${subIdx}`;
-                return <div key={childKey}>{renderStepItem(substep, childKey, depth + 1, { stepNumber: `1.1.${subIdx + 1}` })}</div>;
-              })}
-            </div>
-          ) : null}
-        </div>
-      );
-    }
-
-    // 2. Standard Milestone Step Card
-    return (
-      <div className="group relative my-1 rounded-xl border border-black/[0.06] bg-white p-3 sm:p-3.5 transition-all hover:border-black/15 dark:border-white/10 dark:bg-[#1E1E20] dark:hover:border-white/20 shadow-xs">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex flex-1 items-start gap-2.5 min-w-0">
-            {hasSubsteps && (
-              <button
-                type="button"
-                onClick={() => setCollapsedKeys((prev) => ({ ...prev, [key]: !prev[key] }))}
-                className="app-a-focus-ring mt-0.5 rounded p-0.5 text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white shrink-0"
-                aria-label={isCollapsed ? t.show : t.hide}
-              >
-                {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </button>
-            )}
-
-            {stepNumber && !hasSubsteps && (
-              <span className="flex h-5 min-w-5 px-1.5 shrink-0 items-center justify-center rounded-md bg-black/5 text-[11px] font-bold text-[#6E6E73] dark:bg-white/10 dark:text-[#AEAEB2] mt-0.5">
-                {stepNumber}
-              </span>
-            )}
-
-            <div className="min-w-0 flex-1">
-              {isEditing ? (
-                <div>
-                  <div className="relative flex items-center">
-                    <input
-                      autoFocus
-                      value={editingStepText}
-                      maxLength={240}
-                      onChange={(event) => {
-                        setEditingStepText(event.target.value);
-                        setStepEditError(false);
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Escape") setEditingStep(null);
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          void saveStepEdit(stepText, key);
-                        }
-                      }}
-                      className="app-a-field app-a-focus-ring w-full px-3 pr-10 py-2 text-[14px]"
-                      aria-label={t.editStep}
-                    />
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
-                      <InputCopyButton text={editingStepText} language={language} size="sm" />
-                    </div>
-                  </div>
-                  {stepEditError ? (
-                    <p role="alert" className="mt-1 text-[12px] text-[#FF3B30]">
-                      {t.stepRequired}
-                    </p>
-                  ) : null}
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void saveStepEdit(stepText, key)}
-                      className="app-a-primary-button min-h-8 px-3 text-[12px]"
-                    >
-                      <Save className="h-3.5 w-3.5" />
-                      {t.saveStep}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingStep(null);
-                        setStepEditError(false);
-                      }}
-                      className="app-a-secondary-button min-h-8 px-3 text-[12px]"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                      {t.cancelStep}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <span className="break-words text-[14px] sm:text-[14.5px] font-medium text-[#1C1C1E] dark:text-[#F2F2F7] leading-relaxed block">
-                  {stepText}
-                </span>
-              )}
-
-              {hasSubsteps && (
-                <span className="mt-1 inline-flex items-center rounded-md bg-black/5 px-2 py-0.5 text-[11px] font-medium text-[#6E6E73] dark:bg-white/10 dark:text-[#AEAEB2]">
-                  {t.substepsCount(breakdowns[key].length)}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Action buttons on standard step */}
-          {!isEditing ? (
-            <div className="flex items-center gap-1 shrink-0">
-              <button
-                type="button"
-                onClick={() => setRefiningStep({ key, text: stepText })}
-                className="hidden sm:inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[12px] font-medium text-[#AF52DE] hover:bg-[#AF52DE]/10 transition-colors whitespace-nowrap"
-                title={t.refineWithAi}
-              >
-                <Compass className="h-3.5 w-3.5" />
-                <span>{t.refineWithAi}</span>
-              </button>
-
-              {/* Overflow Menu */}
-              <div className="relative" data-step-menu>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setOpenMenuKey((prev) => (prev === key ? null : key));
-                  }}
-                  className="app-a-focus-ring rounded-lg p-1 text-[#8E8E93] hover:bg-black/10 hover:text-black dark:hover:bg-white/10 dark:hover:text-white"
-                  aria-label={t.stepOptions}
-                  aria-expanded={isMenuOpen}
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </button>
-
-                {/* Overflow Dropdown */}
-                {isMenuOpen && (
-                  <div
-                    role="menu"
-                    className="app-a-surface-elevated absolute right-0 top-full z-20 mt-1 min-w-[200px] rounded-xl border border-black/10 bg-white p-1 shadow-lg dark:border-white/15 dark:bg-[#2C2C2E]"
-                  >
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setEditingStep(key);
-                        setEditingStepText(stepText);
-                        setStepEditError(false);
-                        setOpenMenuKey(null);
-                      }}
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-black hover:bg-black/5 dark:text-white dark:hover:bg-white/5"
-                    >
-                      <Pencil className="h-4 w-4 text-[#0071E3] dark:text-[#2997ff]" />
-                      {t.editStep}
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setRefiningStep({ key, text: stepText });
-                        setOpenMenuKey(null);
-                      }}
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-black hover:bg-black/5 dark:text-white dark:hover:bg-white/5 sm:hidden"
-                    >
-                      <Compass className="h-4 w-4 text-[#AF52DE]" />
-                      {t.refineWithAi}
-                    </button>
-                    {depth < 2 ? (
-                      <button
-                        type="button"
-                        role="menuitem"
-                        disabled={isChecking}
-                        onClick={() => void breakDown(stepText, key, depth as 0 | 1)}
-                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-black hover:bg-black/5 dark:text-white dark:hover:bg-white/5 disabled:opacity-50"
-                      >
-                        <Split className="h-4 w-4 text-[#0071E3] dark:text-[#2997ff]" />
-                        {t.breakDownAction}
-                      </button>
-                    ) : (
-                      <div className="px-3 py-2 text-[12px] text-[#8E8E93]" aria-disabled="true">
-                        {t.maxDepthReached}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : null}
-        </div>
+        ) : null}
 
         {/* Status Indicators */}
         {isChecking && (
-          <p className="mt-1 flex items-center gap-1.5 text-[12px] text-[#0071E3] dark:text-[#2997ff]">
+          <p className="mt-2.5 flex items-center gap-1.5 text-[12.5px] font-medium text-[#0071E3] dark:text-[#2997ff]">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             {t.checking}
           </p>
         )}
 
         {isConcrete && (
-          <p className="mt-1 text-[12px] text-[#1A7F37] dark:text-[#30D158]">
-            {t.alreadyActionable}
-          </p>
+          <div className="mt-2.5 flex items-center gap-2 rounded-xl bg-[#1A7F37]/10 p-2.5 text-[12.5px] font-medium text-[#1A7F37] dark:bg-[#30D158]/10 dark:text-[#30D158]">
+            <Check className="h-4 w-4 shrink-0" />
+            <span>{t.alreadyActionable}</span>
+          </div>
         )}
 
         {/* Breakdown AI Proposal Confirmation Card */}
         {breakdownProposal && breakdownProposal.key === key && (
-          <div className="mt-2.5 rounded-xl border border-[#0071E3]/20 bg-[#0071E3]/5 p-3 dark:border-[#0A84FF]/25 dark:bg-[#0A84FF]/10">
-            <p className="text-[12px] font-semibold text-[#0071E3] dark:text-[#0A84FF]">
+          <div className="mt-3.5 rounded-xl border border-[#0071E3]/30 bg-[#0071E3]/[0.06] p-3.5 sm:p-4 dark:border-[#0A84FF]/30 dark:bg-[#0A84FF]/10 space-y-2.5">
+            <p className="text-[13px] font-bold text-[#0071E3] dark:text-[#0A84FF]">
               {t.breakdownProposalTitle}
             </p>
-            <ul className="mt-1.5 space-y-1 pl-4 list-disc text-[13px] text-black dark:text-white">
+            <ul className="space-y-1.5 pl-4 list-disc text-[13px] text-black dark:text-white leading-snug font-medium">
               {breakdownProposal.substeps.map((sub, sIdx) => (
-                <li key={sIdx} className="leading-snug">
+                <li key={sIdx} className="break-words">
                   {sub}
                 </li>
               ))}
             </ul>
-            <div className="mt-2.5 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => void handleAcceptBreakdown(breakdownProposal.key, breakdownProposal.substeps)}
-                className="app-a-primary-button min-h-8 px-3 text-[12px] font-semibold"
+                className="app-a-primary-button !min-h-8 px-3 text-[12px] font-semibold"
               >
                 <Check className="h-3.5 w-3.5" />
                 {t.acceptBreakdown}
@@ -1486,7 +1682,7 @@ export default function VisionStrategyBuilder({
               <button
                 type="button"
                 onClick={handleRejectBreakdown}
-                className="app-a-secondary-button min-h-8 px-3 text-[12px]"
+                className="app-a-secondary-button !min-h-8 px-3 text-[12px]"
               >
                 <X className="h-3.5 w-3.5" />
                 {t.rejectBreakdown}
@@ -1495,13 +1691,85 @@ export default function VisionStrategyBuilder({
           </div>
         )}
 
-        {/* Substeps Container */}
+        {/* Decomposed Smaller Steps - Clean, un-nested flat list directly within card */}
         {hasSubsteps && !isCollapsed && (
-          <div className="mt-2.5 border-l-2 border-black/10 pl-3 dark:border-white/15 space-y-1.5">
-            {breakdowns[key].map((substep, subIdx) => {
-              const childKey = `${key}-d${subIdx}`;
-              return <div key={childKey}>{renderStepItem(substep, childKey, depth + 1, { stepNumber: `${stepNumber || 1}.${subIdx + 1}` })}</div>;
-            })}
+          <div className="mt-4 pt-3.5 border-t border-black/[0.08] dark:border-white/10 space-y-2.5">
+            <div className="flex items-center justify-between pb-0.5">
+              <div className="flex items-center gap-2 text-[12.5px] font-bold text-[#0071E3] dark:text-[#0A84FF]">
+                <Split className="h-3.5 w-3.5" />
+                <span>{t.substepsTitle} ({breakdowns[key].length})</span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              {breakdowns[key].map((substep, subIdx) => {
+                const childKey = `${key}-d${subIdx}`;
+                const isChildDone = Boolean(completedSteps[childKey]);
+                const isChildInToday = addedStepKeys[childKey] || todayPlanItems.includes(substep.trim().toLowerCase());
+                const childLabel = `${stepNumber || "1"}.${String.fromCharCode(97 + subIdx)}`;
+
+                return (
+                  <div
+                    key={childKey}
+                    className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl px-3 py-2.5 transition-colors ${
+                      isChildDone
+                        ? "bg-[#34C759]/[0.06] dark:bg-[#30D158]/[0.08]"
+                        : "bg-black/[0.03] hover:bg-black/[0.05] dark:bg-white/[0.04] dark:hover:bg-white/[0.07]"
+                    }`}
+                  >
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => toggleStepCompleted(childKey)}
+                        aria-label={isChildDone ? t.stepCompletedBadge : t.activeNextStep}
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border mt-0.5 transition-all ${
+                          isChildDone
+                            ? "border-[#34C759] bg-[#34C759] text-white"
+                            : "border-black/25 bg-transparent hover:border-[#34C759] hover:bg-[#34C759]/10 dark:border-white/25"
+                        }`}
+                      >
+                        <Check className={`h-3 w-3 ${isChildDone ? "opacity-100" : "opacity-0"}`} />
+                      </button>
+                      <span className="rounded bg-black/10 px-1.5 py-0.5 text-[10px] font-bold text-[#6E6E73] dark:bg-white/15 dark:text-[#AEAEB2] shrink-0 mt-0.5">
+                        {childLabel}
+                      </span>
+                      <span className={`text-[13.5px] font-medium leading-snug break-words ${
+                        isChildDone ? "line-through text-[#8E8E93] dark:text-[#636366]" : "text-black dark:text-white"
+                      }`}>
+                        {substep}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0 pl-7 sm:pl-0">
+                      {isChildInToday ? (
+                        <span className="inline-flex items-center gap-1 rounded-lg bg-[#34C759]/15 px-2.5 py-1 text-[11px] font-semibold text-[#248A3D] dark:text-[#30D158]">
+                          <Check className="h-3 w-3" />
+                          {t.inTodayPlanQuick}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={addingStepKey === childKey}
+                          onClick={() => void handleAddStepToToday(substep, childKey)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-black/10 bg-white hover:bg-black/[0.04] dark:border-white/10 dark:bg-[#2C2C2E] dark:hover:bg-white/[0.08] px-2.5 py-1 text-[11px] font-semibold text-black dark:text-white transition-colors"
+                        >
+                          {addingStepKey === childKey ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                          <span>{t.addToTodayQuick}</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => void handleRemoveSubstep(key, subIdx)}
+                        className="rounded-lg p-1.5 text-[#8E8E93] hover:bg-[#FF3B30]/10 hover:text-[#FF3B30] transition-colors"
+                        title={t.deleteSubstep}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
@@ -1630,119 +1898,199 @@ export default function VisionStrategyBuilder({
           </section>
 
           {/* 3. AKCIONI PLAN PO ETAPAMA I KORACI (OPEN & PROMINENT ROADMAP) */}
-          <section className="app-a-surface rounded-2xl border border-black/10 p-4 sm:p-5 dark:border-white/15">
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-black/[0.06] dark:border-white/10">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#0071E3]/10 text-[#0071E3] dark:bg-[#0A84FF]/20 dark:text-[#0A84FF]">
-                  <Route className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="text-[15px] sm:text-[16px] font-bold text-black dark:text-white">
-                    {t.actionRoadmap}
-                  </h3>
-                  <p className="text-[12px] text-[#6E6E73] dark:text-[#AEAEB2]">
-                    {t.fullPath(totalMilestonesCount)}
-                  </p>
-                </div>
-              </div>
+          {(() => {
+            const allMilestoneStepKeys: string[] = [];
+            strategy.milestones.forEach((m, mIdx) => {
+              m.steps.forEach((_, sIdx) => {
+                allMilestoneStepKeys.push(`m${mIdx}-s${sIdx}`);
+              });
+            });
+            const totalStepsCount = allMilestoneStepKeys.length;
+            const completedCount = allMilestoneStepKeys.filter((k) => completedSteps[k]).length;
+            const progressPct = totalStepsCount > 0 ? Math.round((completedCount / totalStepsCount) * 100) : 0;
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={toggleAllMilestones}
-                  className="app-a-secondary-button app-a-focus-ring min-h-8 px-3 text-[12px] font-medium"
-                >
-                  {areAllMilestonesOpen ? t.collapseAll : t.expandAll}
-                </button>
-              </div>
-            </div>
+            return (
+              <div className="space-y-6">
+                {/* 3.1 ROADMAP PROGRESS & CONTROLS CARD */}
+                <div className="app-a-surface rounded-2xl border border-black/10 p-4 sm:p-5 dark:border-white/15 shadow-xs">
+                  {/* Header Row: Title & Collapse Button */}
+                  <div className="flex items-center justify-between gap-2.5 pb-3 border-b border-black/[0.06] dark:border-white/10">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#0071E3]/10 text-[#0071E3] dark:bg-[#0A84FF]/20 dark:text-[#0A84FF]">
+                        <Route className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-[15px] sm:text-[16px] font-bold text-black dark:text-white truncate">
+                          {t.actionRoadmap}
+                        </h3>
+                        <p className="text-[12px] text-[#6E6E73] dark:text-[#AEAEB2] truncate">
+                          {t.fullPath(totalMilestonesCount)} • {t.overallStats(completedCount, totalStepsCount, progressPct)}
+                        </p>
+                      </div>
+                    </div>
 
-            <div className="mt-4 space-y-4">
-              {strategy.milestones.map((milestone, index) => {
-                const isMilestoneOpen = Boolean(openMilestones[index]);
-                const isFirstMilestone = index === 0;
-
-                return (
-                  <div
-                    key={`${milestone.title}-${index}`}
-                    className={`rounded-2xl border transition-all overflow-hidden ${
-                      isFirstMilestone
-                        ? "border-[#0071E3]/30 bg-[#0071E3]/[0.015] dark:border-[#0A84FF]/30 dark:bg-[#0A84FF]/[0.02]"
-                        : "border-black/[0.08] bg-black/[0.01] dark:border-white/10 dark:bg-white/[0.02]"
-                    }`}
-                  >
-                    {/* Milestone Header */}
                     <button
                       type="button"
-                      onClick={() => toggleMilestone(index)}
-                      aria-expanded={isMilestoneOpen}
-                      className="app-a-focus-ring flex min-h-[52px] w-full items-center justify-between gap-3 p-3.5 sm:p-4 text-left transition-colors hover:bg-black/[0.02] dark:hover:bg-white/[0.04]"
+                      onClick={toggleAllMilestones}
+                      className="app-a-secondary-button app-a-focus-ring min-h-8 px-2.5 sm:px-3 text-[12px] font-medium whitespace-nowrap shrink-0"
                     >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <span
-                          className={`flex h-6 px-2.5 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold ${
-                            isFirstMilestone
-                              ? "bg-[#0071E3] text-white"
-                              : "bg-black/10 text-black dark:bg-white/15 dark:text-white"
-                          }`}
-                        >
-                          {t.stage} {index + 1}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block break-words text-[14px] sm:text-[15px] font-bold text-black dark:text-white leading-snug">
-                            {milestone.title}
-                          </span>
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="rounded-md bg-black/5 px-2 py-0.5 text-[11px] font-medium text-[#6E6E73] dark:bg-white/10 dark:text-[#AEAEB2] whitespace-nowrap">
-                          {t.milestoneStepsCount(milestone.steps.length)}
-                        </span>
-                        <ChevronDown
-                          className={`h-4 w-4 text-[#8E8E93] transition-transform duration-200 ${
-                            isMilestoneOpen ? "rotate-180" : ""
-                          }`}
-                        />
-                      </div>
+                      {areAllMilestonesOpen ? t.collapseAll : t.expandAll}
                     </button>
+                  </div>
 
-                    {/* Expanded Milestone Content */}
-                    {isMilestoneOpen ? (
-                      <div className="border-t border-black/[0.06] p-3.5 sm:p-4 dark:border-white/10 space-y-3">
-                        {/* Result / Deliverable */}
+                  {/* Filter Tabs Row */}
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    {/* Status Filter Chips */}
+                    <div className="inline-flex items-center gap-1 rounded-xl bg-black/5 p-1 dark:bg-white/10 max-w-full overflow-x-auto">
+                      <button
+                        type="button"
+                        onClick={() => setFilterStatus("all")}
+                        className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap transition-all ${
+                          filterStatus === "all"
+                            ? "bg-white text-black shadow-2xs dark:bg-[#1E1E20] dark:text-white"
+                            : "text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white"
+                        }`}
+                      >
+                        {t.filterAll}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFilterStatus("active")}
+                        className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap transition-all ${
+                          filterStatus === "active"
+                            ? "bg-white text-black shadow-2xs dark:bg-[#1E1E20] dark:text-white"
+                            : "text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white"
+                        }`}
+                      >
+                        {t.filterActive}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFilterStatus("completed")}
+                        className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap transition-all ${
+                          filterStatus === "completed"
+                            ? "bg-white text-[#34C759] shadow-2xs dark:bg-[#1E1E20] dark:text-[#30D158]"
+                            : "text-[#6E6E73] hover:text-black dark:text-[#AEAEB2] dark:hover:text-white"
+                        }`}
+                      >
+                        {t.filterCompleted}
+                      </button>
+                    </div>
+
+                    <div className="text-[12px] font-semibold text-[#6E6E73] dark:text-[#AEAEB2]">
+                      {progressPct}% {language === "sr" ? "završeno" : "completed"}
+                    </div>
+                  </div>
+
+                  {/* Visual Progress Bar Track */}
+                  <div className="mt-2.5">
+                    <div className="h-2 w-full rounded-full bg-black/10 dark:bg-white/15 overflow-hidden">
+                      <div
+                        className="h-full bg-[#34C759] transition-all duration-300 rounded-full"
+                        style={{ width: `${progressPct}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3.2 STAGES & STEP CARDS (EACH STEP IS ITS OWN STANDALONE CARD) */}
+                <div className="space-y-7">
+                  {strategy.milestones.map((milestone, index) => {
+                    const isMilestoneOpen = Boolean(openMilestones[index]);
+                    const isFirstMilestone = index === 0;
+                    const stageDoneCount = milestone.steps.filter((_, sIdx) => completedSteps[`m${index}-s${sIdx}`]).length;
+                    const filteredSteps = milestone.steps
+                      .map((step, stepIndex) => ({ step, stepIndex, key: `m${index}-s${stepIndex}` }))
+                      .filter(({ key }) => {
+                        if (filterStatus === "active") return !completedSteps[key];
+                        if (filterStatus === "completed") return Boolean(completedSteps[key]);
+                        return true;
+                      });
+
+                    return (
+                      <div key={`${milestone.title}-${index}`} className="space-y-3">
+                        {/* Stage Divider Header */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 px-1 pt-1 pb-1">
+                          <button
+                            type="button"
+                            onClick={() => toggleMilestone(index)}
+                            className="flex items-center gap-2.5 text-left group"
+                            aria-expanded={isMilestoneOpen}
+                          >
+                            <GrowthPathArt
+                              variant="medallion"
+                              medallionType={(["stones", "waves", "plant", "sun"] as const)[index % 4]}
+                              size={24}
+                              className="shrink-0"
+                            />
+                            <span
+                              className={`flex h-6 px-2 shrink-0 items-center justify-center rounded-md text-[11px] font-bold ${
+                                isFirstMilestone
+                                  ? "bg-[#0071E3] text-white"
+                                  : "bg-black/10 text-black dark:bg-white/15 dark:text-white"
+                              }`}
+                            >
+                              {t.stage} {index + 1}
+                            </span>
+                            <h4 className="text-[15px] sm:text-[16px] font-bold text-black dark:text-white group-hover:text-[#0071E3] dark:group-hover:text-[#0A84FF] transition-colors">
+                              {milestone.title}
+                            </h4>
+                            <ChevronDown
+                              className={`h-4 w-4 text-[#8E8E93] transition-transform duration-200 ${
+                                isMilestoneOpen ? "rotate-180" : ""
+                              }`}
+                            />
+                          </button>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="rounded-md bg-black/5 px-2 py-0.5 text-[11px] font-medium text-[#6E6E73] dark:bg-white/10 dark:text-[#AEAEB2] whitespace-nowrap">
+                              {t.stageProgress(stageDoneCount, milestone.steps.length)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Deliverable / Goal of stage */}
                         {milestone.result ? (
-                          <div className="flex items-start gap-2.5 rounded-xl border border-black/[0.06] bg-white/80 p-3 dark:border-white/10 dark:bg-white/[0.03]">
-                            <Target className="h-4 w-4 text-[#0071E3] dark:text-[#0A84FF] shrink-0 mt-0.5" />
-                            <p className="text-[13px] leading-relaxed text-[#3A3A3C] dark:text-[#D1D1D6] break-words">
-                              <strong className="font-semibold text-black dark:text-white mr-1.5">{t.milestoneGoal}</strong>
+                          <div className="flex items-center gap-2 px-1 py-0.5 text-[12.5px] text-[#6E6E73] dark:text-[#AEAEB2]">
+                            <Target className="h-3.5 w-3.5 text-[#0071E3] dark:text-[#0A84FF] shrink-0" />
+                            <p className="truncate">
+                              <strong className="font-semibold text-black dark:text-white mr-1">{t.milestoneGoal}:</strong>
                               {milestone.result}
                             </p>
                           </div>
                         ) : null}
 
-                        {/* Steps inside this milestone */}
-                        <div className="space-y-2.5">
-                          {milestone.steps.map((step, stepIndex) => {
-                            const key = `m${index}-s${stepIndex}`;
-                            const isFeatured = isFirstMilestone && stepIndex === 0;
-                            return (
-                              <div key={key}>
-                                {renderStepItem(step, key, 0, {
-                                  isFeaturedNextStep: isFeatured,
-                                  stepNumber: `${index + 1}.${stepIndex + 1}`,
-                                })}
+                        {/* Direct Step Cards: EACH STEP IS ITS OWN STANDALONE CARD */}
+                        {isMilestoneOpen && (
+                          <div className="space-y-3 pt-1">
+                            {filteredSteps.length > 0 ? (
+                              filteredSteps.map(({ step, stepIndex, key }) => {
+                                const isFeatured = isFirstMilestone && stepIndex === 0;
+                                return (
+                                  <div key={key}>
+                                    {renderStepItem(step, key, 0, {
+                                      isFeaturedNextStep: isFeatured,
+                                      stepNumber: `${index + 1}.${stepIndex + 1}`,
+                                    })}
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <div className="app-a-surface rounded-2xl border border-dashed border-black/15 p-4 text-center dark:border-white/15">
+                                <p className="text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]">
+                                  {filterStatus === "completed" ? t.emptyCompletedFilter : t.emptyActiveFilter}
+                                </p>
                               </div>
-                            );
-                          })}
-                        </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* 4. RIZICI I PRETPOSTAVKE (COLLAPSIBLE / COMPACT) */}
           {totalRisksCount > 0 ? (
@@ -1787,17 +2135,159 @@ export default function VisionStrategyBuilder({
                   ) : null}
 
                   {strategy.assumptions?.length ? (
-                    <div className={strategy.risks?.length ? "pt-2 border-t border-black/[0.06] dark:border-white/10" : ""}>
-                      <p className="text-[12px] font-bold uppercase tracking-[0.06em] text-[#0071E3] dark:text-[#0A84FF]">
-                        {t.assumptions}
-                      </p>
-                      <ul className="mt-1.5 list-disc pl-5 text-[13px] text-[#6E6E73] dark:text-[#AEAEB2] space-y-1">
-                        {strategy.assumptions.map((assumption) => (
-                          <li key={assumption} className="break-words leading-relaxed">
-                            {assumption}
-                          </li>
-                        ))}
-                      </ul>
+                    <div className={strategy.risks?.length ? "pt-4 border-t border-black/[0.06] dark:border-white/10 space-y-3" : "space-y-3"}>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <SlidersHorizontal className="h-4 w-4 text-[#0071E3] dark:text-[#0A84FF]" />
+                            <p className="text-[13px] font-bold text-black dark:text-white">
+                              {t.verifyAssumptionsTitle}
+                            </p>
+                          </div>
+                          <p className="mt-0.5 text-[12px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2]">
+                            {t.verifyAssumptionsSubtitle}
+                          </p>
+                        </div>
+                        {strategy.assumptions.some((a) => Boolean(assumptionAnswers[a]?.trim())) ? (
+                          <span className="self-start sm:self-auto inline-flex items-center gap-1 rounded-full bg-[#1A7F37]/10 px-2.5 py-0.5 text-[11px] font-medium text-[#1A7F37] dark:bg-[#30D158]/20 dark:text-[#30D158]">
+                            <CheckCircle2 className="h-3 w-3" />
+                            {strategy.assumptions.filter((a) => Boolean(assumptionAnswers[a]?.trim())).length} / {strategy.assumptions.length} {t.answeredBadge.toLowerCase()}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      {recalibrateFeedback ? (
+                        <div className="rounded-xl border border-[#1A7F37]/30 bg-[#1A7F37]/[0.08] p-3 text-[13px] text-[#1A7F37] dark:border-[#30D158]/30 dark:bg-[#30D158]/[0.12] dark:text-[#30D158] flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 shrink-0" />
+                          <span>{t.recalibrateSuccess}</span>
+                        </div>
+                      ) : null}
+
+                      <div className="space-y-3 pt-1">
+                        {strategy.assumptions.map((assumption, idx) => {
+                          const currentAnswer = assumptionAnswers[assumption] || "";
+                          const isAnswered = currentAnswer.trim().length > 0;
+                          return (
+                            <div
+                              key={assumption}
+                              className={`rounded-xl border transition-colors p-3.5 ${
+                                isAnswered
+                                  ? "border-[#0071E3]/30 bg-[#0071E3]/[0.02] dark:border-[#0A84FF]/30 dark:bg-[#0A84FF]/[0.03]"
+                                  : "border-black/10 bg-black/[0.015] dark:border-white/10 dark:bg-white/[0.02]"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <label className="block text-left text-[13px] font-semibold text-black dark:text-white leading-snug">
+                                  <span className="text-[#0071E3] dark:text-[#0A84FF] mr-1.5 font-bold">
+                                    {idx + 1}.
+                                  </span>
+                                  {assumption}
+                                </label>
+                                {isAnswered ? (
+                                  <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-[#1A7F37]/10 px-1.5 py-0.5 text-[10px] font-medium text-[#1A7F37] dark:bg-[#30D158]/20 dark:text-[#30D158]">
+                                    <CheckCircle2 className="h-2.5 w-2.5" />
+                                    {t.answeredBadge}
+                                  </span>
+                                ) : null}
+                              </div>
+
+                              {/* Quick presets */}
+                              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                                <span className="text-[11px] text-[#8E8E93] mr-0.5">
+                                  {t.quickPickLabel}
+                                </span>
+                                {t.quickPresets.map((preset) => (
+                                  <button
+                                    key={preset}
+                                    type="button"
+                                    onClick={() => {
+                                      setAssumptionAnswers((prev) => ({
+                                        ...prev,
+                                        [assumption]: preset,
+                                      }));
+                                      setSaved(false);
+                                    }}
+                                    className={`rounded-lg border px-2 py-0.5 text-[11px] font-medium transition-all ${
+                                      currentAnswer === preset
+                                        ? "border-[#0071E3] bg-[#0071E3]/10 text-[#0071E3] dark:border-[#0A84FF] dark:bg-[#0A84FF]/20 dark:text-[#0A84FF]"
+                                        : "border-black/10 bg-white/60 text-[#6E6E73] hover:border-black/25 hover:text-black dark:border-white/10 dark:bg-white/5 dark:text-[#AEAEB2] dark:hover:text-white"
+                                    }`}
+                                  >
+                                    {preset}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {/* Custom detail textarea */}
+                              <div className="relative mt-2">
+                                <textarea
+                                  value={currentAnswer}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setAssumptionAnswers((prev) => ({
+                                      ...prev,
+                                      [assumption]: val,
+                                    }));
+                                    setSaved(false);
+                                  }}
+                                  rows={2}
+                                  maxLength={800}
+                                  placeholder={t.realityPlaceholder}
+                                  className="app-a-field app-a-focus-ring w-full resize-y rounded-xl p-2.5 pr-14 text-[13px] font-normal leading-relaxed"
+                                />
+                                <div className="absolute right-2 top-2 flex items-center gap-1">
+                                  <InputCopyButton
+                                    text={currentAnswer}
+                                    language={language}
+                                    size="sm"
+                                  />
+                                  <VoiceInputButton
+                                    language={language}
+                                    value={currentAnswer}
+                                    onChange={(val) => {
+                                      setAssumptionAnswers((prev) => ({
+                                        ...prev,
+                                        [assumption]: val,
+                                      }));
+                                      setSaved(false);
+                                    }}
+                                    maxLength={800}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Recalibrate CTA button */}
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          disabled={
+                            !strategy.assumptions.some((a) => Boolean(assumptionAnswers[a]?.trim())) ||
+                            isRecalibrating ||
+                            loading
+                          }
+                          onClick={() => void handleRecalibrateWithAssumptions()}
+                          className="app-a-primary-button app-a-focus-ring w-full justify-center gap-2 py-2.5 text-[13px] font-semibold disabled:opacity-50"
+                        >
+                          {isRecalibrating ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span>{t.recalibratingAction}</span>
+                            </>
+                          ) : (
+                            <>
+                              <SlidersHorizontal className="h-4 w-4" />
+                              <span>{t.recalibrateAction}</span>
+                            </>
+                          )}
+                        </button>
+                        <p className="mt-1.5 text-center text-[11px] text-[#8E8E93]">
+                          {t.recalibrateHint}
+                        </p>
+                      </div>
                     </div>
                   ) : null}
                 </div>

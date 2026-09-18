@@ -39,12 +39,18 @@ export function extractExplicitTimeMinutes(item: {
 
 function parseTimeString(str: string): number | null {
   const s = str.trim().toLowerCase();
-  // 24-hour match: 14:30, 14:30h, 09:00, 15:00
+  // 24-hour match with minutes: 14:30, 14:30h, 09:00, 15:00
   const m24 = s.match(/(?:^|\b)(\d{1,2}):(\d{2})\s*(?:h|sati|časova)?(?:\b|$)/);
   if (m24) {
     const h = parseInt(m24[1], 10);
     const m = parseInt(m24[2], 10);
     if (h >= 0 && h < 24 && m >= 0 && m < 60) return h * 60 + m;
+  }
+  // 24-hour match with just hour: 12h, 16h, 14h, 12 sati
+  const m24HourOnly = s.match(/(?:^|\b)(\d{1,2})\s*(?:h|sati|časova)(?:\b|$)/);
+  if (m24HourOnly) {
+    const h = parseInt(m24HourOnly[1], 10);
+    if (h >= 0 && h < 24) return h * 60;
   }
   // 12-hour match: 2:30 pm, 3 pm, 10 am
   const m12 = s.match(/(?:^|\b)(\d{1,2})(?::(\d{2}))?\s*(am|pm)(?:\b|$)/);
@@ -62,10 +68,22 @@ function parseTimeString(str: string): number | null {
 }
 
 function parseExplicitTimeFromText(text: string): number | null {
-  // Matches explicit markers like "u 15:00", "at 14:30", "15:00 - sastanak", "pregled u 10:00"
-  const markerMatch = text.match(/(?:(?:u|at|around|oko|od|sa početkom u)\s+|^)(\d{1,2}):(\d{2})(?:\s*(?:h|sati|am|pm))?/i);
+  // 1. Matches explicit markers with colon: "u 15:00", "at 14:30", "oko 16:00", "pre 12:00", "do 12:00"
+  const markerMatch = text.match(/(?:(?:u|at|around|oko|od|pre|do|before|by|sa početkom u)\s+|^)(\d{1,2}):(\d{2})(?:\s*(?:h|sati|am|pm))?/i);
   if (markerMatch) {
     return parseTimeString(markerMatch[0]);
+  }
+  // 2. Matches hour-only markers: "pre 12", "do 12", "oko 16h", "u 16h", "oko 16", "at 5pm", "before 12"
+  const hourMatch = text.match(/(?:(?:u|at|around|oko|od|pre|do|before|by)\s+)(\d{1,2})\s*(?:h|sati|časova|am|pm)?(?:\b|$)/i);
+  if (hourMatch) {
+    const rawVal = hourMatch[1];
+    const unit = hourMatch[0].toLowerCase();
+    let h = parseInt(rawVal, 10);
+    if (!isNaN(h)) {
+      if (unit.includes("pm") && h < 12) h += 12;
+      if (unit.includes("am") && h === 12) h = 0;
+      if (h >= 0 && h < 24) return h * 60;
+    }
   }
   return null;
 }

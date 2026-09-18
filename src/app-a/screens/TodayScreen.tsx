@@ -11,7 +11,7 @@ import { useTodayFlow } from './todayFlow';
 import type { DailyResetApiClient } from '../api';
 import type { DailyResetDemoConfig } from '../demo/dailyResetDemo';
 import type { DailyResetData } from '../types';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppAAuth } from '../auth/useAppAAuth';
 import {
   type AppADailyPlanDocument,
@@ -20,13 +20,18 @@ import {
   getLocalDateKeyInTimeZone,
   planDraftFromDocument,
 } from '../persistence/dailyPlanDocument';
-import { getEffectiveTimeZone } from '../settings/preferences';
+import { getEffectiveTimeZone, getEffectiveDayResetHour } from '../settings/preferences';
 import {
   loadConfirmedDailyPlan,
   saveDailyPlanCompletion,
   extractDiagnosticFromSaveError,
   PersistenceSaveDiagnostic,
 } from '../persistence/dailyPlanRepository';
+import {
+  clearPersistentBrainDump,
+  loadPersistentBrainDump,
+  savePersistentBrainDump,
+} from '../persistence/brainDumpPersistence';
 import type { DailyPlanDraft } from '../domain/daily-reset/contracts';
 import { normalizeCompletedItemIds, toggleCompletedItemId } from './todayExecution';
 import ResetSessions from '../components/reset/ResetSessions';
@@ -81,7 +86,14 @@ function isAppAGuestUser(user: { uid?: string } | null | undefined): boolean {
 export default function TodayScreen({ language, client, demoConfig, initialData, preferences, onOpenVision }: Props) {
   const t = APP_A_TRANSLATIONS[language] || APP_A_TRANSLATIONS.en;
   const effectiveTimeZone = getEffectiveTimeZone(preferences);
+  const effectiveDayResetHour = getEffectiveDayResetHour(preferences);
   const { user, authReady, signInWithGoogle } = useAppAAuth();
+  const effectiveInitialData = useMemo(() => {
+    if (initialData?.brainDump !== undefined) return initialData;
+    const persisted = loadPersistentBrainDump(user?.uid);
+    if (!persisted) return initialData;
+    return { ...initialData, brainDump: persisted };
+  }, [initialData, user?.uid]);
   const {
     state,
     submitInitial,
@@ -96,7 +108,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     reset,
     updateInputData,
     updateReviewDraft,
-  } = useTodayFlow(language, client, initialData, demoConfig ? undefined : `${user?.uid || 'guest'}:today:${getLocalDateKeyInTimeZone(effectiveTimeZone)}`);
+  } = useTodayFlow(language, client, effectiveInitialData, demoConfig ? undefined : `${user?.uid || 'guest'}:today:${getLocalDateKeyInTimeZone(effectiveTimeZone, undefined, effectiveDayResetHour)}`);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [formVersion, setFormVersion] = useState(0);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -107,7 +119,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
   const [completedItemIds, setCompletedItemIds] = useState<string[]>([]);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [executionError, setExecutionError] = useState<string | null>(null);
-  const [activePlanDate, setActivePlanDate] = useState(() => getLocalDateKeyInTimeZone(effectiveTimeZone));
+  const [activePlanDate, setActivePlanDate] = useState(() => getLocalDateKeyInTimeZone(effectiveTimeZone, undefined, effectiveDayResetHour));
   const [rolloverCandidates, setRolloverCandidates] = useState<UnfinishedRolloverCandidate[]>([]);
   const [selectedExecutionRolloverIds, setSelectedExecutionRolloverIds] = useState<string[]>([]);
   const [reevaluationCandidates, setReevaluationCandidates] = useState<UnfinishedRolloverCandidate[] | null>(null);
@@ -119,8 +131,8 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
   const completionLockRef = useRef<{ itemId: string; localDate: string; token: number } | null>(null);
   const completionTokenRef = useRef(0);
   const planRevision = useRef(0);
-  const liveState = useRef({ unsaved: state.unsaved, viewMode, updatingItemId });
-  liveState.current = { unsaved: state.unsaved, viewMode, updatingItemId };
+  const liveState = useRef({ unsaved: state.unsaved, viewMode, updatingItemId, inputData: state.inputData });
+  liveState.current = { unsaved: state.unsaved, viewMode, updatingItemId, inputData: state.inputData };
   useEffect(() => {
     if (!user || demoConfig) return;
     let active = true;
@@ -130,7 +142,8 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
         const saved = await loadConfirmedDailyPlan(user.uid, activePlanDate);
         if (!active || !saved || liveState.current.unsaved || liveState.current.viewMode !== 'execution' || liveState.current.updatingItemId || isConfirmingRef.current) return;
         planRevision.current = saved.revision || 0;
-        loadConfirmedPlan(planDraftFromDocument(saved), dailyResetDataFromDocument(saved));
+        const currentBrainDump = liveState.current.inputData?.brainDump || loadPersistentBrainDump(user.uid);
+        loadConfirmedPlan(planDraftFromDocument(saved), dailyResetDataFromDocument(saved, currentBrainDump));
         setCompletedItemIds(saved.execution?.completedItemIds || []);
       } catch { if (active) setExecutionError(t.planLoadError); }
     };
@@ -138,14 +151,14 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     window.addEventListener('app-a-plan-changed', refresh);
     return () => { active = false; window.removeEventListener('app-a-navigation', refresh); window.removeEventListener('app-a-plan-changed', refresh); };
   }, [user, demoConfig, activePlanDate, loadConfirmedPlan, t.planLoadError]);
-  const [calendarDate, setCalendarDate] = useState(() => getLocalDateKeyInTimeZone(effectiveTimeZone));
+  const [calendarDate, setCalendarDate] = useState(() => getLocalDateKeyInTimeZone(effectiveTimeZone, undefined, effectiveDayResetHour));
   useEffect(() => {
-    const refresh = () => setCalendarDate(getLocalDateKeyInTimeZone(effectiveTimeZone));
+    const refresh = () => setCalendarDate(getLocalDateKeyInTimeZone(effectiveTimeZone, undefined, effectiveDayResetHour));
     refresh();
     const timer = window.setInterval(refresh, 15_000);
     window.addEventListener('focus', refresh);
     return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh); };
-  }, [effectiveTimeZone]);
+  }, [effectiveTimeZone, effectiveDayResetHour]);
 
   useEffect(() => {
     if (!resetSessionsOpen) return;
@@ -158,7 +171,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
 
   useEffect(() => {
     if (demoConfig || !authReady || !user) return;
-    const localDate = getLocalDateKeyInTimeZone(effectiveTimeZone);
+    const localDate = getLocalDateKeyInTimeZone(effectiveTimeZone, undefined, effectiveDayResetHour);
     let cancelled = false;
     setIsLoadingRollover(true);
 
@@ -176,7 +189,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
     return () => {
       cancelled = true;
     };
-  }, [authReady, demoConfig, effectiveTimeZone, user, activePlanDate]);
+  }, [authReady, demoConfig, effectiveTimeZone, effectiveDayResetHour, user, activePlanDate]);
 
   useEffect(() => {
     const handleDataReset = (event: Event) => {
@@ -191,8 +204,9 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
         setSaveDiagnostic(null);
         setViewMode('review');
         setRolloverCandidates([]);
+        clearPersistentBrainDump(user?.uid);
         cancel();
-        reset();
+        reset({ clearBrainDump: true });
         updateInputData({ brainDump: '', stateNote: '', availableTime: undefined, energy: undefined, pleasantness: undefined });
         planRevision.current = 0;
         setFormVersion(version => version + 1);
@@ -210,7 +224,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
       setIsLoadingSavedPlan(false);
       return;
     }
-    const localDate = getLocalDateKeyInTimeZone(effectiveTimeZone);
+    const localDate = getLocalDateKeyInTimeZone(effectiveTimeZone, undefined, effectiveDayResetHour);
     const loadKey = `${user.uid}:${localDate}`;
     if (loadedForUserAndDate.current === loadKey) return;
     loadedForUserAndDate.current = loadKey;
@@ -234,7 +248,8 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
         if (saved && !liveState.current.unsaved) {
           const loadedPlan = planDraftFromDocument(saved);
           planRevision.current = saved.revision || 0;
-          loadConfirmedPlan(loadedPlan, dailyResetDataFromDocument(saved));
+          const currentBrainDump = liveState.current.inputData?.brainDump || loadPersistentBrainDump(user.uid);
+          loadConfirmedPlan(loadedPlan, dailyResetDataFromDocument(saved, currentBrainDump));
           setCompletedItemIds(
             normalizeCompletedItemIds(loadedPlan, saved.execution?.completedItemIds || []),
           );
@@ -242,11 +257,14 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
           setViewMode('execution');
           setSaveStatus('saved');
         } else if (activePlanDate !== localDate) {
+          const preservedBrainDump = liveState.current.inputData?.brainDump || loadPersistentBrainDump(user.uid);
           reset();
+          updateInputData({ brainDump: preservedBrainDump });
           setCompletedItemIds([]);
           setActivePlanDate(localDate);
           setViewMode('review');
           setSaveStatus('idle');
+          setFormVersion((v) => v + 1);
         }
       })
       .catch(() => {
@@ -258,7 +276,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
       .finally(() => {
         if (loadedForUserAndDate.current === loadKey) setIsLoadingSavedPlan(false);
       });
-  }, [authReady, demoConfig, effectiveTimeZone, calendarDate, loadConfirmedPlan, reset, t.planLoadError, user]);
+  }, [authReady, demoConfig, effectiveTimeZone, effectiveDayResetHour, calendarDate, loadConfirmedPlan, reset, t.planLoadError, user]);
 
   const handleConfirm = async (draft: DailyPlanDraft) => {
     if (isConfirmingRef.current) return;
@@ -276,7 +294,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
       }
       const isGuest = isAppAGuestUser(user);
       const activeUser = user || { uid: 'guest-local-user' };
-      const localDate = getLocalDateKeyInTimeZone(effectiveTimeZone);
+      const localDate = getLocalDateKeyInTimeZone(effectiveTimeZone, undefined, effectiveDayResetHour);
       const document = createDailyPlanDocument(state.inputData, draft, language, localDate, effectiveTimeZone);
       document.revision = activePlanDate === localDate ? planRevision.current : 0;
       document.execution = { completedItemIds: normalizeCompletedItemIds(draft, activePlanDate === localDate ? completedItemIds : []) };
@@ -331,7 +349,7 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
         authPresent: !!user,
         uidMatchesPath: true,
         dateKeyType: "string",
-        dateKeyLength: getLocalDateKeyInTimeZone(effectiveTimeZone).length,
+        dateKeyLength: getLocalDateKeyInTimeZone(effectiveTimeZone, undefined, effectiveDayResetHour).length,
       });
     } finally {
       isConfirmingRef.current = false;
@@ -875,6 +893,26 @@ export default function TodayScreen({ language, client, demoConfig, initialData,
             />
           </div>
         )}
+        <div className="mb-6">
+          <TodayCandidatesSection
+            userId={user?.uid}
+            language={language}
+            localDate={activePlanDate}
+            planState="none"
+            onPlanAction={() => {}}
+            onAddToPlan={handleAddVisionCandidate}
+            onOpenVision={onOpenVision}
+            onSelectForReset={(candidate) => {
+              const line = `• ${candidate.title} (${candidate.estimatedMinutes || 30} min) [Vizija]`;
+              const current = state.inputData.brainDump || '';
+              if (!current.includes(candidate.title)) {
+                const updated = current.trim() ? `${current.trim()}\n${line}` : line;
+                updateInputData({ brainDump: updated });
+              }
+            }}
+            brainDumpText={state.inputData.brainDump || ''}
+          />
+        </div>
         <DailyResetForm
           key={formVersion}
           onDraftChange={updateInputData}

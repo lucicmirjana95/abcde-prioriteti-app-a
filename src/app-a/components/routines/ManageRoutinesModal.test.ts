@@ -83,7 +83,8 @@ async function runManageRoutinesModalTests() {
   // --- Test 1: Real Component Render, Form Display, and Creation ---
   {
     mockDb = {};
-    const container = dom.window.document.getElementById("root")!;
+    const container = dom.window.document.createElement("div");
+    dom.window.document.body.appendChild(container);
     const root = createRoot(container);
     let changedFired = 0;
     let closedFired = 0;
@@ -154,7 +155,8 @@ async function runManageRoutinesModalTests() {
   // --- Test 2: Double Click / Rapid Inflight Click Protection ---
   {
     mockDb = {};
-    const container = dom.window.document.getElementById("root")!;
+    const container = dom.window.document.createElement("div");
+    dom.window.document.body.appendChild(container);
     const root = createRoot(container);
     let changedFired = 0;
 
@@ -209,7 +211,8 @@ async function runManageRoutinesModalTests() {
   // --- Test 3: Unmount During Inflight Create/Save Protects Against State Updates & Callback ---
   {
     mockDb = {};
-    const container = dom.window.document.getElementById("root")!;
+    const container = dom.window.document.createElement("div");
+    dom.window.document.body.appendChild(container);
     const root = createRoot(container);
     let changedFired = 0;
 
@@ -280,7 +283,8 @@ async function runManageRoutinesModalTests() {
   // --- Test 4: Error Handling and Safe Retry ---
   {
     mockDb = {};
-    const container = dom.window.document.getElementById("root")!;
+    const container = dom.window.document.createElement("div");
+    dom.window.document.body.appendChild(container);
     const root = createRoot(container);
     let changedFired = 0;
 
@@ -325,6 +329,7 @@ async function runManageRoutinesModalTests() {
     // First attempt fails
     await act(async () => {
       saveBtn.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+      await new Promise(r => setTimeout(r, 100)); // wait for error render
     });
 
     // Error message displayed: RoutineManagementController wraps repository error:
@@ -359,7 +364,8 @@ async function runManageRoutinesModalTests() {
   {
     console.log("Running Test 5: Draft A pending -> Cancel/Open Draft B -> Late Success A...");
     mockDb = {};
-    const container = dom.window.document.getElementById("root")!;
+    const container = dom.window.document.createElement("div");
+    dom.window.document.body.appendChild(container);
     const root = createRoot(container);
     let changedFired = 0;
     let closedFired = 0;
@@ -499,6 +505,7 @@ async function runManageRoutinesModalTests() {
     // 7. Save Draft B and verify it completes cleanly with separate identity
     await act(async () => {
       saveBtnB.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+      await new Promise(r => setTimeout(r, 100)); // wait for Save B to finish
     });
 
     assert.equal(changedFired, 1, "onChanged must fire once when Draft B saves successfully");
@@ -528,7 +535,8 @@ async function runManageRoutinesModalTests() {
   {
     console.log("Running Test 6: Draft A pending -> Cancel/Open Draft B -> Late Error A...");
     mockDb = {};
-    const container = dom.window.document.getElementById("root")!;
+    const container = dom.window.document.createElement("div");
+    dom.window.document.body.appendChild(container);
     const root = createRoot(container);
     let changedFired = 0;
     let closedFired = 0;

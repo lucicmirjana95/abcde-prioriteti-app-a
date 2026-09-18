@@ -21,7 +21,7 @@ import {
   togglePlannedRoutineForDate,
 } from "../persistence/dailyPlanRepository";
 import { getLocalDateInTimeZone, getPastLocalDates } from "./date";
-import { getEffectiveTimeZone, loadAppAPreferences } from "../settings/preferences";
+import { getEffectiveTimeZone, getEffectiveDayResetHour, loadAppAPreferences } from "../settings/preferences";
 
 export interface PlannedRoutinePersistence {
   load(userId: string, localDate: string): Promise<string[]>;
@@ -32,6 +32,11 @@ const defaultPlannedRoutinePersistence: PlannedRoutinePersistence = {
   load: loadPlannedRoutineIds,
   toggle: togglePlannedRoutineForDate,
 };
+
+function getCurrentLocalDate(): string {
+  const prefs = loadAppAPreferences();
+  return getLocalDateInTimeZone(new Date(), getEffectiveTimeZone(prefs), getEffectiveDayResetHour(prefs));
+}
 
 export function useDailyRoutines(
   userId?: string | null,
@@ -49,9 +54,7 @@ export function useDailyRoutines(
   const [loading, setLoading] = useState(Boolean(userId));
   const [error, setError] = useState<string | null>(null);
   const [updatingRoutineId, setUpdatingRoutineId] = useState<string | null>(null);
-  const [localDate, setLocalDate] = useState(() =>
-    getLocalDateInTimeZone(new Date(), getEffectiveTimeZone(loadAppAPreferences())),
-  );
+  const [localDate, setLocalDate] = useState(() => getCurrentLocalDate());
 
   useEffect(() => {
     if (initialPlannedRoutineIds) {
@@ -60,8 +63,7 @@ export function useDailyRoutines(
   }, [initialPlannedRoutineIds]);
 
   useEffect(() => {
-    const refreshDate = () =>
-      setLocalDate(getLocalDateInTimeZone(new Date(), getEffectiveTimeZone(loadAppAPreferences())));
+    const refreshDate = () => setLocalDate(getCurrentLocalDate());
     const timer = window.setInterval(refreshDate, 15_000);
     window.addEventListener("focus", refreshDate);
     window.addEventListener("app-a-navigation", refreshDate);

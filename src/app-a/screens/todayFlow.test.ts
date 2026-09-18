@@ -655,7 +655,45 @@ async function runTests() {
     );
   }
 
-  console.log("✅ All 34 today flow tests passed successfully!");
+  // 35. reset() preserves brainDump by default, but clears if clearBrainDump: true
+  {
+    const mock = new MockApiClient();
+    const controller = new TodayFlowController("en", mock, { brainDump: "Important persistent brain dump" });
+    assert.strictEqual(controller.getState().inputData.brainDump, "Important persistent brain dump");
+
+    controller.reset();
+    assert.strictEqual(
+      controller.getState().inputData.brainDump,
+      "Important persistent brain dump",
+      "reset() must preserve brainDump on new day"
+    );
+
+    controller.reset({ clearBrainDump: true });
+    assert.strictEqual(
+      controller.getState().inputData.brainDump,
+      "",
+      "reset({ clearBrainDump: true }) must clear brainDump on explicit data reset"
+    );
+  }
+
+  // 36. Brain dump persistence across instances and updates
+  {
+    const mock = new MockApiClient();
+    const draftKey = "test-user-123:today:2026-09-18";
+    const controller = new TodayFlowController("en", mock, undefined, draftKey);
+    controller.updateInputData({ brainDump: "Tasks that should roll over to tomorrow" });
+
+    // Next day controller for the same user
+    const nextDayKey = "test-user-123:today:2026-09-19";
+    const nextDayController = new TodayFlowController("en", mock, undefined, nextDayKey);
+    assert.strictEqual(
+      nextDayController.getState().inputData.brainDump,
+      "Tasks that should roll over to tomorrow",
+      "Next day must load persisted brainDump for user"
+    );
+  }
+
+  console.log("✅ All 36 today flow tests passed successfully!");
 }
 
 runTests().catch((e) => {

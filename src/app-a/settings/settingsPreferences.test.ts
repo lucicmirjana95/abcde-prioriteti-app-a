@@ -29,7 +29,7 @@ globalThis.localStorage = {
   length: 0,
 } as unknown as Storage;
 
-// 1. Defaults include reducedMotion ('system'), soundEnabled (true), notificationsEnabled (false)
+// 1. Defaults include reducedMotion ('system'), soundEnabled (true), notificationsEnabled (false), dayResetHour (5)
 {
   const defaults = getDefaultAppAPreferences();
   assert.equal(defaults.reducedMotion, "system");
@@ -37,6 +37,7 @@ globalThis.localStorage = {
   assert.equal(defaults.notificationsEnabled, false);
   assert.equal(defaults.theme, "system");
   assert.equal(defaults.timeZoneSetting.mode, "automatic");
+  assert.equal(defaults.dayResetHour, 5);
   console.log("✅ 1. Default preferences match required defaults");
 }
 
@@ -151,6 +152,34 @@ globalThis.localStorage = {
   assert.equal(canonicalAppADemo, null, "Canonical scenario demo must return null in production");
 
   console.log("✅ 7. Preview and demo mode are strictly blocked in production builds");
+}
+
+// 8. Day reset hour configuration and normalisation
+{
+  assert.equal(normalizeAppAPreferences({ dayResetHour: 0 }).dayResetHour, 0);
+  assert.equal(normalizeAppAPreferences({ dayResetHour: 4 }).dayResetHour, 4);
+  assert.equal(normalizeAppAPreferences({ dayResetHour: 5 }).dayResetHour, 5);
+  assert.equal(normalizeAppAPreferences({ dayResetHour: 6 }).dayResetHour, 6);
+  assert.equal(normalizeAppAPreferences({ dayResetHour: 7 }).dayResetHour, 7);
+  assert.equal(normalizeAppAPreferences({ dayResetHour: 8 }).dayResetHour, 8);
+
+  // Invalid hours fall back to 5
+  assert.equal(normalizeAppAPreferences({ dayResetHour: 12 }).dayResetHour, 5);
+  assert.equal(normalizeAppAPreferences({ dayResetHour: -1 }).dayResetHour, 5);
+  assert.equal(normalizeAppAPreferences({ dayResetHour: "5" }).dayResetHour, 5);
+  assert.equal(normalizeAppAPreferences({ dayResetHour: null }).dayResetHour, 5);
+
+  // Persistence
+  const prefs = loadAppAPreferences();
+  const savedMidnight = saveAppAPreferences({ ...prefs, dayResetHour: 0 });
+  assert.equal(savedMidnight.dayResetHour, 0);
+  assert.equal(loadAppAPreferences().dayResetHour, 0);
+
+  const savedSeven = saveAppAPreferences({ ...savedMidnight, dayResetHour: 7 });
+  assert.equal(savedSeven.dayResetHour, 7);
+  assert.equal(loadAppAPreferences().dayResetHour, 7);
+
+  console.log("✅ 8. Day reset hour normalizes, falls back to 5, and persists reliably");
 }
 
 console.log("All Settings Preferences & Feature Independence tests passed successfully!");

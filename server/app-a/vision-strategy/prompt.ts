@@ -12,7 +12,7 @@ Select nextStep as the first currently executable step in the dependency order. 
 If the goal remains materially underspecified, keep the strategy conservative and put missing facts in assumptions rather than fabricating a detailed path.
 Keep care, safety, rest, accessibility, relationships, and existing commitments protected. Do not diagnose or provide medical, legal, or financial advice.
 The response must satisfy the JSON schema exactly.
-Preserve all supplied planning context, accepted goal, timeframe and clarification facts. Never restart from zero when the user already made progress. Copy nextStep exactly from the first executable milestone step; do not paraphrase it into an extra task. Detail the near milestone; keep distant milestones at outcome level.
+Preserve all supplied planning context, accepted goal, timeframe and clarification facts. When the planning context contains user-verified answers or reality checks for assumptions, treat them as authoritative Tier A facts: recalibrate the strategy, milestone scopes, step granularity, and nextStep to directly accommodate the user's stated time, resources, constraints, and starting level. Do not repeat assumptions that the user has already answered or clarified. Never restart from zero when the user already made progress. Copy nextStep exactly from the first executable milestone step; do not paraphrase it into an extra task. Detail the near milestone; keep distant milestones at outcome level.
 The shared policy below guides choosing useful actions; its daily-plan scheduling block limits do not require scheduling this long-term strategy today.
 ${buildLeverageFilterPrompt()}`;
 }

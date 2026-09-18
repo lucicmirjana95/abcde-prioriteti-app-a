@@ -51,15 +51,23 @@ export function getLocalDateKey(date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
-export function getLocalDateKeyInTimeZone(timezone?: string, date = new Date()): string {
+export function getLocalDateKeyInTimeZone(
+  timezone?: string,
+  date = new Date(),
+  dayResetHour = 0,
+): string {
   const effectiveZone = timezone && timezone.trim() ? timezone : getLocalTimezone();
+  const adjustedDate =
+    dayResetHour > 0
+      ? new Date(date.getTime() - dayResetHour * 60 * 60 * 1000)
+      : date;
   try {
     const parts = new Intl.DateTimeFormat("en-CA", {
       timeZone: effectiveZone,
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
-    }).formatToParts(date);
+    }).formatToParts(adjustedDate);
     const value = (type: "year" | "month" | "day") => parts.find((part) => part.type === type)?.value;
     const year = value("year");
     const month = value("month");
@@ -68,7 +76,7 @@ export function getLocalDateKeyInTimeZone(timezone?: string, date = new Date()):
   } catch {
     // Invalid zones normally cannot reach this path because preferences are validated.
   }
-  return getLocalDateKey(date);
+  return getLocalDateKey(adjustedDate);
 }
 
 export function getLocalTimezone(): string {
@@ -115,6 +123,7 @@ export function createDailyPlanDocument(
 
 export function dailyResetDataFromDocument(
   document: AppADailyPlanDocument,
+  fallbackBrainDump = "",
 ): DailyResetData {
   const minutes = document.checkIn.availableMinutes;
   return {
@@ -134,7 +143,7 @@ export function dailyResetDataFromDocument(
         }
       : {}),
     stateNote: document.checkIn.stateNote || "",
-    brainDump: "",
+    brainDump: fallbackBrainDump,
   };
 }
 

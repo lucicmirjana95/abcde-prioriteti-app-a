@@ -111,7 +111,54 @@ function runTimezoneDateKeyTests() {
   assert.equal(isLocalDateInRolloverWindow("2026-08-31", rolloverBoundaries), true);
   assert.equal(isLocalDateInRolloverWindow("2026-09-01", rolloverBoundaries), false); // active day is not rolled over to itself
 
-  console.log("✅ All timezone date key tests (Belgrade, LA, DST, Reeval, Cross-domain) passed!");
+  // 6. Day Reset Hour (Configurable new day start: 0, 4, 5, 6, 7, 8):
+  // At 04:30 CEST on 2026-08-10 (UTC 2026-08-10T02:30:00.000Z):
+  const earlyMorning430Utc = new Date("2026-08-10T02:30:00.000Z");
+
+  // With default reset hour 5 (05:00 AM): 04:30 is still part of yesterday's plan (2026-08-09)
+  assert.equal(
+    getLocalDateKeyInTimeZone("Europe/Belgrade", earlyMorning430Utc, 5),
+    "2026-08-09",
+    "At 04:30 with 5 AM reset, the date must still be the previous day"
+  );
+  assert.equal(
+    getLocalDateInTimeZone(earlyMorning430Utc, "Europe/Belgrade", 5),
+    "2026-08-09",
+    "Routines helper must also treat 04:30 as previous day when reset hour is 5"
+  );
+
+  // With reset hour 4 (04:00 AM): 04:30 is part of the new day (2026-08-10)
+  assert.equal(
+    getLocalDateKeyInTimeZone("Europe/Belgrade", earlyMorning430Utc, 4),
+    "2026-08-10",
+    "At 04:30 with 4 AM reset, the new day has already started"
+  );
+
+  // With reset hour 0 (00:00 Midnight): 04:30 is part of the new day (2026-08-10)
+  assert.equal(
+    getLocalDateKeyInTimeZone("Europe/Belgrade", earlyMorning430Utc, 0),
+    "2026-08-10",
+    "At 04:30 with midnight reset, the new day has already started"
+  );
+
+  // At 05:15 CEST on 2026-08-10 (UTC 2026-08-10T03:15:00.000Z):
+  const morning515Utc = new Date("2026-08-10T03:15:00.000Z");
+
+  // With reset hour 5: 05:15 has crossed the reset boundary and is now 2026-08-10
+  assert.equal(
+    getLocalDateKeyInTimeZone("Europe/Belgrade", morning515Utc, 5),
+    "2026-08-10",
+    "At 05:15 with 5 AM reset, the new day has started"
+  );
+
+  // With reset hour 6: 05:15 has NOT reached 06:00 yet, so still 2026-08-09
+  assert.equal(
+    getLocalDateKeyInTimeZone("Europe/Belgrade", morning515Utc, 6),
+    "2026-08-09",
+    "At 05:15 with 6 AM reset, it must still be the previous day"
+  );
+
+  console.log("✅ All timezone date key tests (Belgrade, LA, DST, Reeval, Cross-domain, Day Reset Hour) passed!");
 }
 
 runTimezoneDateKeyTests();

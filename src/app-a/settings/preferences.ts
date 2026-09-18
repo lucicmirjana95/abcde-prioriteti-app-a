@@ -1,4 +1,4 @@
-import type { AppAPreferences, AppATimeZoneSetting } from "../types";
+import type { AppAPreferences, AppATimeZoneSetting, DayResetHour } from "../types";
 import { clearSessionDrafts } from "../persistence/sessionDraft";
 import { isResetBlockedGeneric } from "../persistence/resetGuard";
 
@@ -117,6 +117,16 @@ export function getEffectiveTimeZone(preferencesOrSetting?: AppAPreferences | Ap
   return getDetectedDeviceTimeZone();
 }
 
+export function getEffectiveDayResetHour(preferences?: AppAPreferences | null): DayResetHour {
+  if (preferences && typeof preferences.dayResetHour === "number") {
+    const valid: DayResetHour[] = [0, 4, 5, 6, 7, 8];
+    if (valid.includes(preferences.dayResetHour as DayResetHour)) {
+      return preferences.dayResetHour as DayResetHour;
+    }
+  }
+  return 5;
+}
+
 export function getDefaultAppAPreferences(): AppAPreferences {
   let language: AppAPreferences["language"] = "en";
   try {
@@ -134,6 +144,7 @@ export function getDefaultAppAPreferences(): AppAPreferences {
     reducedMotion: "system",
     soundEnabled: true,
     notificationsEnabled: false,
+    dayResetHour: 5,
   };
 }
 
@@ -158,6 +169,7 @@ export function normalizeAppAPreferences(value: unknown): AppAPreferences {
       reducedMotion: fallback.reducedMotion,
       soundEnabled: fallback.soundEnabled,
       notificationsEnabled: fallback.notificationsEnabled,
+      dayResetHour: fallback.dayResetHour ?? 5,
     };
   }
   const item = value as Record<string, unknown>;
@@ -168,6 +180,11 @@ export function normalizeAppAPreferences(value: unknown): AppAPreferences {
   const reducedMotion = item.reducedMotion === "reduced" || item.reducedMotion === "standard" || item.reducedMotion === "system" ? item.reducedMotion : "system";
   const soundEnabled = typeof item.soundEnabled === "boolean" ? item.soundEnabled : true;
   const notificationsEnabled = typeof item.notificationsEnabled === "boolean" ? item.notificationsEnabled : false;
+  const validResetHours: DayResetHour[] = [0, 4, 5, 6, 7, 8];
+  const dayResetHour: DayResetHour =
+    typeof item.dayResetHour === "number" && validResetHours.includes(item.dayResetHour as DayResetHour)
+      ? (item.dayResetHour as DayResetHour)
+      : fallback.dayResetHour ?? 5;
 
   let timeZoneSetting: AppATimeZoneSetting = { mode: "automatic" };
   if (item.timeZoneSetting && typeof item.timeZoneSetting === "object") {
@@ -190,6 +207,7 @@ export function normalizeAppAPreferences(value: unknown): AppAPreferences {
     reducedMotion,
     soundEnabled,
     notificationsEnabled,
+    dayResetHour,
   };
 }
 

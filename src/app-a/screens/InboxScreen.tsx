@@ -4,7 +4,7 @@ import PlanHistoryState from "../components/PlanHistoryState";
 import type { AppAInboxItem } from "../domain/inbox/contracts";
 import { normalizeInboxTitle } from "../domain/inbox/contracts";
 import { getLocalDateKeyInTimeZone } from "../persistence/dailyPlanDocument";
-import { getEffectiveTimeZone } from "../settings/preferences";
+import { getEffectiveTimeZone, getEffectiveDayResetHour } from "../settings/preferences";
 import type { AppALanguage, AppAPreferences } from "../types";
 import { useDataRefresh } from "../persistence/useDataRefresh";
 import { useVisionReviewAdapter } from "../adapters/useVisionReviewAdapter";
@@ -274,7 +274,8 @@ export default function InboxScreen({
 
   const adapter = useInboxAdapter(customAdapter);
   const effectiveTimeZone = getEffectiveTimeZone(preferences);
-  const todayLocalDate = getLocalDateKeyInTimeZone(effectiveTimeZone);
+  const effectiveDayResetHour = getEffectiveDayResetHour(preferences);
+  const todayLocalDate = getLocalDateKeyInTimeZone(effectiveTimeZone, undefined, effectiveDayResetHour);
 
   const { controller: visionController } = useVisionReviewAdapter(user?.uid, onOpenVision);
 

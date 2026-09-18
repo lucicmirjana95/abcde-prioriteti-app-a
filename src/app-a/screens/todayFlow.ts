@@ -14,6 +14,11 @@ import { DailyResetData } from "../types";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { readSessionDraft, writeSessionDraft } from '../persistence/sessionDraft';
 import { validatePlanDraft } from '../domain/daily-reset/validation';
+import {
+  clearPersistentBrainDump,
+  loadPersistentBrainDump,
+  savePersistentBrainDump,
+} from "../persistence/brainDumpPersistence";
 
 export const CLARIFICATION_UNKNOWN_VALUE = "__UNKNOWN__";
 
@@ -182,20 +187,29 @@ export class TodayFlowController {
   private isSubmittingInitial: boolean = false;
   private isSubmittingResolve: boolean = false;
   private autoDraftRequested: boolean = false;
+  private draftKey?: string;
 
   constructor(
     language: SupportedLanguage = "en",
     client?: DailyResetApiClient,
-    initialData?: Partial<DailyResetData>
+    initialData?: Partial<DailyResetData>,
+    draftKey?: string,
   ) {
     this.client = client || createDailyResetApiClient();
+    this.draftKey = draftKey;
+    const userId = draftKey ? draftKey.split(":")[0] : undefined;
+    const initialBrainDump =
+      initialData?.brainDump !== undefined
+        ? initialData.brainDump
+        : loadPersistentBrainDump(userId);
+
     this.state = {
       phase: "editing",
       language,
       inputData: {
         stateNote: "",
-        brainDump: "",
         ...initialData,
+        brainDump: initialBrainDump,
       },
       questions: [],
       answers: {},
@@ -248,6 +262,10 @@ export class TodayFlowController {
   }
 
   updateInputData(data: Partial<DailyResetData>) {
+    if (data.brainDump !== undefined) {
+      const userId = this.draftKey ? this.draftKey.split(":")[0] : undefined;
+      savePersistentBrainDump(data.brainDump, userId);
+    }
     this.updateState({
       unsaved: true,
       inputData: { ...this.state.inputData, ...data },
@@ -543,8 +561,30 @@ export class TodayFlowController {
     });
   }
 
-  reset() {
+  reset(options?: { clearBrainDump?: boolean }) {
     this.cancel();
+    if (options?.clearBrainDump) {
+      const userId = this.draftKey ? this.draftKey.split(":")[0] : undefined;
+      clearPersistentBrainDump(userId);
+      this.updateState({
+        unsaved: false,
+        phase: "editing",
+        inputData: {
+          ...this.state.inputData,
+          brainDump: "",
+        },
+        questions: [],
+        answers: {},
+        unknowns: {},
+        history: [],
+        roundIndex: 1,
+        showSummaryOptions: false,
+        planDraft: null,
+        error: null,
+        failedPhase: null,
+      });
+      return;
+    }
     this.updateState({
       unsaved: false,
       phase: "editing",
@@ -659,7 +699,7 @@ export function useTodayFlow(
 ) {
   const controller = useMemo(
     () => {
-      const instance = new TodayFlowController(language, client, initialData);
+      const instance = new TodayFlowController(language, client, initialData, draftKey);
       if (draftKey) {
         const draft = readSessionDraft<TodayFlowState | null>(draftKey, null, (value) => {
           const saved = value as TodayFlowState | null;
@@ -669,7 +709,7 @@ export function useTodayFlow(
       }
       return instance;
     },
-    [client]
+    [client, draftKey]
   );
   const [state, setState] = useState<TodayFlowState>(controller.getState());
 
@@ -708,7 +748,10 @@ export function useTodayFlow(
   const retry = useCallback(() => controller.retry(), [controller]);
   const cancel = useCallback(() => controller.cancel(), [controller]);
   const backToEdit = useCallback(() => controller.backToEdit(), [controller]);
-  const reset = useCallback(() => controller.reset(), [controller]);
+  const reset = useCallback(
+    (options?: { clearBrainDump?: boolean }) => controller.reset(options),
+    [controller]
+  );
   const updateReviewDraft = useCallback((draft: DailyPlanDraft) => controller.updateReviewDraft(draft), [controller]);
   const updateInputData = useCallback(
     (data: Partial<DailyResetData>) => controller.updateInputData(data),

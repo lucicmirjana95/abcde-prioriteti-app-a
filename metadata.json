@@ -1,6 +1,6 @@
 {
   "name": "Remix abcde-prioriteti-app-a",
-  "description": "Imported from GitHub: lucicmirjana95/abcde-prioriteti-app-a",
+  "description": "Turn what is on your mind into a realistic daily plan shaped around your priorities, energy, and fixed commitments.",
   "requestFramePermissions": [
     "microphone"
   ],

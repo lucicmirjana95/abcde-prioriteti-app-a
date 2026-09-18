@@ -1,7 +1,7 @@
 import { getLocalDateKeyInTimeZone } from "../persistence/dailyPlanDocument";
 
-export function getLocalDateInTimeZone(date: Date, timeZone: string): string {
-  return getLocalDateKeyInTimeZone(timeZone, date);
+export function getLocalDateInTimeZone(date: Date, timeZone: string, dayResetHour = 0): string {
+  return getLocalDateKeyInTimeZone(timeZone, date, dayResetHour);
 }
 
 export function getPastLocalDates(endLocalDate: string, count: number): string[] {

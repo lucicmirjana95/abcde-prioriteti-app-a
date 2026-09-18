@@ -38,6 +38,14 @@ const COPY = {
     searchZone: "Search time zones…",
     activeZone: "Active timezone",
     allZones: "All time zones",
+    dayReset: "New day start time",
+    dayResetHelp: "When your daily plan resets. Unfinished tasks and notes roll over automatically.",
+    hour0: "00:00 (Midnight)",
+    hour4: "04:00 (Early morning)",
+    hour5: "05:00 (Default)",
+    hour6: "06:00 (Morning)",
+    hour7: "07:00 (Morning)",
+    hour8: "08:00 (Morning)",
     focus: "Default focus session",
     ai: "AI daily planning",
     aiHelp: "Turning this off prevents new AI daily plans; saved content remains available.",
@@ -68,6 +76,14 @@ const COPY = {
     searchZone: "Pretraži vremenske zone…",
     activeZone: "Aktivna zona",
     allZones: "Sve vremenske zone",
+    dayReset: "Početak novog dana",
+    dayResetHelp: "Vreme kada se resetuje dnevni plan. Nezavršeni zadaci i beleške se prenose automatski.",
+    hour0: "00:00 (Ponoć)",
+    hour4: "04:00 (Rano ujutru)",
+    hour5: "05:00 (Podrazumevano)",
+    hour6: "06:00 (Ujutru)",
+    hour7: "07:00 (Ujutru)",
+    hour8: "08:00 (Ujutru)",
     focus: "Podrazumevana fokus sesija",
     ai: "AI dnevno planiranje",
     aiHelp: "Isključivanje sprečava nove AI dnevne planove; sačuvani sadržaj ostaje dostupan.",
@@ -98,6 +114,14 @@ const COPY = {
     searchZone: "Saat dilimlerini ara…",
     activeZone: "Etkin saat dilimi",
     allZones: "Tüm saat dilimleri",
+    dayReset: "Yeni gün başlangıç saati",
+    dayResetHelp: "Günlük planınızın sıfırlandığı saat. Bitmemiş görevler ve notlar otomatik devredilir.",
+    hour0: "00:00 (Gece yarısı)",
+    hour4: "04:00 (Erken sabah)",
+    hour5: "05:00 (Varsayılan)",
+    hour6: "06:00 (Sabah)",
+    hour7: "07:00 (Sabah)",
+    hour8: "08:00 (Sabah)",
     focus: "Varsayılan odak oturumu",
     ai: "AI günlük planlama",
     aiHelp: "Kapatıldığında yeni AI günlük planları durur; kayıtlı içerik kalır.",
@@ -477,6 +501,34 @@ export default function SettingsScreen({
           <p className="mt-2 text-[12px] leading-relaxed text-[#6E6E73] dark:text-[#AEAEB2] break-words">
             {activeZoneText}
           </p>
+        </section>
+
+        {/* Day Reset Hour */}
+        <section className="p-5">
+          <label className="text-[15px] font-semibold text-black dark:text-white" htmlFor="app-a-day-reset">
+            {t.dayReset}
+          </label>
+          <p className="mt-1 text-[13px] text-[#6E6E73] dark:text-[#AEAEB2]">
+            {t.dayResetHelp}
+          </p>
+          <select
+            id="app-a-day-reset"
+            value={preferences.dayResetHour ?? 5}
+            onChange={(event) =>
+              update(
+                "dayResetHour",
+                Number(event.target.value) as AppAPreferences["dayResetHour"]
+              )
+            }
+            className="app-a-field app-a-focus-ring mt-2 w-full p-3 text-[15px]"
+          >
+            <option value={5}>{t.hour5}</option>
+            <option value={0}>{t.hour0}</option>
+            <option value={4}>{t.hour4}</option>
+            <option value={6}>{t.hour6}</option>
+            <option value={7}>{t.hour7}</option>
+            <option value={8}>{t.hour8}</option>
+          </select>
         </section>
 
         {/* Default Focus Duration */}

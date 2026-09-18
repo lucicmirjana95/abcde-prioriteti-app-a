@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowUp, CalendarPlus, Check, ChevronDown, Clock3, Compass, Pencil, X } from "lucide-react";
+import { ArrowUp, CalendarPlus, Check, ChevronDown, Clock3, Compass, Pencil, Plus, X } from "lucide-react";
 import type { AppALanguage } from "../../types";
 import { estimateVisionStepMinutes, shouldSurfaceSecondaryVision, type TodayCandidate } from "../../../shared/domain/today-candidates";
 import { dismissTodayCandidate, ensurePendingVisionCandidates, loadPendingTodayCandidatesContext } from "../../../shared/persistence/today-candidates";
@@ -110,9 +110,21 @@ interface Props {
   onPlanAction: () => void;
   onAddToPlan: (candidate: TodayCandidate) => Promise<string | null>;
   onOpenVision: () => void;
+  onSelectForReset?: (candidate: TodayCandidate) => void;
+  brainDumpText?: string;
 }
 
-export default function TodayCandidatesSection({ userId, language, localDate, planState, onPlanAction, onAddToPlan, onOpenVision }: Props) {
+export default function TodayCandidatesSection({
+  userId,
+  language,
+  localDate,
+  planState,
+  onPlanAction,
+  onAddToPlan,
+  onOpenVision,
+  onSelectForReset,
+  brainDumpText,
+}: Props) {
   const [items, setItems] = useState<TodayCandidate[]>([]);
   const [currentVisionId, setCurrentVisionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -374,7 +386,7 @@ export default function TodayCandidatesSection({ userId, language, localDate, pl
               </div>
             )}
 
-            {planState === "confirmed" ? (
+            {planState === "confirmed" || planState === "draft" ? (
               <button
                 type="button"
                 disabled={busyId !== null}
@@ -384,6 +396,47 @@ export default function TodayCandidatesSection({ userId, language, localDate, pl
                 <CalendarPlus className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span>{t.add}</span>
               </button>
+            ) : null}
+
+            {planState === "none" && onSelectForReset ? (
+              (() => {
+                const isAdded = brainDumpText ? brainDumpText.toLowerCase().includes(item.title.toLowerCase()) : false;
+                return (
+                  <button
+                    type="button"
+                    onClick={() => onSelectForReset(item)}
+                    className={`mt-3.5 flex min-h-[44px] w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 text-[13px] font-semibold transition-all sm:w-auto ${
+                      isAdded
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                        : "app-a-primary-button"
+                    }`}
+                  >
+                    {isAdded ? (
+                      <>
+                        <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        <span>
+                          {language === "sr"
+                            ? "Ubačeno u plan"
+                            : language === "tr"
+                            ? "Plana eklendi"
+                            : "Added to plan"}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        <span>
+                          {language === "sr"
+                            ? "Dodaj u današnji plan"
+                            : language === "tr"
+                            ? "Bugünün planına ekle"
+                            : "Add to today's plan"}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                );
+              })()
             ) : null}
 
             {/* Granular dismissal action options */}

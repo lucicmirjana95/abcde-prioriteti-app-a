@@ -721,6 +721,37 @@ select,
   opacity: 0.45;
 }
 
+.app-a-btn-chip {
+  min-height: 32px;
+  border-radius: 9999px;
+  background-color: transparent;
+  color: var(--app-a-text-secondary);
+  border: 1px solid var(--app-a-border);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  gap: 6px;
+  transition: transform 0.1s ease, background-color 0.15s ease, color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.app-a-btn-chip:active:not(:disabled) {
+  transform: scale(0.96);
+  background-color: var(--app-a-surface-secondary);
+}
+.app-a-btn-chip:hover:not(:disabled) {
+  background-color: var(--app-a-surface-secondary);
+  color: var(--app-a-text);
+}
+.app-a-btn-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .app-a-focus-ring:focus-visible {
   outline: 3px solid var(--app-a-focus-ring);
   outline-offset: 2px;

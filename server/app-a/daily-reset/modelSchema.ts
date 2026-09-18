@@ -140,12 +140,12 @@ const Type = {
 const prioritySchema = {
   type: Type.OBJECT,
   properties: {
-    consequence: { type: Type.INTEGER, description: "Integer 1-5" },
-    urgency: { type: Type.INTEGER, description: "Integer 1-5" },
-    goalContribution: { type: Type.INTEGER, description: "Integer 1-5" },
-    leverage: { type: Type.INTEGER, description: "Integer 1-5" },
-    mentalLoad: { type: Type.INTEGER, description: "Integer 1-5" },
-    dependencyPressure: { type: Type.INTEGER, description: "Integer 1-5" },
+    consequence: { type: Type.INTEGER },
+    urgency: { type: Type.INTEGER },
+    goalContribution: { type: Type.INTEGER },
+    leverage: { type: Type.INTEGER },
+    mentalLoad: { type: Type.INTEGER },
+    dependencyPressure: { type: Type.INTEGER },
     confidence: { type: Type.STRING, enum: ["low", "medium", "high"] },
     recommendedDisposition: { type: Type.STRING, enum: ["do", "delegate", "defer", "eliminate", "clarify"] },
     conciseExplanation: { type: Type.STRING },
@@ -155,28 +155,63 @@ const prioritySchema = {
   required: ["explanation"]
 };
 
+const goalRelationshipSchema = {
+  type: Type.OBJECT,
+  properties: {
+    goalId: { type: Type.STRING },
+    goalTitle: { type: Type.STRING },
+    projectId: { type: Type.STRING },
+    projectTitle: { type: Type.STRING },
+    relationshipExplanation: { type: Type.STRING }
+  }
+};
+
+const makePlanItemSchema = (block: string, allowedCapacities: string[] = ["flexible", "fixed"]) => ({
+  type: Type.OBJECT,
+  properties: {
+    sourceItemIndex: { type: Type.INTEGER, description: "Zero-based index into classifiedItems" },
+    title: { type: Type.STRING },
+    description: { type: Type.STRING },
+    block: { type: Type.STRING, enum: [block] },
+    estimatedMinutes: { type: Type.INTEGER },
+    capacityType: { type: Type.STRING, enum: allowedCapacities },
+    requiredEnergy: { type: Type.INTEGER },
+    timeSensitivity: { type: Type.STRING, enum: ["none", "soft", "deadline", "urgent"] },
+    deadlineText: { type: Type.STRING },
+    deadlineIso: { type: Type.STRING },
+    priority: prioritySchema,
+    goalRelationship: goalRelationshipSchema,
+    reasoning: { type: Type.STRING },
+    needsCheck: { type: Type.BOOLEAN }
+  },
+  required: ["sourceItemIndex", "title", "block", "estimatedMinutes", "capacityType", "requiredEnergy", "timeSensitivity", "priority", "needsCheck"]
+});
+
+const subsetItemSchema = {
+  type: Type.OBJECT,
+  properties: {
+    sourceItemIndex: { type: Type.INTEGER, description: "Zero-based index in classifiedItems" }
+  },
+  required: ["sourceItemIndex"]
+};
+
 export const modelSchema = {
   type: Type.OBJECT,
   properties: {
     phase: {
       type: Type.STRING,
       enum: ["clarification_needed", "plan_ready"],
-      description: "Must be 'clarification_needed' or 'plan_ready'",
+      description: "Must be clarification_needed or plan_ready",
     },
     questions: {
       type: Type.ARRAY,
-      description: "Include 1 to 3 questions only if phase is 'clarification_needed'. Omit or empty when phase is 'plan_ready'.",
       items: {
         type: Type.OBJECT,
         properties: {
-          id: { type: Type.STRING, description: "Temporary ID (e.g. q1)" },
+          id: { type: Type.STRING },
           question: { type: Type.STRING },
           context: { type: Type.STRING },
-          relatedItemIds: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-            description: "Must be an empty array [] during initial clarification."
-          },
+          relatedItemIds: { type: Type.ARRAY, items: { type: Type.STRING } },
           materialImpact: {
             type: Type.STRING,
             enum: ["priority", "deadline", "duration", "classification", "goal_relationship", "other"]
@@ -187,312 +222,59 @@ export const modelSchema = {
     },
     draft: {
       type: Type.OBJECT,
-      description: "Daily plan draft. Required when phase is 'plan_ready'. Omit or empty when phase is 'clarification_needed'.",
       properties: {
         planRationale: { type: Type.STRING },
         classifiedItems: {
           type: Type.ARRAY,
-          description: "List of all classified user thoughts in order (index 0, 1, 2...)",
           items: {
             type: Type.OBJECT,
             properties: {
               originalText: { type: Type.STRING },
-              kind: {
-                type: Type.STRING,
-                enum: ["task", "idea", "worry", "fact", "waiting_for"]
-              },
-              timeHorizon: {
-                type: Type.STRING,
-                enum: ["today", "this_week", "later", "long_term_idea", "no_action"]
-              },
+              kind: { type: Type.STRING, enum: ["task", "idea", "worry", "fact", "waiting_for"] },
+              timeHorizon: { type: Type.STRING, enum: ["today", "this_week", "later", "long_term_idea", "no_action"] },
               suggestedAction: { type: Type.STRING },
-              estimatedMinutes: { type: Type.INTEGER, description: "Positive integer in minutes" },
-              requiredEnergy: { type: Type.INTEGER, description: "Integer 1-5" },
-              timeSensitivity: {
-                type: Type.STRING,
-                enum: ["none", "soft", "deadline", "urgent"]
-              },
+              estimatedMinutes: { type: Type.INTEGER },
+              requiredEnergy: { type: Type.INTEGER },
+              timeSensitivity: { type: Type.STRING, enum: ["none", "soft", "deadline", "urgent"] },
               deadlineText: { type: Type.STRING },
               deadlineIso: { type: Type.STRING },
               isAmbiguous: { type: Type.BOOLEAN },
               needsCheck: { type: Type.BOOLEAN },
               relatedQuestionId: { type: Type.STRING },
               priority: prioritySchema,
-              goalRelationship: {
-                type: Type.OBJECT,
-                properties: {
-                  goalId: { type: Type.STRING },
-                  goalTitle: { type: Type.STRING },
-                  projectId: { type: Type.STRING },
-                  projectTitle: { type: Type.STRING },
-                  relationshipExplanation: { type: Type.STRING }
-                }
-              }
+              goalRelationship: goalRelationshipSchema
             },
             required: ["originalText", "kind", "timeHorizon", "timeSensitivity", "isAmbiguous", "needsCheck", "priority"]
           }
         },
         firstFocus: {
           type: Type.ARRAY,
-          description: "Top focus tasks. Maximum 3 items.",
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              sourceItemIndex: {
-                type: Type.INTEGER,
-                description: "Zero-based integer index of the corresponding item in classifiedItems (0 to N-1)."
-              },
-              title: { type: Type.STRING },
-              description: { type: Type.STRING },
-              block: { type: Type.STRING, enum: ["first_focus"] },
-              estimatedMinutes: { type: Type.INTEGER, description: "Positive integer in minutes" },
-              capacityType: { type: Type.STRING, enum: ["flexible", "fixed"], description: "Use fixed only for an explicitly stated unavoidable commitment; otherwise flexible." },
-              requiredEnergy: { type: Type.INTEGER, description: "Integer 1-5" },
-              timeSensitivity: {
-                type: Type.STRING,
-                enum: ["none", "soft", "deadline", "urgent"]
-              },
-              deadlineText: { type: Type.STRING },
-              deadlineIso: { type: Type.STRING },
-              priority: prioritySchema,
-              goalRelationship: {
-                type: Type.OBJECT,
-                properties: {
-                  goalId: { type: Type.STRING },
-                  goalTitle: { type: Type.STRING },
-                  projectId: { type: Type.STRING },
-                  projectTitle: { type: Type.STRING },
-                  relationshipExplanation: { type: Type.STRING }
-                }
-              },
-              reasoning: { type: Type.STRING },
-              needsCheck: { type: Type.BOOLEAN }
-            },
-            required: ["sourceItemIndex", "title", "block", "estimatedMinutes", "capacityType", "requiredEnergy", "timeSensitivity", "priority", "needsCheck"]
-          }
+          items: makePlanItemSchema("first_focus")
         },
         laterToday: {
           type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              sourceItemIndex: {
-                type: Type.INTEGER,
-                description: "Zero-based integer index of the corresponding item in classifiedItems (0 to N-1)."
-              },
-              title: { type: Type.STRING },
-              description: { type: Type.STRING },
-              block: { type: Type.STRING, enum: ["later_today"] },
-              estimatedMinutes: { type: Type.INTEGER, description: "Positive integer in minutes" },
-              capacityType: { type: Type.STRING, enum: ["flexible", "fixed"], description: "Use fixed only for an explicitly stated unavoidable commitment; otherwise flexible." },
-              requiredEnergy: { type: Type.INTEGER, description: "Integer 1-5" },
-              timeSensitivity: {
-                type: Type.STRING,
-                enum: ["none", "soft", "deadline", "urgent"]
-              },
-              deadlineText: { type: Type.STRING },
-              deadlineIso: { type: Type.STRING },
-              priority: prioritySchema,
-              goalRelationship: {
-                type: Type.OBJECT,
-                properties: {
-                  goalId: { type: Type.STRING },
-                  goalTitle: { type: Type.STRING },
-                  projectId: { type: Type.STRING },
-                  projectTitle: { type: Type.STRING },
-                  relationshipExplanation: { type: Type.STRING }
-                }
-              },
-              reasoning: { type: Type.STRING },
-              needsCheck: { type: Type.BOOLEAN }
-            },
-            required: ["sourceItemIndex", "title", "block", "estimatedMinutes", "capacityType", "requiredEnergy", "timeSensitivity", "priority", "needsCheck"]
-          }
+          items: makePlanItemSchema("later_today")
         },
         ifCapacityRemains: {
           type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              sourceItemIndex: {
-                type: Type.INTEGER,
-                description: "Zero-based integer index of the corresponding item in classifiedItems (0 to N-1)."
-              },
-              title: { type: Type.STRING },
-              description: { type: Type.STRING },
-              block: { type: Type.STRING, enum: ["if_capacity_remains"] },
-              estimatedMinutes: { type: Type.INTEGER, description: "Positive integer in minutes" },
-              capacityType: { type: Type.STRING, enum: ["flexible"], description: "Optional work is always flexible." },
-              requiredEnergy: { type: Type.INTEGER, description: "Integer 1-5" },
-              timeSensitivity: {
-                type: Type.STRING,
-                enum: ["none", "soft", "deadline", "urgent"]
-              },
-              deadlineText: { type: Type.STRING },
-              deadlineIso: { type: Type.STRING },
-              priority: prioritySchema,
-              goalRelationship: {
-                type: Type.OBJECT,
-                properties: {
-                  goalId: { type: Type.STRING },
-                  goalTitle: { type: Type.STRING },
-                  projectId: { type: Type.STRING },
-                  projectTitle: { type: Type.STRING },
-                  relationshipExplanation: { type: Type.STRING }
-                }
-              },
-              reasoning: { type: Type.STRING },
-              needsCheck: { type: Type.BOOLEAN }
-            },
-            required: ["sourceItemIndex", "title", "block", "estimatedMinutes", "capacityType", "requiredEnergy", "timeSensitivity", "priority", "needsCheck"]
-          }
+          items: makePlanItemSchema("if_capacity_remains", ["flexible"])
         },
         deferredItems: {
           type: Type.ARRAY,
-          description: "Items from classifiedItems with timeHorizon 'this_week' or 'later'.",
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              sourceItemIndex: {
-                type: Type.INTEGER,
-                description: "Zero-based integer index of the item in classifiedItems (0 to N-1)."
-              },
-              originalText: { type: Type.STRING },
-              kind: {
-                type: Type.STRING,
-                enum: ["task", "idea", "worry", "fact", "waiting_for"]
-              },
-              timeHorizon: {
-                type: Type.STRING,
-                enum: ["this_week", "later"]
-              },
-              suggestedAction: { type: Type.STRING },
-              estimatedMinutes: { type: Type.INTEGER },
-              requiredEnergy: { type: Type.INTEGER },
-              timeSensitivity: {
-                type: Type.STRING,
-                enum: ["none", "soft", "deadline", "urgent"]
-              },
-              deadlineText: { type: Type.STRING },
-              deadlineIso: { type: Type.STRING },
-              isAmbiguous: { type: Type.BOOLEAN },
-              needsCheck: { type: Type.BOOLEAN },
-              relatedQuestionId: { type: Type.STRING },
-              priority: prioritySchema,
-              goalRelationship: {
-                type: Type.OBJECT,
-                properties: {
-                  goalId: { type: Type.STRING },
-                  goalTitle: { type: Type.STRING },
-                  projectId: { type: Type.STRING },
-                  projectTitle: { type: Type.STRING },
-                  relationshipExplanation: { type: Type.STRING }
-                }
-              }
-            },
-            required: ["sourceItemIndex"]
-          }
+          items: subsetItemSchema
         },
         longTermIdeas: {
           type: Type.ARRAY,
-          description: "Items from classifiedItems with timeHorizon 'long_term_idea'.",
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              sourceItemIndex: {
-                type: Type.INTEGER,
-                description: "Zero-based integer index of the item in classifiedItems (0 to N-1)."
-              },
-              originalText: { type: Type.STRING },
-              kind: {
-                type: Type.STRING,
-                enum: ["task", "idea", "worry", "fact", "waiting_for"]
-              },
-              timeHorizon: {
-                type: Type.STRING,
-                enum: ["long_term_idea"]
-              },
-              suggestedAction: { type: Type.STRING },
-              estimatedMinutes: { type: Type.INTEGER },
-              requiredEnergy: { type: Type.INTEGER },
-              timeSensitivity: {
-                type: Type.STRING,
-                enum: ["none", "soft", "deadline", "urgent"]
-              },
-              deadlineText: { type: Type.STRING },
-              deadlineIso: { type: Type.STRING },
-              isAmbiguous: { type: Type.BOOLEAN },
-              needsCheck: { type: Type.BOOLEAN },
-              relatedQuestionId: { type: Type.STRING },
-              priority: prioritySchema,
-              goalRelationship: {
-                type: Type.OBJECT,
-                properties: {
-                  goalId: { type: Type.STRING },
-                  goalTitle: { type: Type.STRING },
-                  projectId: { type: Type.STRING },
-                  projectTitle: { type: Type.STRING },
-                  relationshipExplanation: { type: Type.STRING }
-                }
-              }
-            },
-            required: ["sourceItemIndex"]
-          }
+          items: subsetItemSchema
         },
         nonActionItems: {
           type: Type.ARRAY,
-          description: "Items from classifiedItems with timeHorizon 'no_action'.",
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              sourceItemIndex: {
-                type: Type.INTEGER,
-                description: "Zero-based integer index of the item in classifiedItems (0 to N-1)."
-              },
-              originalText: { type: Type.STRING },
-              kind: {
-                type: Type.STRING,
-                enum: ["task", "idea", "worry", "fact", "waiting_for"]
-              },
-              timeHorizon: {
-                type: Type.STRING,
-                enum: ["no_action"]
-              },
-              suggestedAction: { type: Type.STRING },
-              estimatedMinutes: { type: Type.INTEGER },
-              requiredEnergy: { type: Type.INTEGER },
-              timeSensitivity: {
-                type: Type.STRING,
-                enum: ["none", "soft", "deadline", "urgent"]
-              },
-              deadlineText: { type: Type.STRING },
-              deadlineIso: { type: Type.STRING },
-              isAmbiguous: { type: Type.BOOLEAN },
-              needsCheck: { type: Type.BOOLEAN },
-              relatedQuestionId: { type: Type.STRING },
-              priority: prioritySchema,
-              goalRelationship: {
-                type: Type.OBJECT,
-                properties: {
-                  goalId: { type: Type.STRING },
-                  goalTitle: { type: Type.STRING },
-                  projectId: { type: Type.STRING },
-                  projectTitle: { type: Type.STRING },
-                  relationshipExplanation: { type: Type.STRING }
-                }
-              }
-            },
-            required: ["sourceItemIndex"]
-          }
+          items: subsetItemSchema
         },
         intervention: {
           type: Type.OBJECT,
-          description: "At most one short, safe, optional non-medical intervention.",
           properties: {
-            type: {
-              type: Type.STRING,
-              enum: ["environment", "movement", "breathing", "rest", "hydration", "light", "focus"]
-            },
+            type: { type: Type.STRING, enum: ["environment", "movement", "breathing", "rest", "hydration", "light", "focus"] },
             title: { type: Type.STRING },
             description: { type: Type.STRING },
             estimatedMinutes: { type: Type.INTEGER },
@@ -502,13 +284,8 @@ export const modelSchema = {
         },
         visionSuggestion: {
           type: Type.OBJECT,
-          description: "At most one optional vision suggestion if brain dump contains a genuine multi-week/month aspiration or long-term strategic direction.",
           properties: {
-            sourceItemIndexes: {
-              type: Type.ARRAY,
-              description: "Zero-based indexes of the brain dump items in classifiedItems that inspire this vision.",
-              items: { type: Type.INTEGER }
-            },
+            sourceItemIndexes: { type: Type.ARRAY, items: { type: Type.INTEGER } },
             suggestedTitle: { type: Type.STRING },
             desiredOutcome: { type: Type.STRING },
             reason: { type: Type.STRING },

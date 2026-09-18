@@ -226,4 +226,29 @@ function createItem(partial: Partial<DailyPlanItem> & { id: string; title: strin
   assert.equal(normalizedDraft.laterToday[1].block, "later_today");
 }
 
+// Regression Test G: Pre 12h i oko 16h prirodni vremenski markeri
+{
+  const itemInvoice = createItem({
+    id: "invoice-1",
+    title: "Završi fakturu za klijenta i pošalji",
+    description: "pošalji je pre 12",
+    block: "later_today",
+  });
+
+  const itemAfternoon = createItem({
+    id: "city-1",
+    title: "Odlazak do grada",
+    description: "Oko 16h moram do grada naredna 2 sata",
+    capacityType: "fixed",
+    block: "later_today",
+  });
+
+  assert.equal(extractExplicitTimeMinutes(itemInvoice), 720); // 12:00 = 720 min
+  assert.equal(extractExplicitTimeMinutes(itemAfternoon), 960); // 16:00 = 960 min
+
+  const normalized = normalizeChronologicalOrder([itemAfternoon, itemInvoice]);
+  assert.equal(normalized[0].id, "invoice-1");
+  assert.equal(normalized[1].id, "city-1");
+}
+
 console.log("Chronology domain and regression tests passed.");

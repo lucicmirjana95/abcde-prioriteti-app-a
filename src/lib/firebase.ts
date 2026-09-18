@@ -3,20 +3,56 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import configRaw from "../../firebase-applet-config.json";
 
+const rawConfig = configRaw as Record<string, any>;
+const apiKey =
+  rawConfig.apiKey ||
+  (rawConfig.apiKey1 && rawConfig.apiKey2 ? rawConfig.apiKey1 + rawConfig.apiKey2 : "");
+
 const firebaseConfig = {
-  ...configRaw,
-  apiKey: (configRaw as any).apiKey1 + (configRaw as any).apiKey2
+  projectId: rawConfig.projectId,
+  appId: rawConfig.appId,
+  apiKey,
+  authDomain: rawConfig.authDomain,
+  storageBucket: rawConfig.storageBucket,
+  messagingSenderId: rawConfig.messagingSenderId,
+  measurementId: rawConfig.measurementId || undefined,
 };
 
 const app = initializeApp(firebaseConfig);
+
+const databaseId =
+  rawConfig.firestoreDatabaseId && rawConfig.firestoreDatabaseId !== "(default)"
+    ? rawConfig.firestoreDatabaseId
+    : undefined;
+
 let _db: any;
 try {
-  _db = getFirestore(app);
-} catch {
-  _db = {} as any;
+  _db = databaseId ? getFirestore(app, databaseId) : getFirestore(app);
+} catch (err) {
+  console.warn("Firestore initialization error, falling back to default:", err);
+  try {
+    _db = getFirestore(app);
+  } catch {
+    _db = {} as any;
+  }
 }
+
 export const db = _db;
-export const auth = getAuth();
+export const auth = getAuth(app);
+
+// Connection validation
+if (typeof window !== "undefined") {
+  (async () => {
+    try {
+      const { doc, getDocFromServer } = await import("firebase/firestore");
+      await getDocFromServer(doc(db, "test", "connection"));
+    } catch (error: any) {
+      if (error?.message?.includes("the client is offline")) {
+        console.error("Please check your Firebase configuration: Firestore client is offline.");
+      }
+    }
+  })();
+}
 
 export enum OperationType {
   CREATE = "create",

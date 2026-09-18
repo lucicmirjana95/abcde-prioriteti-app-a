@@ -8,6 +8,8 @@ export type AppATimeZoneSetting =
 
 export type AppAReducedMotion = 'system' | 'reduced' | 'standard';
 
+export type DayResetHour = 0 | 4 | 5 | 6 | 7 | 8;
+
 export interface AppAPreferences {
   language: AppALanguage;
   theme: AppATheme;
@@ -17,6 +19,7 @@ export interface AppAPreferences {
   reducedMotion: AppAReducedMotion;
   soundEnabled: boolean;
   notificationsEnabled: boolean;
+  dayResetHour?: DayResetHour;
 }
 
 export type EnergyLevel = 1 | 2 | 3 | 4 | 5;

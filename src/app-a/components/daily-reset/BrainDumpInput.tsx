@@ -70,6 +70,17 @@ export default function BrainDumpInput({ value, onChange, t, language, error }: 
         >
           {value.length} / {MAX_CHARS}
         </div>
+        {value.trim().length > 0 && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="text-[12px] font-medium hover:underline cursor-pointer transition-colors"
+            style={{ color: "var(--app-a-text-secondary)" }}
+            aria-label={language === "sr" ? "Očisti unos" : language === "tr" ? "Girişi temizle" : "Clear input"}
+          >
+            {language === "sr" ? "Očisti tekst" : language === "tr" ? "Metni temizle" : "Clear text"}
+          </button>
+        )}
       </div>
 
       {error && (

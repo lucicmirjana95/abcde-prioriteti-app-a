@@ -35,6 +35,12 @@ export default function DailyResetForm({
   const [showNote, setShowNote] = useState(Boolean(initialData.stateNote));
   const [brainDump, setBrainDump] = useState(initialData.brainDump);
 
+  React.useEffect(() => {
+    if (initialData.brainDump !== undefined) {
+      setBrainDump(initialData.brainDump);
+    }
+  }, [initialData.brainDump]);
+
   const [brainDumpError, setBrainDumpError] = useState<string | undefined>();
   const [stateError, setStateError] = useState<string | undefined>();
 

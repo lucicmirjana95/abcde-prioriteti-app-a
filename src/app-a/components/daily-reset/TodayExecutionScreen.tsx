@@ -174,14 +174,14 @@ export default function TodayExecutionScreen({
           const { loadVisionStrategies } = await import("../../../shared/persistence/vision/visionStrategyRepository");
           const list = await loadVisionStrategies(userId);
           if (isMounted) {
-            setActiveVisions(list.filter(v => v.status === "active").map(v => ({ id: v.id, title: v.strategy.horizonVision })));
+            setActiveVisions(list.filter(v => v.status === "active").map(v => ({ id: v.id, title: v.idea || v.strategy?.outcome || v.id })));
           }
         } else {
           const raw = localStorage.getItem("app_a_guest_vision_strategies");
           if (raw && isMounted) {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed)) {
-              setActiveVisions(parsed.filter((v: any) => v.status === "active").map((v: any) => ({ id: v.id, title: v.strategy?.horizonVision || v.id })));
+              setActiveVisions(parsed.filter((v: any) => v.status === "active").map((v: any) => ({ id: v.id, title: v.idea || v.strategy?.outcome || v.id })));
             }
           }
         }
